@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore'
+import { useEffect, useRef } from 'react'
 import BikePreview from '@/components/BikePreview'
 import SelectionPanel from '@/components/SelectionPanel'
 import ConflictAlert from '@/components/ConflictAlert'
@@ -18,6 +19,8 @@ export default function Preview() {
     partConflictMap,
   } = useStore()
 
+  const sidebarRef = useRef<HTMLDivElement>(null)
+
   const selectedItems = currentSelection?.items ?? []
   const selectedParts = selectedItems
     .map((item) => ({ part: allParts.find((p) => p.id === item.partId), quantity: item.quantity }))
@@ -30,6 +33,15 @@ export default function Preview() {
     category: cat,
     parts: allParts.filter((p) => p.categoryId === cat.id),
   }))
+
+  useEffect(() => {
+    if (activeCategory && activeCategory !== 'all' && sidebarRef.current) {
+      const el = sidebarRef.current.querySelector(`[data-category="${activeCategory}"]`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }
+  }, [activeCategory])
 
   return (
     <div className="min-h-screen">
@@ -96,15 +108,18 @@ export default function Preview() {
                     const conflictStatus = partConflictMap[part.id]
                     const hasError = conflictStatus?.hasError
                     const hasWarning = conflictStatus?.hasWarning
+                    const isActiveZone = activeCategory !== 'all' && part.categoryId === activeCategory
                     return (
                       <div
                         key={part.id}
-                        className={`bg-carbon-800 rounded-lg p-3 border relative group ${
-                          hasError
-                            ? 'border-red-500/50'
-                            : hasWarning
-                              ? 'border-yellow-500/50'
-                              : 'border-moto-orange/20'
+                        className={`bg-carbon-800 rounded-lg p-3 border relative group transition-all duration-200 ${
+                          isActiveZone
+                            ? 'border-moto-orange ring-1 ring-moto-orange/30 shadow-lg shadow-moto-orange/10'
+                            : hasError
+                              ? 'border-red-500/50'
+                              : hasWarning
+                                ? 'border-yellow-500/50'
+                                : 'border-moto-orange/20'
                         }`}
                       >
                         <div className="relative">
@@ -153,15 +168,33 @@ export default function Preview() {
           <div className="lg:w-80 shrink-0">
             <div className="bg-carbon-800 rounded-xl border border-carbon-500/20 overflow-hidden sticky top-4">
               <div className="p-4 border-b border-carbon-500/30">
-                <h3 className="font-orbitron text-moto-silver text-sm">快速选配</h3>
-                <p className="text-moto-steel text-xs mt-1">按分类浏览并添加配件</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-orbitron text-moto-silver text-sm">快速选配</h3>
+                    <p className="text-moto-steel text-xs mt-1">按分类浏览并添加配件</p>
+                  </div>
+                  {activeCategory !== 'all' && (
+                    <button
+                      onClick={() => setActiveCategory('all')}
+                      className="text-[10px] text-moto-steel hover:text-moto-orange transition-colors font-orbitron"
+                    >
+                      全部
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="max-h-[60vh] overflow-y-auto">
+              <div ref={sidebarRef} className="max-h-[60vh] overflow-y-auto">
                 {availablePartsByCategory.map(({ category, parts: catParts }) => (
-                  <div key={category.id} className="border-b border-carbon-500/20 last:border-b-0">
+                  <div key={category.id} data-category={category.id} className={`border-b border-carbon-500/20 last:border-b-0 ${
+                    activeCategory === category.id ? 'bg-carbon-700/30' : ''
+                  }`}>
                     <button
                       onClick={() => setActiveCategory(activeCategory === category.id ? 'all' : category.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-sm text-moto-silver hover:bg-carbon-700/50 transition-colors"
+                      className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors ${
+                        activeCategory === category.id
+                          ? 'text-moto-orange bg-moto-orange/5 hover:bg-moto-orange/10'
+                          : 'text-moto-silver hover:bg-carbon-700/50'
+                      }`}
                     >
                       <span className="font-orbitron text-xs">{category.name}</span>
                       <span className="text-moto-steel text-xs">{catParts.length}件</span>
