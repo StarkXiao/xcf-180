@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import { partsRoutes } from './routes/parts.js';
 import { selectionsRoutes } from './routes/selections.js';
+import { compatibilityRoutes } from './routes/compatibility.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +23,9 @@ app.use(partsRoutes.allowedMethods());
 
 app.use(selectionsRoutes.routes());
 app.use(selectionsRoutes.allowedMethods());
+
+app.use(compatibilityRoutes.routes());
+app.use(compatibilityRoutes.allowedMethods());
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);

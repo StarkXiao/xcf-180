@@ -23,7 +23,23 @@ export interface Part {
   description: string
   specs: Record<string, string | boolean | number>
   compatible: string[]
+  conflictsWith: string[]
   position: PartPosition
+}
+
+export interface CompatibilityConflict {
+  partId: string
+  conflictPartId: string
+  partName: string
+  conflictPartName: string
+  severity: 'warning' | 'error'
+  message: string
+}
+
+export interface CompatibilityCheckResult {
+  hasConflicts: boolean
+  conflicts: CompatibilityConflict[]
+  warnings: CompatibilityConflict[]
 }
 
 export interface SelectionItem {

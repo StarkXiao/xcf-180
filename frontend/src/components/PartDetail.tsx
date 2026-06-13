@@ -1,6 +1,8 @@
-import { X, Plus, Check, Tag, Layers, Info } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import type { Part } from '@/types'
+import type { Part, CompatibilityCheckResult } from '@/types'
+import ConflictAlert from '@/components/ConflictAlert'
 
 interface Props {
   part: Part
@@ -8,15 +10,51 @@ interface Props {
 }
 
 export default function PartDetail({ part, onClose }: Props) {
-  const { currentSelection, addPartToSelection, removePartFromSelection } = useStore()
+  const {
+    currentSelection,
+    addPartToSelection,
+    removePartFromSelection,
+    checkPartAgainstSelection,
+  } = useStore()
   const isSelected = currentSelection?.items.some((i) => i.partId === part.id) ?? false
+  const [partCompat, setPartCompat] = useState<CompatibilityCheckResult | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!isSelected) {
+      setChecking(true)
+      checkPartAgainstSelection(part.id).then((r) => {
+        if (!cancelled) {
+          setPartCompat(r)
+          setChecking(false)
+        }
+      })
+    } else {
+      setPartCompat(null)
+    }
+    return () => { cancelled = true }
+  }, [part.id, isSelected, currentSelection?.items.length, checkPartAgainstSelection])
+
+  const hasError = partCompat?.conflicts && partCompat.conflicts.length > 0
+  const hasWarning = partCompat?.warnings && partCompat.warnings.length > 0
 
   const handleToggle = () => {
     if (isSelected) {
       removePartFromSelection(part.id)
+      return
+    }
+    if (hasError || hasWarning) {
+      setShowConfirm(true)
     } else {
       addPartToSelection(part.id)
     }
+  }
+
+  const confirmAdd = () => {
+    setShowConfirm(false)
+    addPartToSelection(part.id)
   }
 
   return (
@@ -82,7 +120,71 @@ export default function PartDetail({ part, onClose }: Props) {
               </div>
             </div>
 
-            <div className="mt-auto pt-6">
+            {!isSelected && (
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  {hasError ? (
+                    <XCircle size={14} className="text-red-400" />
+                  ) : hasWarning ? (
+                    <AlertTriangle size={14} className="text-yellow-500" />
+                  ) : (
+                    <Check size={14} className="text-green-400" />
+                  )}
+                  <span className={`text-sm font-orbitron ${
+                    hasError ? 'text-red-400' : hasWarning ? 'text-yellow-500' : 'text-green-400'
+                  }`}>
+                    {checking
+                      ? '兼容性检查中...'
+                      : hasError
+                        ? '存在安装冲突'
+                        : hasWarning
+                          ? '搭配需专业调校'
+                          : '与当前选配兼容'}
+                  </span>
+                </div>
+                {partCompat && (
+                  <ConflictAlert
+                    conflicts={partCompat.conflicts}
+                    warnings={partCompat.warnings}
+                    compact
+                  />
+                )}
+              </div>
+            )}
+
+            <div className="mt-auto pt-6 space-y-3">
+              {showConfirm && (
+                <div className={`rounded-xl border p-4 space-y-3 ${
+                  hasError
+                    ? 'bg-red-500/5 border-red-500/40'
+                    : 'bg-yellow-500/5 border-yellow-500/40'
+                }`}>
+                  <p className={`text-sm ${hasError ? 'text-red-400' : 'text-yellow-500'}`}>
+                    {hasError
+                      ? '该配件与已选配件存在安装冲突，添加后请尽快处理冲突项。是否仍要添加？'
+                      : '该配件搭配需专业调校，建议咨询技术人员。是否继续添加？'}
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setShowConfirm(false)}
+                      className="px-4 py-2 bg-carbon-700 text-moto-steel rounded-lg text-sm hover:bg-carbon-600 transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={confirmAdd}
+                      className={`px-4 py-2 rounded-lg text-sm font-orbitron text-white transition-colors ${
+                        hasError
+                          ? 'bg-red-500 hover:bg-red-400'
+                          : 'bg-yellow-500 hover:bg-yellow-400'
+                      }`}
+                    >
+                      确认添加
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <span className="font-orbitron text-moto-orange text-2xl font-bold">
                   ¥{part.price.toLocaleString()}
@@ -92,7 +194,11 @@ export default function PartDetail({ part, onClose }: Props) {
                   className={`flex items-center gap-2 px-6 py-3 rounded-xl font-orbitron text-sm transition-all duration-200 ${
                     isSelected
                       ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-                      : 'bg-moto-orange text-white hover:bg-moto-orange-light shadow-lg shadow-moto-orange/20'
+                      : hasError
+                        ? 'bg-red-500/80 text-white hover:bg-red-500 shadow-lg shadow-red-500/20'
+                        : hasWarning
+                          ? 'bg-yellow-500 text-white hover:bg-yellow-400 shadow-lg shadow-yellow-500/20'
+                          : 'bg-moto-orange text-white hover:bg-moto-orange-light shadow-lg shadow-moto-orange/20'
                   }`}
                 >
                   {isSelected ? <><Check size={16} /> 移除</> : <><Plus size={16} /> 添加</>}

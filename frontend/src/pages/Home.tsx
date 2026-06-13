@@ -5,11 +5,21 @@ import PartCard from '@/components/PartCard'
 import PartDetail from '@/components/PartDetail'
 import SearchBar from '@/components/SearchBar'
 import SelectionPanel from '@/components/SelectionPanel'
-import { SlidersHorizontal } from 'lucide-react'
+import ConflictAlert from '@/components/ConflictAlert'
+import { SlidersHorizontal, ArrowRight } from 'lucide-react'
 import type { Part } from '@/types'
+import { Link } from 'react-router-dom'
 
 export default function Home() {
-  const { parts, categories, searchQuery, loading, activeCategory } = useStore()
+  const {
+    parts,
+    categories,
+    searchQuery,
+    loading,
+    activeCategory,
+    compatibilityResult,
+    compatibilityLoading,
+  } = useStore()
   const [detailPart, setDetailPart] = useState<Part | null>(null)
 
   const filteredParts = useMemo(() => {
@@ -27,9 +37,36 @@ export default function Home() {
 
   const activeCategoryName = categories.find((c) => c.id === activeCategory)?.name ?? '全部配件'
 
+  const hasConflicts = compatibilityResult?.conflicts && compatibilityResult.conflicts.length > 0
+  const hasWarnings = compatibilityResult?.warnings && compatibilityResult.warnings.length > 0
+
   return (
     <div className="min-h-screen">
       <div className="p-6 lg:p-8">
+        {(hasConflicts || hasWarnings) && compatibilityResult && (
+          <div className="mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <ConflictAlert
+                  conflicts={compatibilityResult.conflicts}
+                  warnings={compatibilityResult.warnings}
+                />
+              </div>
+              <Link
+                to="/list"
+                className={`shrink-0 flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-orbitron transition-colors ${
+                  hasConflicts
+                    ? 'bg-red-500 text-white hover:bg-red-400'
+                    : 'bg-yellow-500 text-white hover:bg-yellow-400'
+                }`}
+              >
+                处理
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="font-orbitron text-2xl lg:text-3xl text-moto-silver font-bold">

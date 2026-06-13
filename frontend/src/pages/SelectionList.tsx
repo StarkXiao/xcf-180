@@ -1,12 +1,27 @@
 import { useStore } from '@/store/useStore'
 import SelectionPanel from '@/components/SelectionPanel'
-import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft } from 'lucide-react'
+import ConflictAlert from '@/components/ConflictAlert'
+import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export default function SelectionList() {
-  const { currentSelection, parts, removePartFromSelection, setQuantity, clearSelection, getTotalPrice } = useStore()
+  const {
+    currentSelection,
+    parts,
+    removePartFromSelection,
+    setQuantity,
+    clearSelection,
+    getTotalPrice,
+    compatibilityResult,
+    compatibilityLoading,
+    partConflictMap,
+    getConflictsForPart,
+    getWarningsForPart,
+  } = useStore()
   const totalPrice = getTotalPrice()
   const selectedItems = currentSelection?.items ?? []
+  const hasConflicts = compatibilityResult?.conflicts && compatibilityResult.conflicts.length > 0
+  const hasWarnings = compatibilityResult?.warnings && compatibilityResult.warnings.length > 0
 
   const selectedParts = selectedItems
     .map((item) => {
@@ -65,6 +80,11 @@ export default function SelectionList() {
             </h1>
             <p className="text-moto-steel text-sm mt-1">
               已选 {selectedParts.length} 件配件 · 合计 ¥{totalPrice.toLocaleString()}
+              {(hasConflicts || hasWarnings) && (
+                <span className={`ml-2 ${hasConflicts ? 'text-red-400' : 'text-yellow-500'}`}>
+                  · {hasConflicts ? `${compatibilityResult!.conflicts.length} 项冲突` : `${compatibilityResult!.warnings.length} 项提醒`}
+                </span>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -86,15 +106,30 @@ export default function SelectionList() {
                 </button>
                 <button
                   onClick={handleExport}
-                  className="flex items-center gap-2 px-4 py-2 bg-moto-orange text-white rounded-lg text-sm font-orbitron hover:bg-moto-orange-light transition-colors shadow-lg shadow-moto-orange/20"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-orbitron transition-colors shadow-lg ${
+                    hasConflicts
+                      ? 'bg-red-500 text-white hover:bg-red-400 shadow-red-500/20'
+                      : hasWarnings
+                        ? 'bg-yellow-500 text-white hover:bg-yellow-400 shadow-yellow-500/20'
+                        : 'bg-moto-orange text-white hover:bg-moto-orange-light shadow-moto-orange/20'
+                  }`}
                 >
                   <Download size={14} />
-                  导出清单
+                  {hasConflicts ? '仍要导出' : hasWarnings ? '谨慎导出' : '导出清单'}
                 </button>
               </>
             )}
           </div>
         </div>
+
+        {(hasConflicts || hasWarnings) && compatibilityResult && (
+          <div className="mb-6">
+            <ConflictAlert
+              conflicts={compatibilityResult.conflicts}
+              warnings={compatibilityResult.warnings}
+            />
+          </div>
+        )}
 
         {selectedParts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -119,69 +154,142 @@ export default function SelectionList() {
                     <span className="text-moto-orange font-orbitron text-sm">¥{subtotal.toLocaleString()}</span>
                   </div>
                   <div className="divide-y divide-carbon-500/10">
-                    {items.map(({ part, quantity }) => (
-                      <div key={part.id} className="px-6 py-4 flex items-center gap-4 hover:bg-carbon-700/30 transition-colors">
-                        <img
-                          src={part.image}
-                          alt={part.name}
-                          className="w-16 h-16 rounded-lg object-cover bg-carbon-700 shrink-0"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+${part.categoryId}+part+${part.name}+product+photo+dark+background&image_size=square`
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-moto-silver text-sm font-medium">{part.name}</h4>
-                          <p className="text-moto-steel text-xs mt-1 line-clamp-1">{part.description}</p>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {Object.entries(part.specs).slice(0, 3).map(([key, val]) => (
-                              <span key={key} className="text-[10px] px-2 py-0.5 bg-carbon-700 rounded text-moto-steel">
-                                {key}: {String(val)}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={() => setQuantity(part.id, quantity - 1)}
-                            className="w-7 h-7 rounded-lg bg-carbon-700 flex items-center justify-center text-moto-steel hover:text-white hover:bg-carbon-600 transition-colors"
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span className="w-8 text-center text-moto-silver font-orbitron text-sm">{quantity}</span>
-                          <button
-                            onClick={() => setQuantity(part.id, quantity + 1)}
-                            className="w-7 h-7 rounded-lg bg-carbon-700 flex items-center justify-center text-moto-steel hover:text-white hover:bg-carbon-600 transition-colors"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                        <div className="text-right shrink-0 w-28">
-                          <p className="font-orbitron text-moto-orange text-lg">¥{(part.price * quantity).toLocaleString()}</p>
-                          {quantity > 1 && (
-                            <p className="text-moto-steel text-xs">单价 ¥{part.price.toLocaleString()}</p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => removePartFromSelection(part.id)}
-                          className="p-2 text-moto-steel hover:text-red-400 transition-colors shrink-0"
+                    {items.map(({ part, quantity }) => {
+                      const conflictStatus = partConflictMap[part.id]
+                      const hasError = conflictStatus?.hasError
+                      const hasWarning = conflictStatus?.hasWarning
+                      const partConflicts = getConflictsForPart(part.id)
+                      const partWarnings = getWarningsForPart(part.id)
+
+                      return (
+                        <div
+                          key={part.id}
+                          className={`px-6 py-4 flex items-center gap-4 hover:bg-carbon-700/30 transition-colors border-l-4 ${
+                            hasError
+                              ? 'border-l-red-500'
+                              : hasWarning
+                                ? 'border-l-yellow-500'
+                                : 'border-l-transparent'
+                          }`}
                         >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
+                          <div className="relative shrink-0">
+                            <img
+                              src={part.image}
+                              alt={part.name}
+                              className="w-16 h-16 rounded-lg object-cover bg-carbon-700"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+${part.categoryId}+part+${part.name}+product+photo+dark+background&image_size=square`
+                              }}
+                            />
+                            {(hasError || hasWarning) && (
+                              <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${
+                                hasError ? 'bg-red-500' : 'bg-yellow-500'
+                              }`}>
+                                {hasError ? <XCircle size={12} className="text-white" /> : <AlertTriangle size={12} className="text-white" />}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-moto-silver text-sm font-medium">{part.name}</h4>
+                              {(hasError || hasWarning) && (
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                  hasError ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-500'
+                                }`}>
+                                  {hasError ? `${partConflicts.length} 项冲突` : `${partWarnings.length} 项提醒`}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-moto-steel text-xs mt-1 line-clamp-1">{part.description}</p>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {Object.entries(part.specs).slice(0, 3).map(([key, val]) => (
+                                <span key={key} className="text-[10px] px-2 py-0.5 bg-carbon-700 rounded text-moto-steel">
+                                  {key}: {String(val)}
+                                </span>
+                              ))}
+                            </div>
+                            {(hasError || hasWarning) && (
+                              <div className={`mt-2 text-[10px] ${hasError ? 'text-red-400' : 'text-yellow-500'}`}>
+                                {(hasError ? partConflicts : partWarnings).slice(0, 1).map((c) => (
+                                  <span key={c.partId}>
+                                    {c.message}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => setQuantity(part.id, quantity - 1)}
+                              className="w-7 h-7 rounded-lg bg-carbon-700 flex items-center justify-center text-moto-steel hover:text-white hover:bg-carbon-600 transition-colors"
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <span className="w-8 text-center text-moto-silver font-orbitron text-sm">{quantity}</span>
+                            <button
+                              onClick={() => setQuantity(part.id, quantity + 1)}
+                              className="w-7 h-7 rounded-lg bg-carbon-700 flex items-center justify-center text-moto-steel hover:text-white hover:bg-carbon-600 transition-colors"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                          <div className="text-right shrink-0 w-28">
+                            <p className="font-orbitron text-moto-orange text-lg">¥{(part.price * quantity).toLocaleString()}</p>
+                            {quantity > 1 && (
+                              <p className="text-moto-steel text-xs">单价 ¥{part.price.toLocaleString()}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removePartFromSelection(part.id)}
+                            className={`p-2 transition-colors shrink-0 ${
+                              hasError
+                                ? 'text-red-400 hover:text-red-300'
+                                : 'text-moto-steel hover:text-red-400'
+                            }`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
             })}
 
-            <div className="bg-carbon-800 rounded-xl border border-carbon-500/20 p-6 sticky bottom-0">
+            <div className={`bg-carbon-800 rounded-xl border p-6 sticky bottom-0 ${
+              hasConflicts
+                ? 'border-red-500/30 bg-red-500/5'
+                : hasWarnings
+                  ? 'border-yellow-500/30 bg-yellow-500/5'
+                  : 'border-carbon-500/20'
+            }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-moto-steel text-sm">选配总计</p>
-                  <p className="text-moto-steel text-xs mt-1">共 {selectedParts.reduce((s, i) => s + i.quantity, 0)} 件配件</p>
+                  <p className={`text-sm ${
+                    hasConflicts ? 'text-red-400' : hasWarnings ? 'text-yellow-500' : 'text-moto-steel'
+                  }`}>
+                    {hasConflicts
+                      ? '存在兼容冲突，请处理后再下单'
+                      : hasWarnings
+                        ? '存在搭配提醒，建议咨询技术人员'
+                        : '选配总计'}
+                  </p>
+                  <p className="text-moto-steel text-xs mt-1">
+                    共 {selectedParts.reduce((s, i) => s + i.quantity, 0)} 件配件
+                    {(hasConflicts || hasWarnings) && (
+                      <span className={`ml-2 ${hasConflicts ? 'text-red-400' : 'text-yellow-500'}`}>
+                        · {hasConflicts
+                          ? `${compatibilityResult!.conflicts.length} 项冲突`
+                          : `${compatibilityResult!.warnings.length} 项提醒`}
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-orbitron text-moto-orange text-3xl font-bold">
+                  <p className={`font-orbitron text-3xl font-bold ${
+                    hasConflicts ? 'text-red-400' : hasWarnings ? 'text-yellow-500' : 'text-moto-orange'
+                  }`}>
                     ¥{totalPrice.toLocaleString()}
                   </p>
                 </div>

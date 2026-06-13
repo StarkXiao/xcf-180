@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem } from '@/types'
+import type { Category, Part, Selection, SelectionItem, CompatibilityCheckResult } from '@/types'
 
 const BASE = ''
 
@@ -47,5 +47,17 @@ export const api = {
   removeItem: (selectionId: string, partId: string) =>
     fetchJSON<Selection>(`/api/selections/${selectionId}/items/${partId}`, {
       method: 'DELETE',
+    }),
+
+  checkCompatibility: (partIds: string[]) =>
+    fetchJSON<CompatibilityCheckResult>('/api/compatibility/check', {
+      method: 'POST',
+      body: JSON.stringify({ partIds }),
+    }),
+
+  checkPartCompatibility: (partId: string, selectedPartIds: string[]) =>
+    fetchJSON<CompatibilityCheckResult>(`/api/compatibility/part/${partId}/check`, {
+      method: 'POST',
+      body: JSON.stringify({ partIds: selectedPartIds }),
     }),
 }

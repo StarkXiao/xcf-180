@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Category, Part, Selection, SelectionItem } from '@/types'
+import type { Category, Part, Selection, SelectionItem, CompatibilityCheckResult, CompatibilityConflict } from '@/types'
 import { api } from '@/api/client'
 
 interface AppState {
@@ -11,6 +11,9 @@ interface AppState {
   selectedPartIds: string[]
   searchQuery: string
   loading: boolean
+  compatibilityResult: CompatibilityCheckResult | null
+  compatibilityLoading: boolean
+  partConflictMap: Record<string, { hasError: boolean; hasWarning: boolean }>
 
   setActiveCategory: (cat: string) => void
   setSearchQuery: (q: string) => void
@@ -27,6 +30,10 @@ interface AppState {
   getSelectedParts: () => Part[]
   getTotalPrice: () => number
   initDefaultSelection: () => Promise<void>
+  checkCurrentSelectionCompatibility: () => Promise<void>
+  checkPartAgainstSelection: (partId: string) => Promise<CompatibilityCheckResult | null>
+  getConflictsForPart: (partId: string) => CompatibilityConflict[]
+  getWarningsForPart: (partId: string) => CompatibilityConflict[]
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -38,6 +45,9 @@ export const useStore = create<AppState>((set, get) => ({
   selectedPartIds: [],
   searchQuery: '',
   loading: false,
+  compatibilityResult: null,
+  compatibilityLoading: false,
+  partConflictMap: {},
 
   setActiveCategory: (cat) => {
     set({ activeCategory: cat })
@@ -102,6 +112,7 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
       console.error('Failed to add item:', e)
     }
@@ -116,6 +127,7 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
       console.error('Failed to remove item:', e)
     }
@@ -140,6 +152,7 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
       console.error('Failed to update quantity:', e)
     }
@@ -154,6 +167,7 @@ export const useStore = create<AppState>((set, get) => ({
         items: [],
       } as any)
       set({ currentSelection: updated })
+      setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
       console.error('Failed to clear selection:', e)
     }
@@ -193,5 +207,65 @@ export const useStore = create<AppState>((set, get) => ({
     } else {
       set({ currentSelection: selections[0] })
     }
+    setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
+  },
+
+  checkCurrentSelectionCompatibility: async () => {
+    const { currentSelection } = get()
+    const partIds = currentSelection?.items.map((i) => i.partId) ?? []
+    if (partIds.length === 0) {
+      set({ compatibilityResult: null, partConflictMap: {} })
+      return
+    }
+    set({ compatibilityLoading: true })
+    try {
+      const result = await api.checkCompatibility(partIds)
+      const conflictMap: Record<string, { hasError: boolean; hasWarning: boolean }> = {}
+      partIds.forEach((id) => { conflictMap[id] = { hasError: false, hasWarning: false } })
+      result.conflicts.forEach((c) => {
+        const existing1 = conflictMap[c.partId] || { hasError: false, hasWarning: false }
+        conflictMap[c.partId] = { ...existing1, hasError: true }
+        const existing2 = conflictMap[c.conflictPartId] || { hasError: false, hasWarning: false }
+        conflictMap[c.conflictPartId] = { ...existing2, hasError: true }
+      })
+      result.warnings.forEach((w) => {
+        const existing1 = conflictMap[w.partId] || { hasError: false, hasWarning: false }
+        conflictMap[w.partId] = { ...existing1, hasWarning: true }
+        const existing2 = conflictMap[w.conflictPartId] || { hasError: false, hasWarning: false }
+        conflictMap[w.conflictPartId] = { ...existing2, hasWarning: true }
+      })
+      set({ compatibilityResult: result, partConflictMap: conflictMap })
+    } catch (e) {
+      console.error('Failed to check compatibility:', e)
+    } finally {
+      set({ compatibilityLoading: false })
+    }
+  },
+
+  checkPartAgainstSelection: async (partId) => {
+    const { currentSelection } = get()
+    const selectedIds = currentSelection?.items.filter((i) => i.partId !== partId).map((i) => i.partId) ?? []
+    try {
+      return await api.checkPartCompatibility(partId, selectedIds)
+    } catch (e) {
+      console.error('Failed to check part compatibility:', e)
+      return null
+    }
+  },
+
+  getConflictsForPart: (partId) => {
+    const { compatibilityResult } = get()
+    if (!compatibilityResult) return []
+    return compatibilityResult.conflicts.filter(
+      (c) => c.partId === partId || c.conflictPartId === partId
+    )
+  },
+
+  getWarningsForPart: (partId) => {
+    const { compatibilityResult } = get()
+    if (!compatibilityResult) return []
+    return compatibilityResult.warnings.filter(
+      (w) => w.partId === partId || w.conflictPartId === partId
+    )
   },
 }))
