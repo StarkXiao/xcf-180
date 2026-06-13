@@ -43,6 +43,12 @@ interface AppState {
   getSelectedParts: () => Part[]
   getFilteredParts: () => Part[]
   getTotalPrice: () => number
+  getCategorySubtotal: (categoryId: string) => number
+  getCategoryLaborFee: (categoryId: string) => number
+  getTotalLaborFee: () => number
+  getGrandTotal: () => number
+  getCategoryName: (categoryId: string) => string
+  laborFeeRates: Record<string, number>
   initDefaultSelection: () => Promise<void>
   checkCurrentSelectionCompatibility: () => Promise<void>
   checkPartAgainstSelection: (partId: string) => Promise<CompatibilityCheckResult | null>
@@ -73,6 +79,15 @@ export const useStore = create<AppState>((set, get) => ({
 
   compareSelectionIdA: null,
   compareSelectionIdB: null,
+
+  laborFeeRates: {
+    exhaust: 0.15,
+    brake: 0.18,
+    wheels: 0.10,
+    handlebar: 0.08,
+    lighting: 0.05,
+    bodykit: 0.12,
+  },
 
   setActiveCategory: (cat) => {
     set({ activeCategory: cat })
@@ -242,6 +257,47 @@ export const useStore = create<AppState>((set, get) => ({
       const part = allParts.find((p) => p.id === item.partId)
       return total + (part ? part.price * item.quantity : 0)
     }, 0)
+  },
+
+  getCategorySubtotal: (categoryId) => {
+    const { currentSelection, allParts } = get()
+    if (!currentSelection) return 0
+    return currentSelection.items.reduce((total, item) => {
+      const part = allParts.find((p) => p.id === item.partId)
+      if (part && part.categoryId === categoryId) {
+        return total + part.price * item.quantity
+      }
+      return total
+    }, 0)
+  },
+
+  getCategoryLaborFee: (categoryId) => {
+    const { laborFeeRates } = get()
+    const subtotal = get().getCategorySubtotal(categoryId)
+    const rate = laborFeeRates[categoryId] ?? 0.1
+    return Math.round(subtotal * rate)
+  },
+
+  getTotalLaborFee: () => {
+    const { currentSelection, allParts, laborFeeRates } = get()
+    if (!currentSelection) return 0
+    return currentSelection.items.reduce((total, item) => {
+      const part = allParts.find((p) => p.id === item.partId)
+      if (part) {
+        const rate = laborFeeRates[part.categoryId] ?? 0.1
+        return total + Math.round(part.price * item.quantity * rate)
+      }
+      return total
+    }, 0)
+  },
+
+  getGrandTotal: () => {
+    return get().getTotalPrice() + get().getTotalLaborFee()
+  },
+
+  getCategoryName: (categoryId) => {
+    const { categories } = get()
+    return categories.find((c) => c.id === categoryId)?.name || categoryId
   },
 
   initDefaultSelection: async () => {

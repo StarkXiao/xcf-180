@@ -12,6 +12,12 @@ export default function SelectionList() {
     setQuantity,
     clearSelection,
     getTotalPrice,
+    getTotalLaborFee,
+    getGrandTotal,
+    getCategoryName,
+    getCategorySubtotal,
+    getCategoryLaborFee,
+    laborFeeRates,
     compatibilityResult,
     compatibilityLoading,
     partConflictMap,
@@ -23,6 +29,8 @@ export default function SelectionList() {
   } = useStore()
   const navigate = useNavigate()
   const totalPrice = getTotalPrice()
+  const totalLaborFee = getTotalLaborFee()
+  const grandTotal = getGrandTotal()
   const selectedItems = currentSelection?.items ?? []
   const hasConflicts = compatibilityResult?.conflicts && compatibilityResult.conflicts.length > 0
   const hasWarnings = compatibilityResult?.warnings && compatibilityResult.warnings.length > 0
@@ -52,18 +60,29 @@ export default function SelectionList() {
     lines.push('')
 
     Object.entries(groupedByCategory).forEach(([cat, items]) => {
-      lines.push(`【${cat}】`)
+      const categoryName = getCategoryName(cat)
+      const subtotal = getCategorySubtotal(cat)
+      const laborFee = getCategoryLaborFee(cat)
+      const categoryTotal = subtotal + laborFee
+      const laborRate = Math.round((laborFeeRates[cat] ?? 0.1) * 100)
+      lines.push(`【${categoryName}】`)
       items.forEach(({ part, quantity }) => {
         lines.push(`  ${part.name} × ${quantity}  ¥${(part.price * quantity).toLocaleString()}`)
       })
-      const subtotal = items.reduce((s, i) => s + i.part.price * i.quantity, 0)
-      lines.push(`  小计: ¥${subtotal.toLocaleString()}`)
+      lines.push(`  ─────────────────────────`)
+      lines.push(`  配件小计: ¥${subtotal.toLocaleString()}`)
+      lines.push(`  施工费(${laborRate}%): ¥${laborFee.toLocaleString()}`)
+      lines.push(`  分类合计: ¥${categoryTotal.toLocaleString()}`)
       lines.push('')
     })
 
     lines.push('───────────────────────────────────')
-    lines.push(`  总计: ¥${totalPrice.toLocaleString()}`)
+    lines.push(`  配件总价: ¥${totalPrice.toLocaleString()}`)
+    lines.push(`  施工费估算: ¥${totalLaborFee.toLocaleString()}`)
+    lines.push(`  预估总计: ¥${grandTotal.toLocaleString()}`)
     lines.push('═══════════════════════════════════')
+    lines.push('')
+    lines.push('* 施工费为估算值，实际费用以门店报价为准')
 
     const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -83,7 +102,7 @@ export default function SelectionList() {
               选配清单
             </h1>
             <p className="text-moto-steel text-sm mt-1">
-              已选 {selectedParts.length} 件配件 · 合计 ¥{totalPrice.toLocaleString()}
+              已选 {selectedParts.length} 件配件 · 配件合计 ¥{totalPrice.toLocaleString()} · 含施工费总计 ¥{grandTotal.toLocaleString()}
               {(hasConflicts || hasWarnings) && (
                 <span className={`ml-2 ${hasConflicts ? 'text-red-400' : 'text-yellow-500'}`}>
                   · {hasConflicts ? `${compatibilityResult!.conflicts.length} 项冲突` : `${compatibilityResult!.warnings.length} 项提醒`}
@@ -166,12 +185,22 @@ export default function SelectionList() {
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedByCategory).map(([categoryId, items]) => {
-              const subtotal = items.reduce((s, i) => s + i.part.price * i.quantity, 0)
+              const subtotal = getCategorySubtotal(categoryId)
+              const laborFee = getCategoryLaborFee(categoryId)
+              const categoryTotal = subtotal + laborFee
+              const categoryName = getCategoryName(categoryId)
+              const laborRate = laborFeeRates[categoryId] ?? 0.1
               return (
                 <div key={categoryId} className="bg-carbon-800 rounded-xl border border-carbon-500/20 overflow-hidden">
                   <div className="px-6 py-4 border-b border-carbon-500/20 flex items-center justify-between">
-                    <h3 className="font-orbitron text-moto-silver text-sm">{categoryId}</h3>
-                    <span className="text-moto-orange font-orbitron text-sm">¥{subtotal.toLocaleString()}</span>
+                    <div>
+                      <h3 className="font-orbitron text-moto-silver text-sm">{categoryName}</h3>
+                      <p className="text-moto-steel text-xs mt-0.5">{items.length} 项配件</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-moto-orange font-orbitron text-sm">¥{categoryTotal.toLocaleString()}</p>
+                      <p className="text-moto-steel text-xs">含施工费</p>
+                    </div>
                   </div>
                   <div className="divide-y divide-carbon-500/10">
                     {items.map(({ part, quantity }) => {
@@ -273,6 +302,20 @@ export default function SelectionList() {
                       )
                     })}
                   </div>
+                  <div className="px-6 py-3 bg-carbon-700/30 border-t border-carbon-500/20 space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-moto-steel">配件小计</span>
+                      <span className="text-moto-silver font-orbitron">¥{subtotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-moto-steel">施工费估算 <span className="text-xs">({Math.round(laborRate * 100)}%)</span></span>
+                      <span className="text-blue-400 font-orbitron">¥{laborFee.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1.5 border-t border-carbon-500/20">
+                      <span className="text-moto-silver text-sm font-medium">分类合计</span>
+                      <span className="text-moto-orange font-orbitron font-bold">¥{categoryTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
                 </div>
               )
             })}
@@ -284,16 +327,16 @@ export default function SelectionList() {
                   ? 'border-yellow-500/30 bg-yellow-500/5'
                   : 'border-carbon-500/20'
             }`}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className={`text-sm ${
-                    hasConflicts ? 'text-red-400' : hasWarnings ? 'text-yellow-500' : 'text-moto-steel'
+                  <p className={`text-sm font-medium ${
+                    hasConflicts ? 'text-red-400' : hasWarnings ? 'text-yellow-500' : 'text-moto-silver'
                   }`}>
                     {hasConflicts
                       ? '存在兼容冲突，请处理后再下单'
                       : hasWarnings
                         ? '存在搭配提醒，建议咨询技术人员'
-                        : '选配总计'}
+                        : '费用汇总'}
                   </p>
                   <p className="text-moto-steel text-xs mt-1">
                     共 {selectedParts.reduce((s, i) => s + i.quantity, 0)} 件配件
@@ -305,12 +348,23 @@ export default function SelectionList() {
                       </span>
                     )}
                   </p>
+                  <div className="mt-3 space-y-1 text-xs">
+                    <div className="flex items-center gap-3">
+                      <span className="text-moto-steel w-20">配件总价</span>
+                      <span className="text-moto-silver font-orbitron">¥{totalPrice.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-moto-steel w-20">施工费估算</span>
+                      <span className="text-blue-400 font-orbitron">¥{totalLaborFee.toLocaleString()}</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="text-right">
+                  <p className="text-moto-steel text-xs mb-1">预估总计</p>
                   <p className={`font-orbitron text-3xl font-bold ${
                     hasConflicts ? 'text-red-400' : hasWarnings ? 'text-yellow-500' : 'text-moto-orange'
                   }`}>
-                    ¥{totalPrice.toLocaleString()}
+                    ¥{grandTotal.toLocaleString()}
                   </p>
                 </div>
               </div>
