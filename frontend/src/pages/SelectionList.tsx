@@ -3,9 +3,10 @@ import SelectionPanel from '@/components/SelectionPanel'
 import ConflictAlert from '@/components/ConflictAlert'
 import VersionHistoryPanel from '@/components/VersionHistoryPanel'
 import VersionDiffModal from '@/components/VersionDiffModal'
-import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle, ArrowLeftRight, History, Clock } from 'lucide-react'
+import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle, ArrowLeftRight, History, Clock, Share2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import ShareModal from '@/components/ShareModal'
 
 export default function SelectionList() {
   const {
@@ -33,14 +34,18 @@ export default function SelectionList() {
     versions,
     setCompareVersionA,
     setCompareVersionB,
+    fetchShares,
+    shares,
   } = useStore()
   const navigate = useNavigate()
   const [showVersionPanel, setShowVersionPanel] = useState(false)
   const [showVersionDiff, setShowVersionDiff] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
 
   useEffect(() => {
     if (currentSelection) {
       fetchVersions()
+      fetchShares()
     }
   }, [currentSelection?.id])
 
@@ -158,6 +163,18 @@ export default function SelectionList() {
             </button>
             {selectedParts.length > 0 && (
               <>
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-moto-orange/10 text-moto-orange border border-moto-orange/30 rounded-lg text-sm hover:bg-moto-orange/20 transition-colors"
+                >
+                  <Share2 size={14} />
+                  分享
+                  {shares.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-moto-orange/20 rounded-full">
+                      {shares.length}
+                    </span>
+                  )}
+                </button>
                 <button
                   onClick={() => {
                     if (currentSelection) {
@@ -423,6 +440,10 @@ export default function SelectionList() {
           setCompareVersionA(null)
           setCompareVersionB(null)
         }}
+      />
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
       />
     </div>
   )

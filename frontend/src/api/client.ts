@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, Share, CreateShareRequest, UpdateShareRequest } from '@/types'
 
 const BASE = ''
 
@@ -87,4 +87,25 @@ export const api = {
     fetchJSON<{ versionA: SelectionVersion; versionB: SelectionVersion }>(
       `/api/selections/${selectionId}/versions/compare?versionA=${versionA}&versionB=${versionB}`
     ),
+
+  createShare: (selectionId: string, data: CreateShareRequest) =>
+    fetchJSON<Share>(`/api/selections/${selectionId}/share`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getShares: (selectionId: string) =>
+    fetchJSON<Share[]>(`/api/selections/${selectionId}/shares`),
+
+  getShare: (shareId: string) =>
+    fetchJSON<Share>(`/api/shares/${shareId}`),
+
+  updateShare: (shareId: string, data: UpdateShareRequest) =>
+    fetchJSON<Share>(`/api/shares/${shareId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteShare: (shareId: string) =>
+    fetchJSON<Share>(`/api/shares/${shareId}`, { method: 'DELETE' }),
 }

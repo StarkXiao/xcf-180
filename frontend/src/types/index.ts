@@ -127,3 +127,35 @@ export interface ReplacementSuggestion {
   pros: string[]
   cons: string[]
 }
+
+export interface ShareAccessLog {
+  accessedAt: string
+  ip?: string
+  userAgent?: string
+}
+
+export interface Share {
+  id: string
+  selectionId: string
+  name: string
+  items: SelectionItem[]
+  note?: string
+  createdAt: string
+  expiresAt?: string
+  isActive: boolean
+  accessCount: number
+  lastAccessedAt?: string
+  accessLogs: ShareAccessLog[]
+}
+
+export interface CreateShareRequest {
+  note?: string
+  expiresInDays?: number
+  expiresAt?: string
+}
+
+export interface UpdateShareRequest {
+  note?: string
+  expiresAt?: string
+  isActive?: boolean
+}

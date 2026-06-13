@@ -13,6 +13,8 @@ import type {
   DiffType,
   ReplacementSuggestion,
   SortOption,
+  Share,
+  CreateShareRequest,
 } from '@/types'
 import { api } from '@/api/client'
 
@@ -92,6 +94,14 @@ interface AppState {
   setCompareVersionA: (id: string | null) => void
   setCompareVersionB: (id: string | null) => void
   compareVersions: () => ComparisonResult | null
+
+  shares: Share[]
+  sharesLoading: boolean
+  fetchShares: () => Promise<void>
+  createShare: (data: CreateShareRequest) => Promise<Share | undefined>
+  updateShare: (shareId: string, data: { note?: string; expiresAt?: string; isActive?: boolean }) => Promise<Share | undefined>
+  deleteShare: (shareId: string) => Promise<void>
+  getShareById: (shareId: string) => Share | undefined
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -121,6 +131,9 @@ export const useStore = create<AppState>((set, get) => ({
   versionsLoading: false,
   compareVersionIdA: null,
   compareVersionIdB: null,
+
+  shares: [],
+  sharesLoading: false,
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -929,5 +942,59 @@ export const useStore = create<AppState>((set, get) => ({
       modifiedCount,
       unchangedCount,
     }
+  },
+
+  fetchShares: async () => {
+    const { currentSelection } = get()
+    if (!currentSelection) return
+    set({ sharesLoading: true })
+    try {
+      const shares = await api.getShares(currentSelection.id)
+      set({ shares, sharesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch shares:', e)
+      set({ sharesLoading: false })
+    }
+  },
+
+  createShare: async (data) => {
+    const { currentSelection } = get()
+    if (!currentSelection) return
+    try {
+      const share = await api.createShare(currentSelection.id, data)
+      set((state) => ({
+        shares: [share, ...state.shares],
+      }))
+      return share
+    } catch (e) {
+      console.error('Failed to create share:', e)
+    }
+  },
+
+  updateShare: async (shareId, data) => {
+    try {
+      const share = await api.updateShare(shareId, data)
+      set((state) => ({
+        shares: state.shares.map((s) => (s.id === shareId ? share : s)),
+      }))
+      return share
+    } catch (e) {
+      console.error('Failed to update share:', e)
+    }
+  },
+
+  deleteShare: async (shareId) => {
+    try {
+      await api.deleteShare(shareId)
+      set((state) => ({
+        shares: state.shares.filter((s) => s.id !== shareId),
+      }))
+    } catch (e) {
+      console.error('Failed to delete share:', e)
+    }
+  },
+
+  getShareById: (shareId) => {
+    return get().shares.find((s) => s.id === shareId)
   },
 }))
