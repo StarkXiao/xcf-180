@@ -1,0 +1,210 @@
+{
+  "categories": [
+    { "id": "exhaust", "name": "排气系统", "nameEn": "Exhaust System" },
+    { "id": "wheels", "name": "轮毂轮胎", "nameEn": "Wheels & Tires" },
+    { "id": "handlebar", "name": "把手控制", "nameEn": "Handlebar & Controls" },
+    { "id": "lighting", "name": "灯组照明", "nameEn": "Lighting" },
+    { "id": "bodykit", "name": "车身套件", "nameEn": "Body Kit" },
+    { "id": "brake", "name": "制动系统", "nameEn": "Brake System" }
+  ],
+  "parts": [
+    {
+      "id": "exhaust-001",
+      "name": "钛合金全段排气",
+      "categoryId": "exhaust",
+      "price": 12800,
+      "image": "/images/parts/exhaust-001.png",
+      "description": "轻量化钛合金材质，全段排气系统，提升动力输出与声浪表现",
+      "specs": { "material": "钛合金", "weight": "3.2kg", "type": "全段" },
+      "compatible": ["XCF-180", "XCF-180R"],
+      "position": { "x": 30, "y": 55, "width": 45, "height": 15 }
+    },
+    {
+      "id": "exhaust-002",
+      "name": "碳纤维尾段排气",
+      "categoryId": "exhaust",
+      "price": 6800,
+      "image": "/images/parts/exhaust-002.png",
+      "description": "碳纤维外壳尾段排气，外观运动感十足，声浪低沉浑厚",
+      "specs": { "material": "碳纤维", "weight": "2.1kg", "type": "尾段" },
+      "compatible": ["XCF-180", "XCF-180S"],
+      "position": { "x": 35, "y": 58, "width": 40, "height": 12 }
+    },
+    {
+      "id": "exhaust-003",
+      "name": "不锈钢中段排气",
+      "categoryId": "exhaust",
+      "price": 4200,
+      "image": "/images/parts/exhaust-003.png",
+      "description": "不锈钢材质中段排气，耐腐蚀性能优秀，性价比之选",
+      "specs": { "material": "不锈钢", "weight": "4.5kg", "type": "中段" },
+      "compatible": ["XCF-180"],
+      "position": { "x": 32, "y": 56, "width": 38, "height": 10 }
+    },
+    {
+      "id": "wheels-001",
+      "name": "锻造铝合金前轮毂",
+      "categoryId": "wheels",
+      "price": 8500,
+      "image": "/images/parts/wheels-001.png",
+      "description": "锻造铝合金轮毂，强度高重量轻，提升操控精准度",
+      "specs": { "material": "锻造铝合金", "size": "17寸", "weight": "2.8kg" },
+      "compatible": ["XCF-180", "XCF-180R"],
+      "position": { "x": 18, "y": 72, "width": 15, "height": 18 }
+    },
+    {
+      "id": "wheels-002",
+      "name": "高性能运动轮胎",
+      "categoryId": "wheels",
+      "price": 3200,
+      "image": "/images/parts/wheels-002.png",
+      "description": "高性能运动轮胎，抓地力强，湿地表现优异",
+      "specs": { "size": "120/70-17", "compound": "软质复合", "type": "运动型" },
+      "compatible": ["XCF-180", "XCF-180R", "XCF-180S"],
+      "position": { "x": 17, "y": 75, "width": 13, "height": 15 }
+    },
+    {
+      "id": "wheels-003",
+      "name": "碳纤维轮毂盖",
+      "categoryId": "wheels",
+      "price": 1800,
+      "image": "/images/parts/wheels-003.png",
+      "description": "碳纤维材质轮毂盖，减轻簧下质量，提升加速响应",
+      "specs": { "material": "碳纤维", "weight": "0.3kg", "diameter": "17寸" },
+      "compatible": ["XCF-180", "XCF-180R"],
+      "position": { "x": 18, "y": 73, "width": 12, "height": 12 }
+    },
+    {
+      "id": "handlebar-001",
+      "name": "可调节分离式把手",
+      "categoryId": "handlebar",
+      "price": 5600,
+      "image": "/images/parts/handlebar-001.png",
+      "description": "多角度可调节分离式把手，适配不同骑行姿态",
+      "specs": { "material": "铝合金", "adjustable": "多角度", "width": "720mm" },
+      "compatible": ["XCF-180", "XCF-180R"],
+      "position": { "x": 12, "y": 18, "width": 25, "height": 8 }
+    },
+    {
+      "id": "handlebar-002",
+      "name": "快拆油门把手",
+      "categoryId": "handlebar",
+      "price": 2400,
+      "image": "/images/parts/handlebar-002.png",
+      "description": "快拆设计油门把手，响应迅速，安装便捷",
+      "specs": { "material": "铝合金+橡胶", "type": "快拆式", "diameter": "22mm" },
+      "compatible": ["XCF-180", "XCF-180S"],
+      "position": { "x": 8, "y": 16, "width": 10, "height": 8 }
+    },
+    {
+      "id": "handlebar-003",
+      "name": "竞技离合拉杆",
+      "categoryId": "handlebar",
+      "price": 1600,
+      "image": "/images/parts/handlebar-003.png",
+      "description": "竞技级离合拉杆，可调节间距，手感清晰",
+      "specs": { "material": "铝合金", "adjustable": "4段", "foldable": true },
+      "compatible": ["XCF-180", "XCF-180R", "XCF-180S"],
+      "position": { "x": 70, "y": 16, "width": 10, "height": 8 }
+    },
+    {
+      "id": "lighting-001",
+      "name": "LED透镜大灯总成",
+      "categoryId": "lighting",
+      "price": 7200,
+      "image": "/images/parts/lighting-001.png",
+      "description": "高亮LED透镜大灯，照射距离远，光型均匀",
+      "specs": { "type": "LED透镜", "power": "55W", "colorTemp": "6000K" },
+      "compatible": ["XCF-180", "XCF-180R"],
+      "position": { "x": 20, "y": 5, "width": 20, "height": 12 }
+    },
+    {
+      "id": "lighting-002",
+      "name": "流水转向灯",
+      "categoryId": "lighting",
+      "price": 2800,
+      "image": "/images/parts/lighting-002.png",
+      "description": "LED流水式转向灯，动态视觉效果出众",
+      "specs": { "type": "LED流水", "color": "琥珀色", "voltage": "12V" },
+      "compatible": ["XCF-180", "XCF-180R", "XCF-180S"],
+      "position": { "x": 10, "y": 20, "width": 8, "height": 5 }
+    },
+    {
+      "id": "lighting-003",
+      "name": "熏黑尾灯总成",
+      "categoryId": "lighting",
+      "price": 3500,
+      "image": "/images/parts/lighting-003.png",
+      "description": "熏黑风格LED尾灯，集成刹车灯与位置灯功能",
+      "specs": { "type": "LED", "style": "熏黑", "function": "刹车+位置灯" },
+      "compatible": ["XCF-180", "XCF-180S"],
+      "position": { "x": 65, "y": 60, "width": 12, "height": 10 }
+    },
+    {
+      "id": "bodykit-001",
+      "name": "全包围碳纤维整流罩",
+      "categoryId": "bodykit",
+      "price": 15600,
+      "image": "/images/parts/bodykit-001.png",
+      "description": "全包围碳纤维整流罩套件，极致轻量化与空气动力学优化",
+      "specs": { "material": "碳纤维", "pieces": 7, "weightSave": "2.5kg" },
+      "compatible": ["XCF-180", "XCF-180R"],
+      "position": { "x": 15, "y": 25, "width": 55, "height": 35 }
+    },
+    {
+      "id": "bodykit-002",
+      "name": "赛道风挡风玻璃",
+      "categoryId": "bodykit",
+      "price": 3800,
+      "image": "/images/parts/bodykit-002.png",
+      "description": "赛道级挡风玻璃，有效降低风阻，高速骑行更稳定",
+      "specs": { "material": "PC", "height": "280mm", "color": "透明/烟灰" },
+      "compatible": ["XCF-180", "XCF-180R", "XCF-180S"],
+      "position": { "x": 22, "y": 8, "width": 15, "height": 15 }
+    },
+    {
+      "id": "bodykit-003",
+      "name": "油箱保护贴",
+      "categoryId": "bodykit",
+      "price": 980,
+      "image": "/images/parts/bodykit-003.png",
+      "description": "碳纤维纹理油箱保护贴，防刮耐磨，提升外观质感",
+      "specs": { "material": "PU+碳纤维纹理", "thickness": "0.5mm", "type": "贴膜式" },
+      "compatible": ["XCF-180"],
+      "position": { "x": 30, "y": 30, "width": 20, "height": 12 }
+    },
+    {
+      "id": "brake-001",
+      "name": "辐射式对向四活塞卡钳",
+      "categoryId": "brake",
+      "price": 9800,
+      "image": "/images/parts/brake-001.png",
+      "description": "辐射式对向四活塞卡钳，制动力强劲，手感线性",
+      "specs": { "pistons": 4, "type": "辐射式", "discSize": "320mm" },
+      "compatible": ["XCF-180", "XCF-180R"],
+      "position": { "x": 15, "y": 68, "width": 12, "height": 10 }
+    },
+    {
+      "id": "brake-002",
+      "name": "浮动式刹车盘",
+      "categoryId": "brake",
+      "price": 4500,
+      "image": "/images/parts/brake-002.png",
+      "description": "浮动式刹车盘，散热性能优秀，抗热衰减能力强",
+      "specs": { "type": "浮动式", "diameter": "320mm", "material": "不锈钢+铝合金" },
+      "compatible": ["XCF-180", "XCF-180R", "XCF-180S"],
+      "position": { "x": 16, "y": 70, "width": 10, "height": 10 }
+    },
+    {
+      "id": "brake-003",
+      "name": "钢喉刹车油管",
+      "categoryId": "brake",
+      "price": 2200,
+      "image": "/images/parts/brake-003.png",
+      "description": "不锈钢编织刹车油管，提升刹车手感与响应速度",
+      "specs": { "material": "不锈钢编织", "length": "前/后套装", "color": "透明" },
+      "compatible": ["XCF-180", "XCF-180R", "XCF-180S"],
+      "position": { "x": 14, "y": 65, "width": 8, "height": 15 }
+    }
+  ]
+}
