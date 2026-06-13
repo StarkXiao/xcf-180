@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle } from 'lucide-react'
+import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle, Sparkles, RefreshCw, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import type { Part, CompatibilityCheckResult } from '@/types'
+import type { Part, CompatibilityCheckResult, PartRecommendation } from '@/types'
 import ConflictAlert from '@/components/ConflictAlert'
 
 interface Props {
@@ -15,11 +15,16 @@ export default function PartDetail({ part, onClose }: Props) {
     addPartToSelection,
     removePartFromSelection,
     checkPartAgainstSelection,
+    getPartRecommendations,
+    getCategoryName,
   } = useStore()
   const isSelected = currentSelection?.items.some((i) => i.partId === part.id) ?? false
   const [partCompat, setPartCompat] = useState<CompatibilityCheckResult | null>(null)
   const [checking, setChecking] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+
+  const recommendations = getPartRecommendations(part.id)
+  const { alternatives, pairings } = recommendations
 
   useEffect(() => {
     let cancelled = false
@@ -55,6 +60,13 @@ export default function PartDetail({ part, onClose }: Props) {
   const confirmAdd = () => {
     setShowConfirm(false)
     addPartToSelection(part.id)
+  }
+
+  const handleReplaceAlternative = async (altPartId: string) => {
+    if (isSelected) {
+      await removePartFromSelection(part.id)
+    }
+    await addPartToSelection(altPartId)
   }
 
   return (
@@ -157,6 +169,53 @@ export default function PartDetail({ part, onClose }: Props) {
               </div>
             )}
 
+            {pairings.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={14} className="text-moto-orange" />
+                  <span className="text-moto-silver text-sm font-orbitron">搭配建议</span>
+                  <span className="text-[10px] text-moto-steel font-orbitron">
+                    基于当前分类与兼容车型智能推荐
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {pairings.slice(0, 4).map((rec) => (
+                    <RecommendationCard
+                      key={rec.part.id}
+                      recommendation={rec}
+                      isSelected={currentSelection?.items.some((i) => i.partId === rec.part.id) ?? false}
+                      categoryName={getCategoryName(rec.part.categoryId)}
+                      onAdd={() => addPartToSelection(rec.part.id)}
+                      onRemove={() => removePartFromSelection(rec.part.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {alternatives.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <RefreshCw size={14} className="text-moto-orange" />
+                  <span className="text-moto-silver text-sm font-orbitron">替代配件</span>
+                  <span className="text-[10px] text-moto-steel font-orbitron">
+                    同分类其他可选方案
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {alternatives.slice(0, 3).map((rec) => (
+                    <AlternativeRow
+                      key={rec.part.id}
+                      recommendation={rec}
+                      isSelected={currentSelection?.items.some((i) => i.partId === rec.part.id) ?? false}
+                      onAdd={() => handleReplaceAlternative(rec.part.id)}
+                      onRemove={() => removePartFromSelection(rec.part.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="mt-auto pt-6 space-y-3">
               {showConfirm && (
                 <div className={`rounded-xl border p-4 space-y-3 ${
@@ -212,6 +271,139 @@ export default function PartDetail({ part, onClose }: Props) {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function RecommendationCard({
+  recommendation,
+  isSelected,
+  categoryName,
+  onAdd,
+  onRemove,
+}: {
+  recommendation: PartRecommendation
+  isSelected: boolean
+  categoryName: string
+  onAdd: () => void
+  onRemove: () => void
+}) {
+  const { part, reason, compatibilityStatus } = recommendation
+
+  const statusColor = {
+    compatible: 'text-green-400 bg-green-500/10 border-green-500/30',
+    warning: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30',
+    conflict: 'text-red-400 bg-red-500/10 border-red-500/30',
+    unknown: 'text-moto-steel bg-carbon-700 border-carbon-500/30',
+  }[compatibilityStatus]
+
+  const statusIcon = {
+    compatible: <Check size={10} />,
+    warning: <AlertTriangle size={10} />,
+    conflict: <XCircle size={10} />,
+    unknown: null,
+  }[compatibilityStatus]
+
+  return (
+    <div className={`rounded-lg border p-2 transition-all hover:bg-carbon-700/30 ${
+      isSelected
+        ? 'border-moto-orange/50 bg-moto-orange/5'
+        : 'border-carbon-500/20 bg-carbon-800/50'
+    }`}>
+      <div className="flex gap-2">
+        <img
+          src={part.image}
+          alt={part.name}
+          className="w-12 h-12 rounded object-cover bg-carbon-600 shrink-0"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+${part.categoryId}+part+icon+minimal&image_size=square`
+          }}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-moto-silver text-xs font-medium truncate">{part.name}</p>
+          <p className="text-[10px] text-moto-steel truncate">{categoryName}</p>
+          <p className="font-orbitron text-[10px] text-moto-orange mt-0.5">
+            ¥{part.price.toLocaleString()}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-2">
+        <span className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border font-orbitron ${statusColor}`}>
+          {statusIcon}
+          {compatibilityStatus === 'compatible' ? '兼容' : compatibilityStatus === 'warning' ? '注意' : compatibilityStatus === 'conflict' ? '冲突' : ''}
+        </span>
+        <button
+          onClick={isSelected ? onRemove : onAdd}
+          className={`flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-orbitron transition-colors ${
+            isSelected
+              ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+              : compatibilityStatus === 'conflict'
+                ? 'bg-carbon-700 text-moto-steel hover:bg-carbon-600'
+                : 'bg-moto-orange/10 text-moto-orange border border-moto-orange/30 hover:bg-moto-orange/20'
+          }`}
+        >
+          {isSelected ? <><Check size={10} /> 已选</> : <><Plus size={10} /> 添加</>}
+        </button>
+      </div>
+      <p className="text-[9px] text-moto-steel mt-1.5 truncate">
+        <span className="text-moto-orange/70">·</span> {reason}
+      </p>
+    </div>
+  )
+}
+
+function AlternativeRow({
+  recommendation,
+  isSelected,
+  onAdd,
+  onRemove,
+}: {
+  recommendation: PartRecommendation
+  isSelected: boolean
+  onAdd: () => void
+  onRemove: () => void
+}) {
+  const { part, reason, compatibilityStatus } = recommendation
+
+  return (
+    <div className={`flex items-center gap-3 rounded-lg p-2 transition-colors ${
+      isSelected
+        ? 'bg-moto-orange/5 border border-moto-orange/30'
+        : 'bg-carbon-800/50 border border-transparent hover:bg-carbon-700/50'
+    }`}>
+      <img
+        src={part.image}
+        alt={part.name}
+        className="w-10 h-10 rounded object-cover bg-carbon-600 shrink-0"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+part+icon+minimal&image_size=square`
+        }}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="text-moto-silver text-xs font-medium truncate">{part.name}</p>
+          {compatibilityStatus === 'conflict' && <XCircle size={10} className="text-red-400 shrink-0" />}
+          {compatibilityStatus === 'warning' && <AlertTriangle size={10} className="text-yellow-500 shrink-0" />}
+        </div>
+        <p className="text-[10px] text-moto-steel truncate">{reason}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="font-orbitron text-xs text-moto-orange">
+          ¥{part.price.toLocaleString()}
+        </span>
+        <button
+          onClick={isSelected ? onRemove : onAdd}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-orbitron transition-colors ${
+            isSelected
+              ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+              : compatibilityStatus === 'conflict'
+                ? 'bg-carbon-700 text-moto-steel hover:bg-carbon-600'
+                : 'bg-moto-orange/10 text-moto-orange border border-moto-orange/30 hover:bg-moto-orange/20'
+          }`}
+        >
+          {isSelected ? <><Check size={10} /> 已选</> : <><ChevronRight size={10} /> 替换</>}
+        </button>
       </div>
     </div>
   )

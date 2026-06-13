@@ -15,6 +15,8 @@ import type {
   SortOption,
   Share,
   CreateShareRequest,
+  PartRecommendations,
+  PartRecommendation,
 } from '@/types'
 import { api } from '@/api/client'
 
@@ -102,6 +104,7 @@ interface AppState {
   updateShare: (shareId: string, data: { note?: string; expiresAt?: string; isActive?: boolean }) => Promise<Share | undefined>
   deleteShare: (shareId: string) => Promise<void>
   getShareById: (shareId: string) => Share | undefined
+  getPartRecommendations: (partId: string) => PartRecommendations
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -996,5 +999,77 @@ export const useStore = create<AppState>((set, get) => ({
 
   getShareById: (shareId) => {
     return get().shares.find((s) => s.id === shareId)
+  },
+
+  getPartRecommendations: (partId) => {
+    const { allParts, currentSelection, categories, partConflictMap } = get()
+    const currentPart = allParts.find((p) => p.id === partId)
+    if (!currentPart) {
+      return { alternatives: [], pairings: [] }
+    }
+
+    const selectedPartIds = currentSelection?.items.map((i) => i.partId) ?? []
+    const selectedCategoryIds = new Set(
+      selectedPartIds
+        .map((id) => allParts.find((p) => p.id === id)?.categoryId)
+        .filter(Boolean) as string[]
+    )
+
+    const calcMatchScore = (part: Part): number => {
+      let score = 0
+      const commonModels = currentPart.compatible.filter((m) => part.compatible.includes(m))
+      score += commonModels.length * 20
+      if (part.brand === currentPart.brand) score += 15
+      if (!part.conflictsWith.includes(currentPart.id) && !currentPart.conflictsWith.includes(part.id)) {
+        score += 25
+      } else {
+        score -= 50
+      }
+      const isInSelection = selectedPartIds.includes(part.id)
+      if (isInSelection) score += 10
+      return score
+    }
+
+    const getCompatStatus = (part: Part): PartRecommendation['compatibilityStatus'] => {
+      const conflictInfo = partConflictMap[part.id]
+      if (conflictInfo?.hasError) return 'conflict'
+      if (conflictInfo?.hasWarning) return 'warning'
+      if (part.conflictsWith.includes(currentPart.id) || currentPart.conflictsWith.includes(part.id)) {
+        return 'conflict'
+      }
+      return 'compatible'
+    }
+
+    const alternatives: PartRecommendation[] = allParts
+      .filter((p) => p.categoryId === currentPart.categoryId && p.id !== currentPart.id)
+      .map((part) => {
+        const score = calcMatchScore(part)
+        const status = getCompatStatus(part)
+        let reason = '同分类替代配件'
+        const commonModels = currentPart.compatible.filter((m) => part.compatible.includes(m))
+        if (part.brand === currentPart.brand) reason = '同品牌推荐'
+        if (commonModels.length >= 2) reason = '兼容车型高度匹配'
+        return { part, reason, matchScore: score, compatibilityStatus: status }
+      })
+      .sort((a, b) => b.matchScore - a.matchScore)
+
+    const pairings: PartRecommendation[] = allParts
+      .filter((p) => p.categoryId !== currentPart.categoryId)
+      .filter((p) => !currentPart.conflictsWith.includes(p.id) && !p.conflictsWith.includes(currentPart.id))
+      .map((part) => {
+        const score = calcMatchScore(part)
+        const status = getCompatStatus(part)
+        let reason = '经典搭配组合'
+        const catName = categories.find((c) => c.id === part.categoryId)?.name || part.categoryId
+        if (part.brand === currentPart.brand) reason = `同品牌${catName}搭配`
+        const commonModels = currentPart.compatible.filter((m) => part.compatible.includes(m))
+        if (commonModels.length >= 2) reason = `${catName}完美兼容`
+        if (selectedCategoryIds.has(part.categoryId)) reason = `补充${catName}方案`
+        return { part, reason, matchScore: score, compatibilityStatus: status }
+      })
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 6)
+
+    return { alternatives, pairings }
   },
 }))

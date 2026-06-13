@@ -154,6 +154,18 @@ export interface CreateShareRequest {
   expiresAt?: string
 }
 
+export interface PartRecommendation {
+  part: Part
+  reason: string
+  matchScore: number
+  compatibilityStatus: 'compatible' | 'warning' | 'conflict' | 'unknown'
+}
+
+export interface PartRecommendations {
+  alternatives: PartRecommendation[]
+  pairings: PartRecommendation[]
+}
+
 export interface UpdateShareRequest {
   note?: string
   expiresAt?: string
