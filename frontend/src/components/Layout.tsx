@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle } from 'lucide-react'
+import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 
 const navItems = [
   { path: '/', label: '配件浏览', icon: Wrench },
   { path: '/preview', label: '机车预览', icon: Bike },
   { path: '/list', label: '选配清单', icon: ClipboardList },
+  { path: '/compare', label: '方案对比', icon: ArrowLeftRight },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {

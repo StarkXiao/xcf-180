@@ -54,3 +54,50 @@ export interface Selection {
   createdAt: string
   updatedAt: string
 }
+
+export type DiffType = 'added' | 'removed' | 'modified' | 'unchanged'
+
+export interface PartDiffItem {
+  partId: string
+  part: Part | null
+  diffType: DiffType
+  quantityA: number
+  quantityB: number
+  priceA: number
+  priceB: number
+  priceDiff: number
+}
+
+export interface CategoryDiff {
+  categoryId: string
+  categoryName: string
+  items: PartDiffItem[]
+  subtotalA: number
+  subtotalB: number
+  subtotalDiff: number
+}
+
+export interface ComparisonResult {
+  selectionA: Selection | null
+  selectionB: Selection | null
+  totalA: number
+  totalB: number
+  totalDiff: number
+  totalDiffPercent: number
+  categories: CategoryDiff[]
+  addedCount: number
+  removedCount: number
+  modifiedCount: number
+  unchangedCount: number
+}
+
+export interface ReplacementSuggestion {
+  categoryId: string
+  categoryName: string
+  partA: Part | null
+  partB: Part | null
+  suggestion: string
+  priceDiff: number
+  pros: string[]
+  cons: string[]
+}

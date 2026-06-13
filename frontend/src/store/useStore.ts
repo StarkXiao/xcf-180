@@ -1,5 +1,17 @@
 import { create } from 'zustand'
-import type { Category, Part, Selection, SelectionItem, CompatibilityCheckResult, CompatibilityConflict } from '@/types'
+import type {
+  Category,
+  Part,
+  Selection,
+  SelectionItem,
+  CompatibilityCheckResult,
+  CompatibilityConflict,
+  ComparisonResult,
+  CategoryDiff,
+  PartDiffItem,
+  DiffType,
+  ReplacementSuggestion,
+} from '@/types'
 import { api } from '@/api/client'
 
 interface AppState {
@@ -36,6 +48,13 @@ interface AppState {
   checkPartAgainstSelection: (partId: string) => Promise<CompatibilityCheckResult | null>
   getConflictsForPart: (partId: string) => CompatibilityConflict[]
   getWarningsForPart: (partId: string) => CompatibilityConflict[]
+
+  compareSelectionIdA: string | null
+  compareSelectionIdB: string | null
+  setCompareSelectionA: (id: string | null) => void
+  setCompareSelectionB: (id: string | null) => void
+  compareSelections: () => ComparisonResult | null
+  getReplacementSuggestions: () => ReplacementSuggestion[]
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -51,6 +70,9 @@ export const useStore = create<AppState>((set, get) => ({
   compatibilityResult: null,
   compatibilityLoading: false,
   partConflictMap: {},
+
+  compareSelectionIdA: null,
+  compareSelectionIdB: null,
 
   setActiveCategory: (cat) => {
     set({ activeCategory: cat })
@@ -289,5 +311,236 @@ export const useStore = create<AppState>((set, get) => ({
     return compatibilityResult.warnings.filter(
       (w) => w.partId === partId || w.conflictPartId === partId
     )
+  },
+
+  setCompareSelectionA: (id) => set({ compareSelectionIdA: id }),
+  setCompareSelectionB: (id) => set({ compareSelectionIdB: id }),
+
+  compareSelections: () => {
+    const { selections, allParts, categories, compareSelectionIdA, compareSelectionIdB } = get()
+    if (!compareSelectionIdA || !compareSelectionIdB) return null
+
+    const selectionA = selections.find((s) => s.id === compareSelectionIdA) || null
+    const selectionB = selections.find((s) => s.id === compareSelectionIdB) || null
+
+    const getSelectionTotal = (sel: Selection | null) => {
+      if (!sel) return 0
+      return sel.items.reduce((total, item) => {
+        const part = allParts.find((p) => p.id === item.partId)
+        return total + (part ? part.price * item.quantity : 0)
+      }, 0)
+    }
+
+    const totalA = getSelectionTotal(selectionA)
+    const totalB = getSelectionTotal(selectionB)
+    const totalDiff = totalB - totalA
+    const totalDiffPercent = totalA > 0 ? (totalDiff / totalA) * 100 : 0
+
+    const getItemMap = (sel: Selection | null) => {
+      const map = new Map<string, number>()
+      if (sel) {
+        sel.items.forEach((item) => map.set(item.partId, item.quantity))
+      }
+      return map
+    }
+
+    const mapA = getItemMap(selectionA)
+    const mapB = getItemMap(selectionB)
+
+    const allPartIds = new Set([...mapA.keys(), ...mapB.keys()])
+
+    const partDiffs: PartDiffItem[] = []
+    allPartIds.forEach((partId) => {
+      const part = allParts.find((p) => p.id === partId) || null
+      const quantityA = mapA.get(partId) || 0
+      const quantityB = mapB.get(partId) || 0
+      const priceA = part ? part.price * quantityA : 0
+      const priceB = part ? part.price * quantityB : 0
+      const priceDiff = priceB - priceA
+
+      let diffType: DiffType
+      if (quantityA === 0 && quantityB > 0) {
+        diffType = 'added'
+      } else if (quantityA > 0 && quantityB === 0) {
+        diffType = 'removed'
+      } else if (quantityA !== quantityB) {
+        diffType = 'modified'
+      } else {
+        diffType = 'unchanged'
+      }
+
+      partDiffs.push({
+        partId,
+        part,
+        diffType,
+        quantityA,
+        quantityB,
+        priceA,
+        priceB,
+        priceDiff,
+      })
+    })
+
+    const categoryMap = new Map<string, CategoryDiff>()
+    categories.forEach((cat) => {
+      categoryMap.set(cat.id, {
+        categoryId: cat.id,
+        categoryName: cat.name,
+        items: [],
+        subtotalA: 0,
+        subtotalB: 0,
+        subtotalDiff: 0,
+      })
+    })
+
+    partDiffs.forEach((diff) => {
+      const catId = diff.part?.categoryId || 'other'
+      if (!categoryMap.has(catId)) {
+        categoryMap.set(catId, {
+          categoryId: catId,
+          categoryName: catId,
+          items: [],
+          subtotalA: 0,
+          subtotalB: 0,
+          subtotalDiff: 0,
+        })
+      }
+      const catDiff = categoryMap.get(catId)!
+      catDiff.items.push(diff)
+      catDiff.subtotalA += diff.priceA
+      catDiff.subtotalB += diff.priceB
+      catDiff.subtotalDiff += diff.priceDiff
+    })
+
+    const categoriesResult = Array.from(categoryMap.values()).filter(
+      (c) => c.items.length > 0
+    )
+
+    let addedCount = 0
+    let removedCount = 0
+    let modifiedCount = 0
+    let unchangedCount = 0
+
+    partDiffs.forEach((diff) => {
+      switch (diff.diffType) {
+        case 'added':
+          addedCount++
+          break
+        case 'removed':
+          removedCount++
+          break
+        case 'modified':
+          modifiedCount++
+          break
+        case 'unchanged':
+          unchangedCount++
+          break
+      }
+    })
+
+    return {
+      selectionA,
+      selectionB,
+      totalA,
+      totalB,
+      totalDiff,
+      totalDiffPercent,
+      categories: categoriesResult,
+      addedCount,
+      removedCount,
+      modifiedCount,
+      unchangedCount,
+    }
+  },
+
+  getReplacementSuggestions: () => {
+    const { allParts, compareSelectionIdA, compareSelectionIdB, selections, categories } = get()
+    if (!compareSelectionIdA || !compareSelectionIdB) return []
+
+    const selectionA = selections.find((s) => s.id === compareSelectionIdA)
+    const selectionB = selections.find((s) => s.id === compareSelectionIdB)
+    if (!selectionA || !selectionB) return []
+
+    const suggestions: ReplacementSuggestion[] = []
+    const categoryPartsMap = new Map<string, Part[]>()
+
+    allParts.forEach((part) => {
+      if (!categoryPartsMap.has(part.categoryId)) {
+        categoryPartsMap.set(part.categoryId, [])
+      }
+      categoryPartsMap.get(part.categoryId)!.push(part)
+    })
+
+    const getCategoryName = (catId: string) => {
+      return categories.find((c) => c.id === catId)?.name || catId
+    }
+
+    const catAList = selectionA.items.map((i) => i.partId)
+    const catBList = selectionB.items.map((i) => i.partId)
+
+    const allCategories = new Set<string>()
+    catAList.forEach((id) => {
+      const part = allParts.find((p) => p.id === id)
+      if (part) allCategories.add(part.categoryId)
+    })
+    catBList.forEach((id) => {
+      const part = allParts.find((p) => p.id === id)
+      if (part) allCategories.add(part.categoryId)
+    })
+
+    allCategories.forEach((catId) => {
+      const partsInCat = categoryPartsMap.get(catId) || []
+      const partsA = partsInCat.filter((p) => catAList.includes(p.id))
+      const partsB = partsInCat.filter((p) => catBList.includes(p.id))
+
+      if (partsA.length > 0 && partsB.length > 0) {
+        partsA.forEach((partA) => {
+          partsB.forEach((partB) => {
+            if (partA.id !== partB.id) {
+              const priceDiff = partB.price - partA.price
+              const pros: string[] = []
+              const cons: string[] = []
+              let suggestion = ''
+
+              if (priceDiff > 0) {
+                suggestion = `升级到 ${partB.name}，获得更好的性能表现`
+                pros.push('性能提升')
+                pros.push('品质更好')
+                cons.push(`价格增加 ¥${priceDiff.toLocaleString()}`)
+              } else if (priceDiff < 0) {
+                suggestion = `降级到 ${partB.name}，节省预算`
+                pros.push(`节省 ¥${Math.abs(priceDiff).toLocaleString()}`)
+                pros.push('性价比更高')
+                cons.push('性能可能有所下降')
+              }
+
+              const specKeysA = Object.keys(partA.specs)
+              const specKeysB = Object.keys(partB.specs)
+              const commonSpecs = specKeysA.filter((k) => specKeysB.includes(k))
+              commonSpecs.slice(0, 2).forEach((key) => {
+                const valA = partA.specs[key]
+                const valB = partB.specs[key]
+                if (valA !== valB) {
+                  pros.push(`${key}: ${valA} → ${valB}`)
+                }
+              })
+
+              suggestions.push({
+                categoryId: catId,
+                categoryName: getCategoryName(catId),
+                partA,
+                partB,
+                suggestion,
+                priceDiff,
+                pros,
+                cons,
+              })
+            }
+          })
+        })
+      }
+    })
+
+    return suggestions.sort((a, b) => Math.abs(b.priceDiff) - Math.abs(a.priceDiff))
   },
 }))

@@ -1,8 +1,8 @@
 import { useStore } from '@/store/useStore'
 import SelectionPanel from '@/components/SelectionPanel'
 import ConflictAlert from '@/components/ConflictAlert'
-import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle, ArrowLeftRight } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 
 export default function SelectionList() {
   const {
@@ -17,7 +17,11 @@ export default function SelectionList() {
     partConflictMap,
     getConflictsForPart,
     getWarningsForPart,
+    setCompareSelectionA,
+    setCompareSelectionB,
+    selections,
   } = useStore()
+  const navigate = useNavigate()
   const totalPrice = getTotalPrice()
   const selectedItems = currentSelection?.items ?? []
   const hasConflicts = compatibilityResult?.conflicts && compatibilityResult.conflicts.length > 0
@@ -97,6 +101,22 @@ export default function SelectionList() {
             </Link>
             {selectedParts.length > 0 && (
               <>
+                <button
+                  onClick={() => {
+                    if (currentSelection) {
+                      setCompareSelectionA(currentSelection.id)
+                      const other = selections.find((s) => s.id !== currentSelection.id)
+                      if (other) {
+                        setCompareSelectionB(other.id)
+                      }
+                      navigate('/compare')
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-moto-orange/10 text-moto-orange border border-moto-orange/30 rounded-lg text-sm hover:bg-moto-orange/20 transition-colors"
+                >
+                  <ArrowLeftRight size={14} />
+                  方案对比
+                </button>
                 <button
                   onClick={clearSelection}
                   className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg text-sm hover:bg-red-500/20 transition-colors"
