@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useStore } from '@/store/useStore'
 import CategoryNav from '@/components/CategoryNav'
 import PartCard from '@/components/PartCard'
@@ -12,28 +12,16 @@ import { Link } from 'react-router-dom'
 
 export default function Home() {
   const {
-    parts,
     categories,
-    searchQuery,
     loading,
     activeCategory,
     compatibilityResult,
     compatibilityLoading,
+    getFilteredParts,
   } = useStore()
   const [detailPart, setDetailPart] = useState<Part | null>(null)
 
-  const filteredParts = useMemo(() => {
-    let result = parts
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q)
-      )
-    }
-    return result
-  }, [parts, searchQuery])
+  const filteredParts = getFilteredParts()
 
   const activeCategoryName = categories.find((c) => c.id === activeCategory)?.name ?? '全部配件'
 

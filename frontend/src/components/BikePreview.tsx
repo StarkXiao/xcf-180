@@ -6,7 +6,7 @@ import type { Part } from '@/types'
 export default function BikePreview() {
   const {
     currentSelection,
-    parts,
+    allParts,
     setActiveCategory,
     partConflictMap,
     compatibilityResult,
@@ -15,7 +15,7 @@ export default function BikePreview() {
 
   const selectedItems = currentSelection?.items ?? []
   const selectedParts = selectedItems
-    .map((item) => parts.find((p) => p.id === item.partId))
+    .map((item) => allParts.find((p) => p.id === item.partId))
     .filter(Boolean) as Part[]
 
   const uniqueCategories = [...new Set(selectedParts.map((p) => p.categoryId))]

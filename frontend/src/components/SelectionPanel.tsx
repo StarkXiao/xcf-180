@@ -7,7 +7,7 @@ export default function SelectionPanel() {
   const [isOpen, setIsOpen] = useState(false)
   const {
     currentSelection,
-    parts,
+    allParts,
     removePartFromSelection,
     setQuantity,
     getTotalPrice,
@@ -84,7 +84,7 @@ export default function SelectionPanel() {
               <p className="text-moto-steel text-sm text-center py-8">暂无配件，请浏览添加</p>
             )}
             {currentSelection?.items.map((item) => {
-              const part = parts.find((p) => p.id === item.partId)
+              const part = allParts.find((p) => p.id === item.partId)
               if (!part) return null
               const conflictStatus = partConflictMap[part.id]
               const hasError = conflictStatus?.hasError

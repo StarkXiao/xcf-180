@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 export default function Preview() {
   const {
     currentSelection,
-    parts,
+    allParts,
     addPartToSelection,
     removePartFromSelection,
     categories,
@@ -20,7 +20,7 @@ export default function Preview() {
 
   const selectedItems = currentSelection?.items ?? []
   const selectedParts = selectedItems
-    .map((item) => ({ part: parts.find((p) => p.id === item.partId), quantity: item.quantity }))
+    .map((item) => ({ part: allParts.find((p) => p.id === item.partId), quantity: item.quantity }))
     .filter((item): item is { part: NonNullable<typeof item.part>; quantity: number } => item.part !== null)
 
   const hasConflicts = compatibilityResult?.conflicts && compatibilityResult.conflicts.length > 0
@@ -28,7 +28,7 @@ export default function Preview() {
 
   const availablePartsByCategory = categories.map((cat) => ({
     category: cat,
-    parts: parts.filter((p) => p.categoryId === cat.id),
+    parts: allParts.filter((p) => p.categoryId === cat.id),
   }))
 
   return (

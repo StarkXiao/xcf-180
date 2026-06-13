@@ -5,6 +5,7 @@ import { api } from '@/api/client'
 interface AppState {
   categories: Category[]
   parts: Part[]
+  allParts: Part[]
   selections: Selection[]
   activeCategory: string
   currentSelection: Selection | null
@@ -18,7 +19,7 @@ interface AppState {
   setActiveCategory: (cat: string) => void
   setSearchQuery: (q: string) => void
   fetchCategories: () => Promise<void>
-  fetchParts: (category?: string) => Promise<void>
+  fetchParts: () => Promise<void>
   fetchSelections: () => Promise<void>
   createSelection: (name: string) => Promise<Selection | undefined>
   addPartToSelection: (partId: string) => Promise<void>
@@ -28,6 +29,7 @@ interface AppState {
   togglePartSelection: (partId: string) => void
   getPartById: (id: string) => Part | undefined
   getSelectedParts: () => Part[]
+  getFilteredParts: () => Part[]
   getTotalPrice: () => number
   initDefaultSelection: () => Promise<void>
   checkCurrentSelectionCompatibility: () => Promise<void>
@@ -39,6 +41,7 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   categories: [],
   parts: [],
+  allParts: [],
   selections: [],
   activeCategory: 'all',
   currentSelection: null,
@@ -51,7 +54,11 @@ export const useStore = create<AppState>((set, get) => ({
 
   setActiveCategory: (cat) => {
     set({ activeCategory: cat })
-    get().fetchParts(cat === 'all' ? undefined : cat)
+    const { allParts } = get()
+    const filtered = cat === 'all'
+      ? allParts
+      : allParts.filter((p) => p.categoryId === cat)
+    set({ parts: filtered })
   },
 
   setSearchQuery: (q) => set({ searchQuery: q }),
@@ -65,11 +72,15 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  fetchParts: async (category) => {
+  fetchParts: async () => {
     set({ loading: true })
     try {
-      const parts = await api.getParts(category)
-      set({ parts, loading: false })
+      const allParts = await api.getParts()
+      const { activeCategory } = get()
+      const filtered = activeCategory === 'all'
+        ? allParts
+        : allParts.filter((p) => p.categoryId === activeCategory)
+      set({ allParts, parts: filtered, loading: false })
     } catch (e) {
       console.error('Failed to fetch parts:', e)
       set({ loading: false })
@@ -183,19 +194,30 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   getPartById: (id) => {
-    return get().parts.find((p) => p.id === id)
+    return get().allParts.find((p) => p.id === id)
   },
 
   getSelectedParts: () => {
-    const { parts, selectedPartIds } = get()
-    return parts.filter((p) => selectedPartIds.includes(p.id))
+    const { allParts, selectedPartIds } = get()
+    return allParts.filter((p) => selectedPartIds.includes(p.id))
+  },
+
+  getFilteredParts: () => {
+    const { parts, searchQuery } = get()
+    if (!searchQuery) return parts
+    const q = searchQuery.toLowerCase()
+    return parts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
+    )
   },
 
   getTotalPrice: () => {
-    const { currentSelection, parts } = get()
+    const { currentSelection, allParts } = get()
     if (!currentSelection) return 0
     return currentSelection.items.reduce((total, item) => {
-      const part = parts.find((p) => p.id === item.partId)
+      const part = allParts.find((p) => p.id === item.partId)
       return total + (part ? part.price * item.quantity : 0)
     }, 0)
   },

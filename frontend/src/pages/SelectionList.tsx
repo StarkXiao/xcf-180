@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 export default function SelectionList() {
   const {
     currentSelection,
-    parts,
+    allParts,
     removePartFromSelection,
     setQuantity,
     clearSelection,
@@ -25,10 +25,10 @@ export default function SelectionList() {
 
   const selectedParts = selectedItems
     .map((item) => {
-      const part = parts.find((p) => p.id === item.partId)
+      const part = allParts.find((p) => p.id === item.partId)
       return part ? { part, quantity: item.quantity } : null
     })
-    .filter(Boolean) as { part: NonNullable<ReturnType<typeof parts.find>>; quantity: number }[]
+    .filter(Boolean) as { part: NonNullable<ReturnType<typeof allParts.find>>; quantity: number }[]
 
   const groupedByCategory = selectedParts.reduce<Record<string, typeof selectedParts>>((acc, item) => {
     const cat = item.part.categoryId
