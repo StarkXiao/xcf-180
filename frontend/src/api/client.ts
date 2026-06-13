@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, CompatibilityCheckResult } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult } from '@/types'
 
 const BASE = ''
 
@@ -60,4 +60,31 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ partIds: selectedPartIds }),
     }),
+
+  getVersions: (selectionId: string) =>
+    fetchJSON<SelectionVersion[]>(`/api/selections/${selectionId}/versions`),
+
+  createVersion: (selectionId: string, description?: string) =>
+    fetchJSON<SelectionVersion>(`/api/selections/${selectionId}/versions`, {
+      method: 'POST',
+      body: JSON.stringify({ description }),
+    }),
+
+  getVersion: (selectionId: string, versionId: string) =>
+    fetchJSON<SelectionVersion>(`/api/selections/${selectionId}/versions/${versionId}`),
+
+  rollbackVersion: (selectionId: string, versionId: string) =>
+    fetchJSON<Selection>(`/api/selections/${selectionId}/versions/${versionId}/rollback`, {
+      method: 'POST',
+    }),
+
+  deleteVersion: (selectionId: string, versionId: string) =>
+    fetchJSON<SelectionVersion>(`/api/selections/${selectionId}/versions/${versionId}`, {
+      method: 'DELETE',
+    }),
+
+  compareVersions: (selectionId: string, versionA: string, versionB: string) =>
+    fetchJSON<{ versionA: SelectionVersion; versionB: SelectionVersion }>(
+      `/api/selections/${selectionId}/versions/compare?versionA=${versionA}&versionB=${versionB}`
+    ),
 }

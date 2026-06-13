@@ -52,6 +52,17 @@ body {
   to { opacity: 1; }
 }
 
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @keyframes pulseGlow {
   0%, 100% { box-shadow: 0 0 5px rgba(255, 107, 53, 0.3); }
   50% { box-shadow: 0 0 20px rgba(255, 107, 53, 0.6); }
@@ -68,6 +79,10 @@ body {
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s ease-out;
 }
 
 .animate-pulse-glow {

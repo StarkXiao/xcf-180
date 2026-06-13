@@ -1,8 +1,11 @@
 import { useStore } from '@/store/useStore'
 import SelectionPanel from '@/components/SelectionPanel'
 import ConflictAlert from '@/components/ConflictAlert'
-import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle, ArrowLeftRight } from 'lucide-react'
+import VersionHistoryPanel from '@/components/VersionHistoryPanel'
+import VersionDiffModal from '@/components/VersionDiffModal'
+import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle, ArrowLeftRight, History, Clock } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 
 export default function SelectionList() {
   const {
@@ -26,8 +29,25 @@ export default function SelectionList() {
     setCompareSelectionA,
     setCompareSelectionB,
     selections,
+    fetchVersions,
+    versions,
+    setCompareVersionA,
+    setCompareVersionB,
   } = useStore()
   const navigate = useNavigate()
+  const [showVersionPanel, setShowVersionPanel] = useState(false)
+  const [showVersionDiff, setShowVersionDiff] = useState(false)
+
+  useEffect(() => {
+    if (currentSelection) {
+      fetchVersions()
+    }
+  }, [currentSelection?.id])
+
+  const handleCompareVersions = () => {
+    setShowVersionPanel(false)
+    setShowVersionDiff(true)
+  }
   const totalPrice = getTotalPrice()
   const totalLaborFee = getTotalLaborFee()
   const grandTotal = getGrandTotal()
@@ -109,6 +129,17 @@ export default function SelectionList() {
                 </span>
               )}
             </p>
+            {currentSelection?.updatedAt && (
+              <p className="text-moto-steel/60 text-xs mt-1 flex items-center gap-1">
+                <Clock size={10} />
+                最后更新: {new Date(currentSelection.updatedAt).toLocaleString('zh-CN')}
+                {versions.length > 0 && (
+                  <span className="ml-2">
+                    · {versions.length} 个历史版本
+                  </span>
+                )}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <Link
@@ -118,6 +149,13 @@ export default function SelectionList() {
               <ArrowLeft size={14} />
               返回预览
             </Link>
+            <button
+              onClick={() => setShowVersionPanel(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-carbon-700 text-moto-steel rounded-lg text-sm hover:bg-carbon-600 hover:text-moto-silver transition-colors"
+            >
+              <History size={14} />
+              版本历史
+            </button>
             {selectedParts.length > 0 && (
               <>
                 <button
@@ -373,6 +411,19 @@ export default function SelectionList() {
         )}
       </div>
       <SelectionPanel />
+      <VersionHistoryPanel
+        isOpen={showVersionPanel}
+        onClose={() => setShowVersionPanel(false)}
+        onCompare={handleCompareVersions}
+      />
+      <VersionDiffModal
+        isOpen={showVersionDiff}
+        onClose={() => {
+          setShowVersionDiff(false)
+          setCompareVersionA(null)
+          setCompareVersionB(null)
+        }}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import type {
   Part,
   Selection,
   SelectionItem,
+  SelectionVersion,
   CompatibilityCheckResult,
   CompatibilityConflict,
   ComparisonResult,
@@ -78,6 +79,19 @@ interface AppState {
   setCompareSelectionB: (id: string | null) => void
   compareSelections: () => ComparisonResult | null
   getReplacementSuggestions: () => ReplacementSuggestion[]
+
+  versions: SelectionVersion[]
+  versionsLoading: boolean
+  compareVersionIdA: string | null
+  compareVersionIdB: string | null
+
+  fetchVersions: () => Promise<void>
+  createVersionSnapshot: (description?: string) => Promise<void>
+  rollbackToVersion: (versionId: string) => Promise<void>
+  deleteVersion: (versionId: string) => Promise<void>
+  setCompareVersionA: (id: string | null) => void
+  setCompareVersionB: (id: string | null) => void
+  compareVersions: () => ComparisonResult | null
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -102,6 +116,11 @@ export const useStore = create<AppState>((set, get) => ({
 
   compareSelectionIdA: null,
   compareSelectionIdB: null,
+
+  versions: [],
+  versionsLoading: false,
+  compareVersionIdA: null,
+  compareVersionIdB: null,
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -228,6 +247,7 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      await get().fetchVersions()
       setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
       console.error('Failed to add item:', e)
@@ -243,6 +263,7 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      await get().fetchVersions()
       setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
       console.error('Failed to remove item:', e)
@@ -268,6 +289,7 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      await get().fetchVersions()
       setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
       console.error('Failed to update quantity:', e)
@@ -283,6 +305,10 @@ export const useStore = create<AppState>((set, get) => ({
         items: [],
       } as any)
       set({ currentSelection: updated })
+      set((state) => ({
+        selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
+      }))
+      await get().fetchVersions()
       setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
       console.error('Failed to clear selection:', e)
@@ -708,5 +734,200 @@ export const useStore = create<AppState>((set, get) => ({
     })
 
     return suggestions.sort((a, b) => Math.abs(b.priceDiff) - Math.abs(a.priceDiff))
+  },
+
+  fetchVersions: async () => {
+    const { currentSelection } = get()
+    if (!currentSelection) return
+    set({ versionsLoading: true })
+    try {
+      const versions = await api.getVersions(currentSelection.id)
+      set({ versions, versionsLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch versions:', e)
+      set({ versionsLoading: false })
+    }
+  },
+
+  createVersionSnapshot: async (description) => {
+    const { currentSelection } = get()
+    if (!currentSelection) return
+    try {
+      const version = await api.createVersion(currentSelection.id, description)
+      set((state) => ({
+        versions: [version, ...state.versions],
+      }))
+    } catch (e) {
+      console.error('Failed to create version snapshot:', e)
+    }
+  },
+
+  rollbackToVersion: async (versionId) => {
+    const { currentSelection } = get()
+    if (!currentSelection) return
+    try {
+      const updated = await api.rollbackVersion(currentSelection.id, versionId)
+      set({ currentSelection: updated })
+      set((state) => ({
+        selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
+      }))
+      await get().fetchVersions()
+      setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
+    } catch (e) {
+      console.error('Failed to rollback version:', e)
+    }
+  },
+
+  deleteVersion: async (versionId) => {
+    const { currentSelection } = get()
+    if (!currentSelection) return
+    try {
+      await api.deleteVersion(currentSelection.id, versionId)
+      set((state) => ({
+        versions: state.versions.filter((v) => v.id !== versionId),
+      }))
+    } catch (e) {
+      console.error('Failed to delete version:', e)
+    }
+  },
+
+  setCompareVersionA: (id) => set({ compareVersionIdA: id }),
+  setCompareVersionB: (id) => set({ compareVersionIdB: id }),
+
+  compareVersions: () => {
+    const { versions, allParts, categories, compareVersionIdA, compareVersionIdB } = get()
+    if (!compareVersionIdA || !compareVersionIdB) return null
+
+    const versionA = versions.find((v) => v.id === compareVersionIdA) || null
+    const versionB = versions.find((v) => v.id === compareVersionIdB) || null
+
+    const getVersionTotal = (ver: SelectionVersion | null) => {
+      if (!ver) return 0
+      return ver.items.reduce((total, item) => {
+        const part = allParts.find((p) => p.id === item.partId)
+        return total + (part ? part.price * item.quantity : 0)
+      }, 0)
+    }
+
+    const totalA = getVersionTotal(versionA)
+    const totalB = getVersionTotal(versionB)
+    const totalDiff = totalB - totalA
+    const totalDiffPercent = totalA > 0 ? (totalDiff / totalA) * 100 : 0
+
+    const getItemMap = (ver: SelectionVersion | null) => {
+      const map = new Map<string, number>()
+      if (ver) {
+        ver.items.forEach((item) => map.set(item.partId, item.quantity))
+      }
+      return map
+    }
+
+    const mapA = getItemMap(versionA)
+    const mapB = getItemMap(versionB)
+
+    const allPartIds = new Set([...mapA.keys(), ...mapB.keys()])
+
+    const partDiffs: PartDiffItem[] = []
+    allPartIds.forEach((partId) => {
+      const part = allParts.find((p) => p.id === partId) || null
+      const quantityA = mapA.get(partId) || 0
+      const quantityB = mapB.get(partId) || 0
+      const priceA = part ? part.price * quantityA : 0
+      const priceB = part ? part.price * quantityB : 0
+      const priceDiff = priceB - priceA
+
+      let diffType: DiffType
+      if (quantityA === 0 && quantityB > 0) {
+        diffType = 'added'
+      } else if (quantityA > 0 && quantityB === 0) {
+        diffType = 'removed'
+      } else if (quantityA !== quantityB) {
+        diffType = 'modified'
+      } else {
+        diffType = 'unchanged'
+      }
+
+      partDiffs.push({
+        partId,
+        part,
+        diffType,
+        quantityA,
+        quantityB,
+        priceA,
+        priceB,
+        priceDiff,
+      })
+    })
+
+    const categoryMap = new Map<string, CategoryDiff>()
+    categories.forEach((cat) => {
+      categoryMap.set(cat.id, {
+        categoryId: cat.id,
+        categoryName: cat.name,
+        items: [],
+        subtotalA: 0,
+        subtotalB: 0,
+        subtotalDiff: 0,
+      })
+    })
+
+    partDiffs.forEach((diff) => {
+      const catId = diff.part?.categoryId || 'other'
+      if (!categoryMap.has(catId)) {
+        categoryMap.set(catId, {
+          categoryId: catId,
+          categoryName: catId,
+          items: [],
+          subtotalA: 0,
+          subtotalB: 0,
+          subtotalDiff: 0,
+        })
+      }
+      const catDiff = categoryMap.get(catId)!
+      catDiff.items.push(diff)
+      catDiff.subtotalA += diff.priceA
+      catDiff.subtotalB += diff.priceB
+      catDiff.subtotalDiff += diff.priceDiff
+    })
+
+    const categoriesResult = Array.from(categoryMap.values()).filter(
+      (c) => c.items.length > 0
+    )
+
+    let addedCount = 0
+    let removedCount = 0
+    let modifiedCount = 0
+    let unchangedCount = 0
+
+    partDiffs.forEach((diff) => {
+      switch (diff.diffType) {
+        case 'added':
+          addedCount++
+          break
+        case 'removed':
+          removedCount++
+          break
+        case 'modified':
+          modifiedCount++
+          break
+        case 'unchanged':
+          unchangedCount++
+          break
+      }
+    })
+
+    return {
+      selectionA: versionA ? { ...versionA, updatedAt: versionA.createdAt, versions: [] } : null,
+      selectionB: versionB ? { ...versionB, updatedAt: versionB.createdAt, versions: [] } : null,
+      totalA,
+      totalB,
+      totalDiff,
+      totalDiffPercent,
+      categories: categoriesResult,
+      addedCount,
+      removedCount,
+      modifiedCount,
+      unchangedCount,
+    }
   },
 }))

@@ -63,12 +63,22 @@ export interface SelectionItem {
   quantity: number
 }
 
+export interface SelectionVersion {
+  id: string
+  name: string
+  items: SelectionItem[]
+  createdAt: string
+  description?: string
+  versionNumber: number
+}
+
 export interface Selection {
   id: string
   name: string
   items: SelectionItem[]
   createdAt: string
   updatedAt: string
+  versions: SelectionVersion[]
 }
 
 export type DiffType = 'added' | 'removed' | 'modified' | 'unchanged'
