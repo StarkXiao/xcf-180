@@ -3,7 +3,12 @@
     {
       "id": "sel-1781283923455",
       "name": "我的改装方案",
-      "items": [],
+      "items": [
+        {
+          "partId": "exhaust-001",
+          "quantity": 1
+        }
+      ],
       "createdAt": "2026-06-12T17:05:23.455Z"
     },
     {

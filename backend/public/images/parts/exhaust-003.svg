@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  
+  <defs>
+    <linearGradient id="bgGradexhaust-003" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f1a"/>
+    </linearGradient>
+    <linearGradient id="borderGradexhaust-003" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#ff6b35" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="300" fill="url(#bgGradexhaust-003)"/>
+  <rect x="4" y="4" width="392" height="292" rx="8" ry="8" fill="none" stroke="url(#borderGradexhaust-003)" stroke-width="2"/>
+
+  <g transform="translate(0, -10)">
+    <rect x="40" y="140" width="320" height="24" rx="12" ry="12" fill="#b8b8b8" stroke="#888" stroke-width="2"/>
+    <rect x="30" y="128" width="16" height="48" rx="4" ry="4" fill="#999" stroke="#555" stroke-width="2"/>
+              <circle cx="38" cy="140" r="3" fill="#333"/>
+              <circle cx="38" cy="164" r="3" fill="#333"/>
+    <rect x="354" y="128" width="16" height="48" rx="4" ry="4" fill="#999" stroke="#555" stroke-width="2"/>
+              <circle cx="362" cy="140" r="3" fill="#333"/>
+              <circle cx="362" cy="164" r="3" fill="#333"/>
+    <text x="200" y="155" text-anchor="middle" fill="#ff6b35" font-family="Orbitron, Arial, sans-serif" font-size="12" font-weight="normal" style="text-shadow: 0 0 10px #ff6b3544;">STAINLESS</text>
+  </g>
+
+  <rect x="0" y="258" width="400" height="42" fill="#0d0d15" opacity="0.95"/>
+  <line x1="0" y1="258" x2="400" y2="258" stroke="#ff6b35" stroke-width="1" opacity="0.5"/>
+  <text x="20" y="278" fill="#8d99ae" font-family="Arial, sans-serif" font-size="10" opacity="0.7">排气系统</text>
+  <text x="380" y="278" fill="#8d99ae" font-family="Orbitron, Arial, sans-serif" font-size="10" text-anchor="end" opacity="0.7">XCF-180</text>
+  <text x="200" y="283" text-anchor="middle" fill="#e2e2e2" font-family="Orbitron, Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="1">不锈钢中段排气</text>
+  <text x="200" y="296" text-anchor="middle" fill="#ff6b35" font-family="Orbitron, Arial, sans-serif" font-size="8" opacity="0.8">EXHAUST-003</text>
+</svg>

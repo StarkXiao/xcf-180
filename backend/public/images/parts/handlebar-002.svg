@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  
+  <defs>
+    <linearGradient id="bgGradhandlebar-002" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f1a"/>
+    </linearGradient>
+    <linearGradient id="borderGradhandlebar-002" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#ff6b35" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="300" fill="url(#bgGradhandlebar-002)"/>
+  <rect x="4" y="4" width="392" height="292" rx="8" ry="8" fill="none" stroke="url(#borderGradhandlebar-002)" stroke-width="2"/>
+
+  <g transform="translate(0, -10)">
+    <g transform="translate(40, 150) rotate(0)">
+                <rect x="0" y="-6" width="320" height="12" rx="2" ry="2" fill="#555"  stroke="none" stroke-width="2"/>
+              </g>
+    <rect x="280" y="130" width="80" height="40" rx="6" ry="6" fill="#222" stroke="#444" stroke-width="1"/>
+              <line x1="288" y1="136" x2="288" y2="164" stroke="#444" stroke-width="1"/>
+              <line x1="296" y1="136" x2="296" y2="164" stroke="#444" stroke-width="1"/>
+              <line x1="304" y1="136" x2="304" y2="164" stroke="#444" stroke-width="1"/>
+    <rect x="340" y="120" width="24" height="60" rx="3" ry="3" fill="#c0c0c0" stroke="#888" stroke-width="1"/>
+              <circle cx="352" cy="132" r="4" fill="#333"/>
+              <line x1="346" y1="162" x2="358" y2="174" stroke="#333" stroke-width="3"/>
+    <text x="100" y="155" text-anchor="middle" fill="#ff6b35" font-family="Orbitron, Arial, sans-serif" font-size="11" font-weight="normal" style="text-shadow: 0 0 10px #ff6b3544;">QUICK RELEASE</text>
+  </g>
+
+  <rect x="0" y="258" width="400" height="42" fill="#0d0d15" opacity="0.95"/>
+  <line x1="0" y1="258" x2="400" y2="258" stroke="#ff6b35" stroke-width="1" opacity="0.5"/>
+  <text x="20" y="278" fill="#8d99ae" font-family="Arial, sans-serif" font-size="10" opacity="0.7">把手控制</text>
+  <text x="380" y="278" fill="#8d99ae" font-family="Orbitron, Arial, sans-serif" font-size="10" text-anchor="end" opacity="0.7">XCF-180</text>
+  <text x="200" y="283" text-anchor="middle" fill="#e2e2e2" font-family="Orbitron, Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="1">快拆油门把手</text>
+  <text x="200" y="296" text-anchor="middle" fill="#ff6b35" font-family="Orbitron, Arial, sans-serif" font-size="8" opacity="0.8">HANDLEBAR-002</text>
+</svg>

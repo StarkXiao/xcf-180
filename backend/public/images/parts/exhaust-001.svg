@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  
+  <defs>
+    <linearGradient id="bgGradexhaust-001" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f1a"/>
+    </linearGradient>
+    <linearGradient id="borderGradexhaust-001" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#ff6b35" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="300" fill="url(#bgGradexhaust-001)"/>
+  <rect x="4" y="4" width="392" height="292" rx="8" ry="8" fill="none" stroke="url(#borderGradexhaust-001)" stroke-width="2"/>
+
+  <g transform="translate(0, -10)">
+    <rect x="30" y="140" width="280" height="28" rx="14" ry="14" fill="#c0c0c0" stroke="#808080" stroke-width="2"/>
+    <rect x="280" y="120" width="80" height="60" rx="30" ry="30" fill="#e8e8e8" stroke="#a0a0a0" stroke-width="2"/>
+    <circle cx="350" cy="150" r="20" fill="#666" stroke="#444" stroke-width="2"/>
+    <text x="170" y="150" text-anchor="middle" fill="#ff6b35" font-family="Orbitron, Arial, sans-serif" font-size="14" font-weight="normal" style="text-shadow: 0 0 10px #ff6b3544;">TITANIUM</text>
+  </g>
+
+  <rect x="0" y="258" width="400" height="42" fill="#0d0d15" opacity="0.95"/>
+  <line x1="0" y1="258" x2="400" y2="258" stroke="#ff6b35" stroke-width="1" opacity="0.5"/>
+  <text x="20" y="278" fill="#8d99ae" font-family="Arial, sans-serif" font-size="10" opacity="0.7">排气系统</text>
+  <text x="380" y="278" fill="#8d99ae" font-family="Orbitron, Arial, sans-serif" font-size="10" text-anchor="end" opacity="0.7">XCF-180</text>
+  <text x="200" y="283" text-anchor="middle" fill="#e2e2e2" font-family="Orbitron, Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="1">钛合金全段排气</text>
+  <text x="200" y="296" text-anchor="middle" fill="#ff6b35" font-family="Orbitron, Arial, sans-serif" font-size="8" opacity="0.8">EXHAUST-001</text>
+</svg>

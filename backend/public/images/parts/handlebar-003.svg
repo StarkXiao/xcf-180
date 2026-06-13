@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  
+  <defs>
+    <linearGradient id="bgGradhandlebar-003" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f1a"/>
+    </linearGradient>
+    <linearGradient id="borderGradhandlebar-003" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6b35" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#ff6b35" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ff6b35" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="300" fill="url(#bgGradhandlebar-003)"/>
+  <rect x="4" y="4" width="392" height="292" rx="8" ry="8" fill="none" stroke="url(#borderGradhandlebar-003)" stroke-width="2"/>
+
+  <g transform="translate(0, -10)">
+    <g transform="translate(60, 140) rotate(-16.69924423399362)">
+                <rect x="0" y="-8" width="208.806130178211" height="16" rx="8" ry="8" fill="#666" stroke="#444" stroke-width="2"/>
+                <rect x="178.806130178211" y="-5" width="25" height="10" rx="4" ry="4" fill="#444"/>
+              </g>
+    <circle cx="70" cy="145" r="22" fill="#888" stroke="#555" stroke-width="2"/>
+              <circle cx="70" cy="145" r="8.8" fill="#222"/>
+    <rect x="40" y="130" width="25" height="35" rx="4" ry="4" fill="#ff6b35" stroke="#ff8866" stroke-width="1"/>
+              <text x="52.5" y="150.5" text-anchor="middle" fill="#fff" font-family="Arial" font-size="8">4WAY</text>
+    <rect x="255" y="65" width="30" height="30" rx="6" ry="6" fill="#333"/>
+  </g>
+
+  <rect x="0" y="258" width="400" height="42" fill="#0d0d15" opacity="0.95"/>
+  <line x1="0" y1="258" x2="400" y2="258" stroke="#ff6b35" stroke-width="1" opacity="0.5"/>
+  <text x="20" y="278" fill="#8d99ae" font-family="Arial, sans-serif" font-size="10" opacity="0.7">把手控制</text>
+  <text x="380" y="278" fill="#8d99ae" font-family="Orbitron, Arial, sans-serif" font-size="10" text-anchor="end" opacity="0.7">XCF-180</text>
+  <text x="200" y="283" text-anchor="middle" fill="#e2e2e2" font-family="Orbitron, Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="1">竞技离合拉杆</text>
+  <text x="200" y="296" text-anchor="middle" fill="#ff6b35" font-family="Orbitron, Arial, sans-serif" font-size="8" opacity="0.8">HANDLEBAR-003</text>
+</svg>
