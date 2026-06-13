@@ -17,6 +17,7 @@ export interface PartPosition {
 export interface Part {
   id: string
   name: string
+  brand: string
   categoryId: string
   price: number
   image: string
@@ -25,6 +26,21 @@ export interface Part {
   compatible: string[]
   conflictsWith: string[]
   position: PartPosition
+}
+
+export type SortOption =
+  | 'default'
+  | 'price-asc'
+  | 'price-desc'
+  | 'name-asc'
+  | 'name-desc'
+
+export interface FilterState {
+  priceMin: number | null
+  priceMax: number | null
+  brands: string[]
+  compatibleModels: string[]
+  sortBy: SortOption
 }
 
 export interface CompatibilityConflict {

@@ -74,7 +74,12 @@ export default function PartCard({ part, onViewDetail }: Props) {
         <div className="absolute inset-0 bg-gradient-to-t from-carbon-900/80 via-transparent to-transparent" />
       </div>
       <div className="p-4">
-        <h3 className="font-orbitron text-sm text-moto-silver group-hover:text-moto-orange transition-colors truncate">
+        <div className="flex items-center justify-between gap-2">
+          <span className="shrink-0 text-[10px] font-orbitron px-2 py-0.5 rounded bg-carbon-700/70 text-moto-steel border border-carbon-500/30">
+            {part.brand}
+          </span>
+        </div>
+        <h3 className="font-orbitron text-sm text-moto-silver group-hover:text-moto-orange transition-colors truncate mt-2">
           {part.name}
         </h3>
         <p className="text-moto-steel text-xs mt-1 line-clamp-2">{part.description}</p>

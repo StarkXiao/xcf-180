@@ -84,9 +84,14 @@ export default function PartDetail({ part, onClose }: Props) {
           </div>
 
           <div className="lg:w-1/2 p-6 lg:p-8 flex flex-col overflow-y-auto max-h-[50vh] lg:max-h-[90vh]">
-            <div className="flex items-center gap-2 mb-2">
-              <Tag size={14} className="text-moto-orange" />
-              <span className="text-moto-orange text-xs font-orbitron uppercase">{part.categoryId}</span>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="text-[11px] font-orbitron px-2.5 py-1 rounded-md bg-moto-orange/15 border border-moto-orange/30 text-moto-orange">
+                {part.brand}
+              </span>
+              <span className="flex items-center gap-1 text-moto-steel text-xs font-orbitron">
+                <Tag size={12} />
+                {part.categoryId}
+              </span>
             </div>
             <h2 className="font-orbitron text-xl lg:text-2xl text-moto-silver font-bold">{part.name}</h2>
             <p className="text-moto-steel text-sm mt-3 leading-relaxed">{part.description}</p>

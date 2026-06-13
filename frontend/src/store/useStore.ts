@@ -11,6 +11,7 @@ import type {
   PartDiffItem,
   DiffType,
   ReplacementSuggestion,
+  SortOption,
 } from '@/types'
 import { api } from '@/api/client'
 
@@ -28,8 +29,24 @@ interface AppState {
   compatibilityLoading: boolean
   partConflictMap: Record<string, { hasError: boolean; hasWarning: boolean }>
 
+  priceMin: number | null
+  priceMax: number | null
+  selectedBrands: string[]
+  selectedModels: string[]
+  sortBy: SortOption
+
   setActiveCategory: (cat: string) => void
   setSearchQuery: (q: string) => void
+  setPriceMin: (v: number | null) => void
+  setPriceMax: (v: number | null) => void
+  toggleBrand: (brand: string) => void
+  toggleModel: (model: string) => void
+  setSortBy: (v: SortOption) => void
+  clearFilters: () => void
+  getAllBrands: () => string[]
+  getAllCompatibleModels: () => string[]
+  getPriceRange: () => { min: number; max: number }
+
   fetchCategories: () => Promise<void>
   fetchParts: () => Promise<void>
   fetchSelections: () => Promise<void>
@@ -77,6 +94,12 @@ export const useStore = create<AppState>((set, get) => ({
   compatibilityLoading: false,
   partConflictMap: {},
 
+  priceMin: null,
+  priceMax: null,
+  selectedBrands: [],
+  selectedModels: [],
+  sortBy: 'default',
+
   compareSelectionIdA: null,
   compareSelectionIdB: null,
 
@@ -99,6 +122,51 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setSearchQuery: (q) => set({ searchQuery: q }),
+  setPriceMin: (v) => set({ priceMin: v }),
+  setPriceMax: (v) => set({ priceMax: v }),
+  toggleBrand: (brand) =>
+    set((state) => ({
+      selectedBrands: state.selectedBrands.includes(brand)
+        ? state.selectedBrands.filter((b) => b !== brand)
+        : [...state.selectedBrands, brand],
+    })),
+  toggleModel: (model) =>
+    set((state) => ({
+      selectedModels: state.selectedModels.includes(model)
+        ? state.selectedModels.filter((m) => m !== model)
+        : [...state.selectedModels, model],
+    })),
+  setSortBy: (v) => set({ sortBy: v }),
+  clearFilters: () =>
+    set({
+      priceMin: null,
+      priceMax: null,
+      selectedBrands: [],
+      selectedModels: [],
+      sortBy: 'default',
+      searchQuery: '',
+    }),
+  getAllBrands: () => {
+    const { allParts } = get()
+    return Array.from(new Set(allParts.map((p) => p.brand))).sort()
+  },
+  getAllCompatibleModels: () => {
+    const { allParts } = get()
+    const set = new Set<string>()
+    allParts.forEach((p) => p.compatible.forEach((m) => set.add(m)))
+    return Array.from(set).sort()
+  },
+  getPriceRange: () => {
+    const { allParts } = get()
+    if (allParts.length === 0) return { min: 0, max: 0 }
+    let min = Infinity
+    let max = -Infinity
+    allParts.forEach((p) => {
+      if (p.price < min) min = p.price
+      if (p.price > max) max = p.price
+    })
+    return { min, max }
+  },
 
   fetchCategories: async () => {
     try {
@@ -240,14 +308,56 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   getFilteredParts: () => {
-    const { parts, searchQuery } = get()
-    if (!searchQuery) return parts
-    const q = searchQuery.toLowerCase()
-    return parts.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
-    )
+    const {
+      parts,
+      searchQuery,
+      priceMin,
+      priceMax,
+      selectedBrands,
+      selectedModels,
+      sortBy,
+    } = get()
+    let result = [...parts]
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.brand.toLowerCase().includes(q)
+      )
+    }
+    if (priceMin != null) {
+      result = result.filter((p) => p.price >= priceMin)
+    }
+    if (priceMax != null) {
+      result = result.filter((p) => p.price <= priceMax)
+    }
+    if (selectedBrands.length > 0) {
+      result = result.filter((p) => selectedBrands.includes(p.brand))
+    }
+    if (selectedModels.length > 0) {
+      result = result.filter((p) =>
+        p.compatible.some((m) => selectedModels.includes(m))
+      )
+    }
+    switch (sortBy) {
+      case 'price-asc':
+        result.sort((a, b) => a.price - b.price)
+        break
+      case 'price-desc':
+        result.sort((a, b) => b.price - a.price)
+        break
+      case 'name-asc':
+        result.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+        break
+      case 'name-desc':
+        result.sort((a, b) => b.name.localeCompare(a.name, 'zh-CN'))
+        break
+      default:
+        break
+    }
+    return result
   },
 
   getTotalPrice: () => {

@@ -11,6 +11,7 @@
     {
       "id": "exhaust-001",
       "name": "钛合金全段排气",
+      "brand": "Akrapovič",
       "categoryId": "exhaust",
       "price": 12800,
       "image": "/images/parts/exhaust-001.svg",
@@ -23,6 +24,7 @@
     {
       "id": "exhaust-002",
       "name": "碳纤维尾段排气",
+      "brand": "Yoshimura",
       "categoryId": "exhaust",
       "price": 6800,
       "image": "/images/parts/exhaust-002.svg",
@@ -35,6 +37,7 @@
     {
       "id": "exhaust-003",
       "name": "不锈钢中段排气",
+      "brand": "LeoVince",
       "categoryId": "exhaust",
       "price": 4200,
       "image": "/images/parts/exhaust-003.svg",
@@ -47,6 +50,7 @@
     {
       "id": "wheels-001",
       "name": "锻造铝合金前轮毂",
+      "brand": "Marchesini",
       "categoryId": "wheels",
       "price": 8500,
       "image": "/images/parts/wheels-001.svg",
@@ -59,6 +63,7 @@
     {
       "id": "wheels-002",
       "name": "高性能运动轮胎",
+      "brand": "Michelin",
       "categoryId": "wheels",
       "price": 3200,
       "image": "/images/parts/wheels-002.svg",
@@ -71,6 +76,7 @@
     {
       "id": "wheels-003",
       "name": "碳纤维轮毂盖",
+      "brand": "OZ Racing",
       "categoryId": "wheels",
       "price": 1800,
       "image": "/images/parts/wheels-003.svg",
@@ -83,6 +89,7 @@
     {
       "id": "handlebar-001",
       "name": "可调节分离式把手",
+      "brand": "Rizoma",
       "categoryId": "handlebar",
       "price": 5600,
       "image": "/images/parts/handlebar-001.svg",
@@ -95,6 +102,7 @@
     {
       "id": "handlebar-002",
       "name": "快拆油门把手",
+      "brand": "Domino",
       "categoryId": "handlebar",
       "price": 2400,
       "image": "/images/parts/handlebar-002.svg",
@@ -107,6 +115,7 @@
     {
       "id": "handlebar-003",
       "name": "竞技离合拉杆",
+      "brand": "Puig",
       "categoryId": "handlebar",
       "price": 1600,
       "image": "/images/parts/handlebar-003.svg",
@@ -119,6 +128,7 @@
     {
       "id": "lighting-001",
       "name": "LED透镜大灯总成",
+      "brand": "OSRAM",
       "categoryId": "lighting",
       "price": 7200,
       "image": "/images/parts/lighting-001.svg",
@@ -131,6 +141,7 @@
     {
       "id": "lighting-002",
       "name": "流水转向灯",
+      "brand": "Philips",
       "categoryId": "lighting",
       "price": 2800,
       "image": "/images/parts/lighting-002.svg",
@@ -143,6 +154,7 @@
     {
       "id": "lighting-003",
       "name": "熏黑尾灯总成",
+      "brand": "CustomDynamics",
       "categoryId": "lighting",
       "price": 3500,
       "image": "/images/parts/lighting-003.svg",
@@ -155,6 +167,7 @@
     {
       "id": "bodykit-001",
       "name": "全包围碳纤维整流罩",
+      "brand": "Carbonin",
       "categoryId": "bodykit",
       "price": 15600,
       "image": "/images/parts/bodykit-001.svg",
@@ -167,6 +180,7 @@
     {
       "id": "bodykit-002",
       "name": "赛道风挡风玻璃",
+      "brand": "Puig",
       "categoryId": "bodykit",
       "price": 3800,
       "image": "/images/parts/bodykit-002.svg",
@@ -179,6 +193,7 @@
     {
       "id": "bodykit-003",
       "name": "油箱保护贴",
+      "brand": "TechSpec",
       "categoryId": "bodykit",
       "price": 980,
       "image": "/images/parts/bodykit-003.svg",
@@ -191,6 +206,7 @@
     {
       "id": "brake-001",
       "name": "辐射式对向四活塞卡钳",
+      "brand": "Brembo",
       "categoryId": "brake",
       "price": 9800,
       "image": "/images/parts/brake-001.svg",
@@ -203,6 +219,7 @@
     {
       "id": "brake-002",
       "name": "浮动式刹车盘",
+      "brand": "Galfer",
       "categoryId": "brake",
       "price": 4500,
       "image": "/images/parts/brake-002.svg",
@@ -215,6 +232,7 @@
     {
       "id": "brake-003",
       "name": "钢喉刹车油管",
+      "brand": "Goodridge",
       "categoryId": "brake",
       "price": 2200,
       "image": "/images/parts/brake-003.svg",
