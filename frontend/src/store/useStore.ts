@@ -489,6 +489,8 @@ export const useStore = create<AppState>((set, get) => ({
       await get().removePartFromSelection(partId)
       return
     }
+    const existingItem = currentSelection.items.find((i) => i.partId === partId)
+    const oldQuantity = existingItem?.quantity || 0
     const updatedItems = currentSelection.items.map((i) =>
       i.partId === partId ? { ...i, quantity } : i
     )
@@ -501,6 +503,10 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      if (oldQuantity !== quantity) {
+        await get().releaseInventoryForSelection(currentSelection.id, [partId])
+        await get().reserveInventoryForSelection(currentSelection.id, [{ partId, quantity }])
+      }
       await get().fetchVersions()
       setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
@@ -512,6 +518,7 @@ export const useStore = create<AppState>((set, get) => ({
     const { currentSelection } = get()
     if (!currentSelection) return
     try {
+      const allPartIds = currentSelection.items.map((i) => i.partId)
       const updated = await api.updateSelection(currentSelection.id, {
         ...currentSelection,
         items: [],
@@ -520,6 +527,9 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      if (allPartIds.length > 0) {
+        await get().releaseInventoryForSelection(currentSelection.id, allPartIds)
+      }
       await get().fetchVersions()
       setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
