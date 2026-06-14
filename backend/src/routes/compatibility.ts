@@ -8,10 +8,19 @@ const __dirname = path.dirname(__filename);
 
 const router = new Router();
 
-function loadPartsData() {
+interface DataStore {
+  parts: any[];
+  compatibilityRelations: any[];
+}
+
+function loadData(): DataStore {
   const filePath = path.resolve(__dirname, '../../data/parts.json');
   const raw = readFileSync(filePath, 'utf-8');
-  return JSON.parse(raw);
+  const data = JSON.parse(raw);
+  return {
+    parts: data.parts || [],
+    compatibilityRelations: data.compatibilityRelations || [],
+  };
 }
 
 interface ConflictInfo {
@@ -40,7 +49,7 @@ router.post('/api/compatibility/check', (ctx) => {
     return;
   }
 
-  const data = loadPartsData();
+  const data = loadData();
   const partsMap = new Map<string, any>();
   data.parts.forEach((p: any) => partsMap.set(p.id, p));
 
@@ -50,9 +59,16 @@ router.post('/api/compatibility/check', (ctx) => {
 
   for (const partId of partIds) {
     const part = partsMap.get(partId);
-    if (!part || !part.conflictsWith) continue;
+    if (!part) continue;
 
-    for (const conflictId of part.conflictsWith) {
+    const relations = data.compatibilityRelations.filter(
+      (r) =>
+        (r.partIdA === partId || r.partIdB === partId) &&
+        r.type === 'conflict'
+    );
+
+    for (const rel of relations) {
+      const conflictId = rel.partIdA === partId ? rel.partIdB : rel.partIdA;
       if (!partIds.includes(conflictId)) continue;
 
       const pairKey = [partId, conflictId].sort().join('-');
@@ -62,15 +78,13 @@ router.post('/api/compatibility/check', (ctx) => {
       const conflictPart = partsMap.get(conflictId);
       if (!conflictPart) continue;
 
-      const isSameCategory = part.categoryId === conflictPart.categoryId;
-
       const info: ConflictInfo = {
         partId,
         conflictPartId: conflictId,
         partName: part.name,
         conflictPartName: conflictPart.name,
-        severity: isSameCategory ? 'error' : 'warning',
-        message: isSameCategory
+        severity: rel.severity || 'warning',
+        message: rel.severity === 'error'
           ? buildConflictMessage(part.name, conflictPart.name)
           : buildWarningMessage(part.name, conflictPart.name),
       };
@@ -95,7 +109,7 @@ router.post('/api/compatibility/part/:partId/check', (ctx) => {
   const { partIds } = ctx.request.body as { partIds: string[] };
   const selectedIds = Array.isArray(partIds) ? partIds : [];
 
-  const data = loadPartsData();
+  const data = loadData();
   const partsMap = new Map<string, any>();
   data.parts.forEach((p: any) => partsMap.set(p.id, p));
 
@@ -109,23 +123,33 @@ router.post('/api/compatibility/part/:partId/check', (ctx) => {
   const conflicts: ConflictInfo[] = [];
   const warnings: ConflictInfo[] = [];
 
+  const targetRelations = data.compatibilityRelations.filter(
+    (r) =>
+      (r.partIdA === partId || r.partIdB === partId) &&
+      r.type === 'conflict'
+  );
+
   for (const selectedId of selectedIds) {
     if (selectedId === partId) continue;
-    const hasDirect = (targetPart.conflictsWith || []).includes(selectedId);
+    
+    const relation = targetRelations.find(
+      (r) =>
+        (r.partIdA === partId && r.partIdB === selectedId) ||
+        (r.partIdA === selectedId && r.partIdB === partId)
+    );
+    
+    if (!relation) continue;
+    
     const selectedPart = partsMap.get(selectedId);
-    const hasReverse = selectedPart && (selectedPart.conflictsWith || []).includes(partId);
-
-    if (!hasDirect && !hasReverse) continue;
     if (!selectedPart) continue;
 
-    const isSameCategory = targetPart.categoryId === selectedPart.categoryId;
     const info: ConflictInfo = {
       partId: targetPart.id,
       conflictPartId: selectedPart.id,
       partName: targetPart.name,
       conflictPartName: selectedPart.name,
-      severity: isSameCategory ? 'error' : 'warning',
-      message: isSameCategory
+      severity: relation.severity || 'warning',
+      message: relation.severity === 'error'
         ? buildConflictMessage(targetPart.name, selectedPart.name)
         : buildWarningMessage(targetPart.name, selectedPart.name),
     };
@@ -146,7 +170,7 @@ router.post('/api/compatibility/part/:partId/check', (ctx) => {
 
 router.get('/api/compatibility/part/:partId', (ctx) => {
   const { partId } = ctx.params;
-  const data = loadPartsData();
+  const data = loadData();
   const part = data.parts.find((p: any) => p.id === partId);
 
   if (!part) {
@@ -155,8 +179,17 @@ router.get('/api/compatibility/part/:partId', (ctx) => {
     return;
   }
 
-  const conflictParts = (part.conflictsWith || [])
-    .map((id: string) => data.parts.find((p: any) => p.id === id))
+  const relations = data.compatibilityRelations.filter(
+    (r) =>
+      (r.partIdA === partId || r.partIdB === partId) &&
+      r.type === 'conflict'
+  );
+
+  const conflictParts = relations
+    .map((r) => {
+      const conflictId = r.partIdA === partId ? r.partIdB : r.partIdA;
+      return data.parts.find((p: any) => p.id === conflictId);
+    })
     .filter(Boolean);
 
   ctx.body = {

@@ -39,6 +39,7 @@ interface Part {
   description: string;
   specs: Record<string, string | boolean | number>;
   compatible: string[];
+  compatibleModels: string[];
   conflictsWith: string[];
   position: PartPosition;
   sku?: string;
@@ -76,17 +77,59 @@ function loadData(): DataStore {
     updatedAt: c.updatedAt ?? new Date().toISOString(),
     sortOrder: c.sortOrder ?? 0,
   }));
-  data.parts = data.parts.map((p: Part) => ({
-    ...p,
-    sku: p.sku ?? p.id.toUpperCase(),
-    stock: p.stock ?? 100,
-    status: p.status ?? 'active',
-    originalPrice: p.originalPrice ?? Math.round(p.price * 1.2),
-    costPrice: p.costPrice ?? Math.round(p.price * 0.6),
-    createdAt: p.createdAt ?? new Date().toISOString(),
-    updatedAt: p.updatedAt ?? new Date().toISOString(),
-    createdBy: p.createdBy ?? 'system',
-  }));
+  
+  let needsMigration = false;
+  data.parts = data.parts.map((p: Part) => {
+    const hasOldCompatible = p.compatible && !p.compatibleModels;
+    if (hasOldCompatible) needsMigration = true;
+    return {
+      ...p,
+      compatibleModels: p.compatibleModels ?? p.compatible ?? [],
+      compatible: undefined,
+      sku: p.sku ?? p.id.toUpperCase(),
+      stock: p.stock ?? 100,
+      status: p.status ?? 'active',
+      originalPrice: p.originalPrice ?? Math.round(p.price * 1.2),
+      costPrice: p.costPrice ?? Math.round(p.price * 0.6),
+      createdAt: p.createdAt ?? new Date().toISOString(),
+      updatedAt: p.updatedAt ?? new Date().toISOString(),
+      createdBy: p.createdBy ?? 'system',
+      conflictsWith: p.conflictsWith ?? [],
+    };
+  });
+  
+  const hasOldConflicts = data.parts.some((p: Part) => (p.conflictsWith ?? []).length > 0);
+  const hasNoRelations = data.compatibilityRelations.length === 0;
+  
+  if (hasOldConflicts && hasNoRelations) {
+    needsMigration = true;
+    const processed = new Set<string>();
+    data.parts.forEach((p: Part) => {
+      (p.conflictsWith ?? []).forEach((conflictId: string) => {
+        const pairKey = [p.id, conflictId].sort().join('-');
+        if (processed.has(pairKey)) return;
+        processed.add(pairKey);
+        
+        const conflictPart = data.parts.find((x: Part) => x.id === conflictId);
+        const isSameCategory = conflictPart && conflictPart.categoryId === p.categoryId;
+        
+        data.compatibilityRelations.push({
+          id: genId('rel'),
+          partIdA: p.id,
+          partIdB: conflictId,
+          type: 'conflict',
+          severity: isSameCategory ? 'error' : 'warning',
+          remark: '从旧数据迁移',
+          createdAt: new Date().toISOString(),
+        });
+      });
+    });
+  }
+  
+  if (needsMigration) {
+    saveData(data);
+  }
+  
   return data;
 }
 
@@ -160,14 +203,37 @@ router.delete('/api/admin/categories/:id', (ctx) => {
   ctx.body = removed;
 });
 
+function transformPartForFrontend(part: Part) {
+  return {
+    id: part.id,
+    name: part.name,
+    brand: part.brand,
+    categoryId: part.categoryId,
+    price: part.price,
+    originalPrice: part.originalPrice,
+    image: part.image,
+    description: part.description,
+    specs: part.specs,
+    compatibleModels: part.compatibleModels,
+    position: part.position,
+  };
+}
+
 router.get('/api/parts', (ctx) => {
   const data = loadData();
-  const { category, status, keyword, brand } = ctx.query as any;
+  const { category, status, keyword, brand, admin } = ctx.query as any;
   let parts = data.parts;
+  
+  const isAdmin = admin === '1' || admin === 'true';
+  
+  if (!isAdmin) {
+    parts = parts.filter((p) => p.status === 'active');
+  }
+  
   if (category) {
     parts = parts.filter((p) => p.categoryId === category);
   }
-  if (status) {
+  if (status && isAdmin) {
     parts = parts.filter((p) => p.status === status);
   }
   if (brand) {
@@ -182,14 +248,32 @@ router.get('/api/parts', (ctx) => {
         (p.sku && p.sku.toLowerCase().includes(q))
     );
   }
-  ctx.body = parts;
+  
+  if (!isAdmin) {
+    ctx.body = parts.map(transformPartForFrontend);
+  } else {
+    ctx.body = parts;
+  }
 });
 
 router.get('/api/parts/:id', (ctx) => {
   const data = loadData();
+  const { admin } = ctx.query as any;
   const part = data.parts.find((p) => p.id === ctx.params.id);
+  
+  const isAdmin = admin === '1' || admin === 'true';
+  
   if (part) {
-    ctx.body = part;
+    if (!isAdmin && part.status !== 'active') {
+      ctx.status = 404;
+      ctx.body = { error: 'Part not found' };
+      return;
+    }
+    if (!isAdmin) {
+      ctx.body = transformPartForFrontend(part);
+    } else {
+      ctx.body = part;
+    }
   } else {
     ctx.status = 404;
     ctx.body = { error: 'Part not found' };
@@ -212,7 +296,8 @@ router.post('/api/admin/parts', (ctx) => {
     image: body.image || '/images/parts/default.svg',
     description: body.description,
     specs: body.specs || {},
-    compatible: body.compatible || [],
+    compatibleModels: body.compatibleModels || [],
+    compatible: [],
     conflictsWith: body.conflictsWith || [],
     position: body.position || { x: 50, y: 50, width: 20, height: 20 },
     status: body.status || 'draft',
@@ -284,6 +369,9 @@ router.delete('/api/admin/parts/:id', (ctx) => {
   data.parts.forEach((p) => {
     p.conflictsWith = p.conflictsWith.filter((id) => id !== removed.id);
   });
+  data.compatibilityRelations = data.compatibilityRelations.filter(
+    (r) => r.partIdA !== removed.id && r.partIdB !== removed.id
+  );
   saveData(data);
   ctx.body = { success: true, removed };
 });

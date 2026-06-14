@@ -146,7 +146,7 @@ export default function PartDetail({ part, onClose }: Props) {
                 <span className="text-moto-silver text-sm font-orbitron">兼容车型</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {part.compatible.map((model) => (
+                {part.compatibleModels.map((model) => (
                   <span key={model} className="px-3 py-1 bg-carbon-700 rounded-full text-xs text-moto-steel">
                     {model}
                   </span>

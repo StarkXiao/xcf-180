@@ -261,7 +261,7 @@ export const useStore = create<AppState>((set, get) => ({
   getAllCompatibleModels: () => {
     const { allParts } = get()
     const set = new Set<string>()
-    allParts.forEach((p) => p.compatible.forEach((m) => set.add(m)))
+    allParts.forEach((p) => p.compatibleModels.forEach((m) => set.add(m)))
     return Array.from(set).sort()
   },
   getPriceRange: () => {
@@ -453,7 +453,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
     if (selectedModels.length > 0) {
       result = result.filter((p) =>
-        p.compatible.some((m) => selectedModels.includes(m))
+        p.compatibleModels.some((m) => selectedModels.includes(m))
       )
     }
     switch (sortBy) {
@@ -1090,14 +1090,10 @@ export const useStore = create<AppState>((set, get) => ({
 
     const calcMatchScore = (part: Part): number => {
       let score = 0
-      const commonModels = currentPart.compatible.filter((m) => part.compatible.includes(m))
+      const commonModels = currentPart.compatibleModels.filter((m) => part.compatibleModels.includes(m))
       score += commonModels.length * 20
       if (part.brand === currentPart.brand) score += 15
-      if (!part.conflictsWith.includes(currentPart.id) && !currentPart.conflictsWith.includes(part.id)) {
-        score += 25
-      } else {
-        score -= 50
-      }
+      score += 25
       const isInSelection = selectedPartIds.includes(part.id)
       if (isInSelection) score += 10
       return score
@@ -1107,9 +1103,6 @@ export const useStore = create<AppState>((set, get) => ({
       const conflictInfo = partConflictMap[part.id]
       if (conflictInfo?.hasError) return 'conflict'
       if (conflictInfo?.hasWarning) return 'warning'
-      if (part.conflictsWith.includes(currentPart.id) || currentPart.conflictsWith.includes(part.id)) {
-        return 'conflict'
-      }
       return 'compatible'
     }
 
@@ -1119,7 +1112,7 @@ export const useStore = create<AppState>((set, get) => ({
         const score = calcMatchScore(part)
         const status = getCompatStatus(part)
         let reason = '同分类替代配件'
-        const commonModels = currentPart.compatible.filter((m) => part.compatible.includes(m))
+        const commonModels = currentPart.compatibleModels.filter((m) => part.compatibleModels.includes(m))
         if (part.brand === currentPart.brand) reason = '同品牌推荐'
         if (commonModels.length >= 2) reason = '兼容车型高度匹配'
         return { part, reason, matchScore: score, compatibilityStatus: status }
@@ -1128,14 +1121,13 @@ export const useStore = create<AppState>((set, get) => ({
 
     const pairings: PartRecommendation[] = allParts
       .filter((p) => p.categoryId !== currentPart.categoryId)
-      .filter((p) => !currentPart.conflictsWith.includes(p.id) && !p.conflictsWith.includes(currentPart.id))
       .map((part) => {
         const score = calcMatchScore(part)
         const status = getCompatStatus(part)
         let reason = '经典搭配组合'
         const catName = categories.find((c) => c.id === part.categoryId)?.name || part.categoryId
         if (part.brand === currentPart.brand) reason = `同品牌${catName}搭配`
-        const commonModels = currentPart.compatible.filter((m) => part.compatible.includes(m))
+        const commonModels = currentPart.compatibleModels.filter((m) => part.compatibleModels.includes(m))
         if (commonModels.length >= 2) reason = `${catName}完美兼容`
         if (selectedCategoryIds.has(part.categoryId)) reason = `补充${catName}方案`
         return { part, reason, matchScore: score, compatibilityStatus: status }

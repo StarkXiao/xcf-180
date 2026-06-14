@@ -178,6 +178,7 @@ export const api = {
 
   adminGetParts: (params?: { category?: string; status?: PartStatus; keyword?: string; brand?: string }) => {
     const searchParams = new URLSearchParams()
+    searchParams.set('admin', '1')
     if (params?.category) searchParams.set('category', params.category)
     if (params?.status) searchParams.set('status', params.status)
     if (params?.keyword) searchParams.set('keyword', params.keyword)

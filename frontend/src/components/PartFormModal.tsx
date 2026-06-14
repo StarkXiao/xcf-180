@@ -31,7 +31,7 @@ type TabKey =
   | 'price'
   | 'content'
   | 'specs'
-  | 'compatible'
+  | 'compatibleModels'
   | 'conflicts'
   | 'position'
   | 'status'
@@ -47,7 +47,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'price', label: '价格库存', icon: <Tag size={14} /> },
   { key: 'content', label: '图文详情', icon: <Image size={14} /> },
   { key: 'specs', label: '规格参数', icon: <List size={14} /> },
-  { key: 'compatible', label: '兼容车型', icon: <Car size={14} /> },
+  { key: 'compatibleModels', label: '兼容车型', icon: <Car size={14} /> },
   { key: 'conflicts', label: '冲突配件', icon: <AlertTriangle size={14} /> },
   { key: 'position', label: '预览位置', icon: <MapPin size={14} /> },
   { key: 'status', label: '状态设置', icon: <Info size={14} /> },
@@ -89,7 +89,7 @@ export default function PartFormModal({
 
   const [specs, setSpecs] = useState<SpecRow[]>([])
 
-  const [compatible, setCompatible] = useState<string[]>([])
+  const [compatibleModels, setCompatibleModels] = useState<string[]>([])
 
   const [conflictsWith, setConflictsWith] = useState<string[]>([])
   const [conflictSearch, setConflictSearch] = useState('')
@@ -139,7 +139,7 @@ export default function PartFormModal({
               }))
             : []
         )
-        setCompatible(initialData.compatible || [])
+        setCompatibleModels(initialData.compatibleModels || [])
         setConflictsWith(initialData.conflictsWith || [])
         setPosition(initialData.position || DEFAULT_POSITION)
         setStatus(initialData.status || 'draft')
@@ -163,7 +163,7 @@ export default function PartFormModal({
     setImage('')
     setDescription('')
     setSpecs([])
-    setCompatible([])
+    setCompatibleModels([])
     setConflictsWith([])
     setPosition(DEFAULT_POSITION)
     setStatus('draft')
@@ -190,7 +190,7 @@ export default function PartFormModal({
   }
 
   const toggleCompatible = (modelId: string) => {
-    setCompatible((prev) =>
+    setCompatibleModels((prev) =>
       prev.includes(modelId) ? prev.filter((id) => id !== modelId) : [...prev, modelId]
     )
   }
@@ -289,7 +289,7 @@ export default function PartFormModal({
       image: image.trim(),
       description: description.trim(),
       specs: specsRecord,
-      compatible,
+      compatibleModels,
       conflictsWith,
       position,
       status,
@@ -716,14 +716,14 @@ export default function PartFormModal({
             </div>
           )}
 
-          {activeTab === 'compatible' && (
+          {activeTab === 'compatibleModels' && (
             <div className="space-y-4">
               <p className="text-xs text-moto-steel">
                 选择该配件兼容的车型
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {BIKE_MODELS.map((model) => {
-                  const isSelected = compatible.includes(model.id)
+                  const isSelected = compatibleModels.includes(model.id)
                   return (
                     <button
                       key={model.id}
@@ -754,7 +754,7 @@ export default function PartFormModal({
                 })}
               </div>
               <p className="text-xs text-moto-steel">
-                已选择 {compatible.length} 个兼容车型
+                已选择 {compatibleModels.length} 个兼容车型
               </p>
             </div>
           )}

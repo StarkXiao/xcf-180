@@ -24,6 +24,7 @@ export interface PartAdmin extends Part {
   createdBy?: string
   createdAt: string
   updatedAt: string
+  conflictsWith: string[]
 }
 
 export interface CreatePartRequest {
@@ -38,7 +39,7 @@ export interface CreatePartRequest {
   image: string
   description: string
   specs: Record<string, string | boolean | number>
-  compatible: string[]
+  compatibleModels: string[]
   conflictsWith: string[]
   position: PartPosition
   status?: PartStatus
@@ -56,7 +57,7 @@ export interface UpdatePartRequest {
   image?: string
   description?: string
   specs?: Record<string, string | boolean | number>
-  compatible?: string[]
+  compatibleModels?: string[]
   conflictsWith?: string[]
   position?: PartPosition
   status?: PartStatus
@@ -146,8 +147,7 @@ export interface Part {
   image: string
   description: string
   specs: Record<string, string | boolean | number>
-  compatible: string[]
-  conflictsWith: string[]
+  compatibleModels: string[]
   position: PartPosition
 }
 
