@@ -597,3 +597,317 @@ export interface StockReservationResult {
   reservations: InventoryReservation[]
   failedItems: { partId: string; reason: string }[]
 }
+
+export type QuoteStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'approved'
+  | 'rejected'
+  | 'sent_to_customer'
+  | 'customer_confirmed'
+  | 'customer_rejected'
+  | 'expired'
+  | 'converted'
+
+export type ApprovalRole = 'sales' | 'sales_manager' | 'finance' | 'general_manager'
+
+export type ApprovalAction = 'approve' | 'reject' | 'return'
+
+export interface QuoteItem {
+  partId: string
+  partName: string
+  partBrand: string
+  partImage: string
+  categoryId: string
+  categoryName: string
+  originalPrice: number
+  unitPrice: number
+  discountRate: number
+  quantity: number
+  laborFee: number
+  subtotal: number
+}
+
+export interface QuotePlan {
+  id: string
+  name: string
+  description?: string
+  items: QuoteItem[]
+  partsTotal: number
+  laborFeeTotal: number
+  discountTotal: number
+  totalAmount: number
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ApprovalNode {
+  id: string
+  role: ApprovalRole
+  approverName?: string
+  status: 'pending' | 'approved' | 'rejected' | 'returned' | 'skipped'
+  actionAt?: string
+  comment?: string
+}
+
+export interface ApprovalFlow {
+  id: string
+  currentStep: number
+  nodes: ApprovalNode[]
+  history: {
+    nodeId: string
+    role: ApprovalRole
+    approverName?: string
+    action: ApprovalAction
+    comment?: string
+    actedAt: string
+  }[]
+  startedAt?: string
+  completedAt?: string
+}
+
+export interface DiscountRule {
+  id: string
+  name: string
+  description?: string
+  type: 'percentage' | 'fixed' | 'category' | 'brand' | 'volume'
+  value: number
+  minAmount?: number
+  maxAmount?: number
+  categoryId?: string
+  brand?: string
+  minQuantity?: number
+  priority: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DiscountResult {
+  ruleId: string
+  ruleName: string
+  appliedAmount: number
+  description: string
+}
+
+export interface CustomerConfirmation {
+  id: string
+  confirmedBy: string
+  confirmedAt: string
+  contactInfo: string
+  signature?: string
+  ipAddress?: string
+  userAgent?: string
+  note?: string
+  selectedPlanId?: string
+}
+
+export interface QuoteExportRecord {
+  id: string
+  exportedBy: string
+  exportedAt: string
+  format: 'pdf' | 'excel' | 'print'
+  version: number
+}
+
+export interface QuoteVersion {
+  id: string
+  versionNumber: number
+  createdAt: string
+  createdBy: string
+  description?: string
+  plans: QuotePlan[]
+  totalAmount: number
+}
+
+export interface Quote {
+  id: string
+  quoteNo: string
+  customerName: string
+  customerContact: string
+  customerPhone: string
+  customerEmail?: string
+  modelId: string
+  modelName: string
+  packageType: 'basic' | 'sport' | 'street' | null
+  packageName: string
+  plans: QuotePlan[]
+  activePlanId?: string
+  status: QuoteStatus
+  approvalFlow: ApprovalFlow | null
+  customerConfirmation: CustomerConfirmation | null
+  exportRecords: QuoteExportRecord[]
+  versions: QuoteVersion[]
+  currentVersion: number
+  validUntil?: string
+  remark?: string
+  internalNote?: string
+  createdBy: string
+  createdAt: string
+  updatedBy?: string
+  updatedAt: string
+  convertedOrderId?: string
+}
+
+export interface CreateQuoteRequest {
+  selectionId: string
+  customerName: string
+  customerContact: string
+  customerPhone: string
+  customerEmail?: string
+  modelId: string
+  packageType: 'basic' | 'sport' | 'street' | null
+  remark?: string
+  validUntil?: string
+}
+
+export interface UpdateQuoteRequest {
+  customerName?: string
+  customerContact?: string
+  customerPhone?: string
+  customerEmail?: string
+  remark?: string
+  internalNote?: string
+  validUntil?: string
+  activePlanId?: string
+}
+
+export interface CreateQuotePlanRequest {
+  quoteId: string
+  name: string
+  description?: string
+  items: {
+    partId: string
+    unitPrice?: number
+    discountRate?: number
+    quantity: number
+  }[]
+  isDefault?: boolean
+}
+
+export interface UpdateQuotePlanRequest {
+  name?: string
+  description?: string
+  items?: {
+    partId: string
+    unitPrice?: number
+    discountRate?: number
+    quantity: number
+  }[]
+  isDefault?: boolean
+}
+
+export interface SubmitApprovalRequest {
+  submitter: string
+  comment?: string
+}
+
+export interface ProcessApprovalRequest {
+  nodeId: string
+  role: ApprovalRole
+  action: ApprovalAction
+  approverName: string
+  comment?: string
+}
+
+export interface CustomerConfirmRequest {
+  planId?: string
+  confirmedBy: string
+  contactInfo: string
+  signature?: string
+  note?: string
+}
+
+export interface ExportQuoteRequest {
+  format: 'pdf' | 'excel' | 'print'
+  planId?: string
+  exportedBy: string
+}
+
+export interface CreateDiscountRuleRequest {
+  name: string
+  description?: string
+  type: DiscountRule['type']
+  value: number
+  minAmount?: number
+  maxAmount?: number
+  categoryId?: string
+  brand?: string
+  minQuantity?: number
+  priority?: number
+  isActive?: boolean
+}
+
+export interface UpdateDiscountRuleRequest {
+  name?: string
+  description?: string
+  type?: DiscountRule['type']
+  value?: number
+  minAmount?: number
+  maxAmount?: number
+  categoryId?: string
+  brand?: string
+  minQuantity?: number
+  priority?: number
+  isActive?: boolean
+}
+
+export interface CalculateDiscountRequest {
+  items: {
+    partId: string
+    categoryId: string
+    brand: string
+    unitPrice: number
+    quantity: number
+  }[]
+  totalAmount: number
+}
+
+export interface PlanComparisonResult {
+  planA: QuotePlan
+  planB: QuotePlan
+  totalDiff: number
+  totalDiffPercent: number
+  items: {
+    partId: string
+    partName: string
+    quantityA: number
+    quantityB: number
+    priceA: number
+    priceB: number
+    priceDiff: number
+    diffType: 'added' | 'removed' | 'modified' | 'unchanged'
+  }[]
+}
+
+export const APPROVAL_ROLE_LABELS: Record<ApprovalRole, string> = {
+  sales: '销售',
+  sales_manager: '销售经理',
+  finance: '财务',
+  general_manager: '总经理',
+}
+
+export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
+  draft: '草稿',
+  pending_approval: '待审批',
+  approved: '已通过',
+  rejected: '已拒绝',
+  sent_to_customer: '已发客户',
+  customer_confirmed: '客户确认',
+  customer_rejected: '客户拒绝',
+  expired: '已过期',
+  converted: '已转订单',
+}
+
+export const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
+  draft: 'bg-gray-500',
+  pending_approval: 'bg-yellow-500',
+  approved: 'bg-green-500',
+  rejected: 'bg-red-500',
+  sent_to_customer: 'bg-blue-500',
+  customer_confirmed: 'bg-emerald-500',
+  customer_rejected: 'bg-rose-500',
+  expired: 'bg-zinc-500',
+  converted: 'bg-purple-500',
+}

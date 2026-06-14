@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest } from '@/types'
 
 const BASE = ''
 
@@ -422,4 +422,130 @@ export const api = {
     fetchJSON<{ success: boolean }>(`/api/inventory/purchase-orders/${id}`, {
       method: 'DELETE',
     }),
+
+  getQuotes: (params?: { status?: QuoteStatus; customerName?: string; modelId?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.customerName) searchParams.set('customerName', params.customerName)
+    if (params?.modelId) searchParams.set('modelId', params.modelId)
+    const qs = searchParams.toString()
+    return fetchJSON<Quote[]>(`/api/quotes${qs ? `?${qs}` : ''}`)
+  },
+
+  getQuote: (id: string) =>
+    fetchJSON<Quote>(`/api/quotes/${id}`),
+
+  createQuote: (data: CreateQuoteRequest) =>
+    fetchJSON<Quote>('/api/quotes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateQuote: (id: string, data: UpdateQuoteRequest) =>
+    fetchJSON<Quote>(`/api/quotes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteQuote: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/quotes/${id}`, {
+      method: 'DELETE',
+    }),
+
+  createQuotePlan: (quoteId: string, data: CreateQuotePlanRequest) =>
+    fetchJSON<QuotePlan>(`/api/quotes/${quoteId}/plans`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateQuotePlan: (quoteId: string, planId: string, data: UpdateQuotePlanRequest) =>
+    fetchJSON<QuotePlan>(`/api/quotes/${quoteId}/plans/${planId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteQuotePlan: (quoteId: string, planId: string) =>
+    fetchJSON<{ success: boolean }>(`/api/quotes/${quoteId}/plans/${planId}`, {
+      method: 'DELETE',
+    }),
+
+  compareQuotePlans: (quoteId: string, planA: string, planB: string) =>
+    fetchJSON<PlanComparisonResult>(
+      `/api/quotes/${quoteId}/compare?planA=${planA}&planB=${planB}`
+    ),
+
+  submitQuoteApproval: (quoteId: string, data: SubmitApprovalRequest) =>
+    fetchJSON<Quote>(`/api/quotes/${quoteId}/submit-approval`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  processQuoteApproval: (quoteId: string, nodeId: string, data: ProcessApprovalRequest) =>
+    fetchJSON<Quote>(`/api/quotes/${quoteId}/approval/${nodeId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  sendQuoteToCustomer: (quoteId: string) =>
+    fetchJSON<Quote>(`/api/quotes/${quoteId}/send-to-customer`, {
+      method: 'POST',
+    }),
+
+  customerConfirmQuote: (quoteId: string, data: CustomerConfirmRequest) =>
+    fetchJSON<Quote>(`/api/quotes/${quoteId}/customer-confirm`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  customerRejectQuote: (quoteId: string, data: { confirmedBy: string; contactInfo: string; note?: string }) =>
+    fetchJSON<Quote>(`/api/quotes/${quoteId}/customer-reject`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  exportQuote: (quoteId: string, data: ExportQuoteRequest) =>
+    fetchJSON<{ success: boolean; quote: Quote; plan: QuotePlan; exportRecord: any }>(
+      `/api/quotes/${quoteId}/export`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+
+  convertQuoteToOrder: (quoteId: string, orderId?: string) =>
+    fetchJSON<Quote>(`/api/quotes/${quoteId}/convert`, {
+      method: 'POST',
+      body: JSON.stringify({ orderId }),
+    }),
+
+  getDiscountRules: (params?: { isActive?: boolean }) => {
+    const qs = params?.isActive !== undefined ? `?isActive=${params.isActive}` : ''
+    return fetchJSON<DiscountRule[]>(`/api/discount-rules${qs}`)
+  },
+
+  createDiscountRule: (data: CreateDiscountRuleRequest) =>
+    fetchJSON<DiscountRule>('/api/discount-rules', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateDiscountRule: (id: string, data: UpdateDiscountRuleRequest) =>
+    fetchJSON<DiscountRule>(`/api/discount-rules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteDiscountRule: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/discount-rules/${id}`, {
+      method: 'DELETE',
+    }),
+
+  calculateDiscount: (data: CalculateDiscountRequest) =>
+    fetchJSON<{ results: DiscountResult[]; totalDiscount: number; finalAmount: number }>(
+      '/api/discount-rules/calculate',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
 }

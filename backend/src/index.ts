@@ -12,6 +12,7 @@ import { ordersRoutes } from './routes/orders.js';
 import { templatesRoutes } from './routes/templates.js';
 
 import { inventoryRoutes } from './routes/inventory.js';
+import { quotesRoutes } from './routes/quotes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,9 @@ app.use(templatesRoutes.allowedMethods());
 
 app.use(inventoryRoutes.routes());
 app.use(inventoryRoutes.allowedMethods());
+
+app.use(quotesRoutes.routes());
+app.use(quotesRoutes.allowedMethods());
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);

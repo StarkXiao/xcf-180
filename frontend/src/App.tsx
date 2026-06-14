@@ -15,6 +15,9 @@ import TemplateCenterPage from "@/pages/TemplateCenterPage";
 import TemplateDetailPage from "@/pages/TemplateDetailPage";
 import AdminTemplatesPage from "@/pages/AdminTemplatesPage";
 import AdminInventoryPage from "@/pages/AdminInventoryPage";
+import QuoteListPage from "@/pages/QuoteListPage";
+import QuoteDetailPage from "@/pages/QuoteDetailPage";
+import AdminDiscountRulesPage from "@/pages/AdminDiscountRulesPage";
 import Layout from "@/components/Layout";
 
 export default function App() {
@@ -35,7 +38,10 @@ export default function App() {
                 <Route path="/templates/:id" element={<TemplateDetailPage />} />
                 <Route path="/orders" element={<OrderListPage />} />
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
+                <Route path="/quotes" element={<QuoteListPage />} />
+                <Route path="/quotes/:id" element={<QuoteDetailPage />} />
                 <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+                <Route path="/admin/discount-rules" element={<AdminDiscountRulesPage />} />
                 <Route path="/admin/parts" element={<AdminPartsPage />} />
                 <Route path="/admin/compatibility" element={<AdminCompatibilityPage />} />
                 <Route path="/admin/price" element={<AdminPricePage />} />

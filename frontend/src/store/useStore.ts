@@ -39,6 +39,23 @@ import type {
   CreatePurchaseOrderRequest,
   PurchaseOrderStatus,
   StockLevel,
+  Quote,
+  QuotePlan,
+  QuoteStatus,
+  DiscountRule,
+  DiscountResult,
+  PlanComparisonResult,
+  CreateQuoteRequest,
+  UpdateQuoteRequest,
+  CreateQuotePlanRequest,
+  UpdateQuotePlanRequest,
+  SubmitApprovalRequest,
+  ProcessApprovalRequest,
+  CustomerConfirmRequest,
+  ExportQuoteRequest,
+  CreateDiscountRuleRequest,
+  UpdateDiscountRuleRequest,
+  ApprovalRole,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -263,6 +280,50 @@ interface AppState {
   createPurchaseOrder: (data: CreatePurchaseOrderRequest) => Promise<PurchaseOrder | undefined>
   updatePurchaseOrderStatus: (id: string, status: PurchaseOrderStatus) => Promise<void>
   deletePurchaseOrder: (id: string) => Promise<void>
+
+  quotes: Quote[]
+  quotesLoading: boolean
+  currentQuote: Quote | null
+  quoteFilterStatus: QuoteStatus | 'all'
+  quoteFilterCustomerName: string
+  quoteFilterModelId: string
+  discountRules: DiscountRule[]
+  discountRulesLoading: boolean
+  planComparison: PlanComparisonResult | null
+
+  fetchQuotes: (params?: { status?: QuoteStatus; customerName?: string; modelId?: string }) => Promise<void>
+  fetchQuoteDetail: (id: string) => Promise<void>
+  createQuote: (data: CreateQuoteRequest) => Promise<Quote | undefined>
+  updateQuote: (id: string, data: UpdateQuoteRequest) => Promise<Quote | undefined>
+  deleteQuote: (id: string) => Promise<void>
+  setQuoteFilterStatus: (status: QuoteStatus | 'all') => void
+  setQuoteFilterCustomerName: (name: string) => void
+  setQuoteFilterModelId: (modelId: string) => void
+  getFilteredQuotes: () => Quote[]
+  getQuoteById: (id: string) => Quote | undefined
+
+  createQuotePlan: (quoteId: string, data: CreateQuotePlanRequest) => Promise<QuotePlan | undefined>
+  updateQuotePlan: (quoteId: string, planId: string, data: UpdateQuotePlanRequest) => Promise<QuotePlan | undefined>
+  deleteQuotePlan: (quoteId: string, planId: string) => Promise<void>
+  compareQuotePlans: (quoteId: string, planA: string, planB: string) => Promise<PlanComparisonResult | null>
+  setPlanComparison: (data: PlanComparisonResult | null) => void
+
+  submitQuoteApproval: (quoteId: string, data: SubmitApprovalRequest) => Promise<Quote | undefined>
+  processQuoteApproval: (quoteId: string, nodeId: string, data: ProcessApprovalRequest) => Promise<Quote | undefined>
+  sendQuoteToCustomer: (quoteId: string) => Promise<Quote | undefined>
+  customerConfirmQuote: (quoteId: string, data: CustomerConfirmRequest) => Promise<Quote | undefined>
+  customerRejectQuote: (quoteId: string, data: { confirmedBy: string; contactInfo: string; note?: string }) => Promise<Quote | undefined>
+  exportQuote: (quoteId: string, data: ExportQuoteRequest) => Promise<{ success: boolean; quote: Quote; plan: QuotePlan; exportRecord: any } | undefined>
+  convertQuoteToOrder: (quoteId: string, orderId?: string) => Promise<Quote | undefined>
+
+  fetchDiscountRules: (params?: { isActive?: boolean }) => Promise<void>
+  createDiscountRule: (data: CreateDiscountRuleRequest) => Promise<DiscountRule | undefined>
+  updateDiscountRule: (id: string, data: UpdateDiscountRuleRequest) => Promise<DiscountRule | undefined>
+  deleteDiscountRule: (id: string) => Promise<void>
+  calculateDiscount: (data: {
+    items: { partId: string; categoryId: string; brand: string; unitPrice: number; quantity: number }[];
+    totalAmount: number
+  }) => Promise<{ results: DiscountResult[]; totalDiscount: number; finalAmount: number } | undefined>
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -327,6 +388,16 @@ export const useStore = create<AppState>((set, get) => ({
   purchaseOrders: [],
   inventoryLoading: false,
   substituteCache: {},
+
+  quotes: [],
+  quotesLoading: false,
+  currentQuote: null,
+  quoteFilterStatus: 'all' as QuoteStatus | 'all',
+  quoteFilterCustomerName: '',
+  quoteFilterModelId: '',
+  discountRules: [],
+  discountRulesLoading: false,
+  planComparison: null,
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -1877,6 +1948,323 @@ export const useStore = create<AppState>((set, get) => ({
       }))
     } catch (e) {
       console.error('Failed to delete purchase order:', e)
+    }
+  },
+
+  fetchQuotes: async (params) => {
+    set({ quotesLoading: true })
+    try {
+      const quotes = await api.getQuotes(params)
+      set({ quotes, quotesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch quotes:', e)
+      set({ quotesLoading: false })
+    }
+  },
+
+  fetchQuoteDetail: async (id) => {
+    try {
+      const quote = await api.getQuote(id)
+      set({ currentQuote: quote })
+    } catch (e) {
+      console.error('Failed to fetch quote detail:', e)
+    }
+  },
+
+  createQuote: async (data) => {
+    try {
+      const quote = await api.createQuote(data)
+      set((state) => ({
+        quotes: [quote, ...state.quotes],
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to create quote:', e)
+    }
+  },
+
+  updateQuote: async (id, data) => {
+    try {
+      const quote = await api.updateQuote(id, data)
+      set((state) => ({
+        quotes: state.quotes.map((q) => (q.id === id ? quote : q)),
+        currentQuote: state.currentQuote?.id === id ? quote : state.currentQuote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to update quote:', e)
+    }
+  },
+
+  deleteQuote: async (id) => {
+    try {
+      await api.deleteQuote(id)
+      set((state) => ({
+        quotes: state.quotes.filter((q) => q.id !== id),
+        currentQuote: state.currentQuote?.id === id ? null : state.currentQuote,
+      }))
+    } catch (e) {
+      console.error('Failed to delete quote:', e)
+    }
+  },
+
+  setQuoteFilterStatus: (status) => set({ quoteFilterStatus: status }),
+  setQuoteFilterCustomerName: (name) => set({ quoteFilterCustomerName: name }),
+  setQuoteFilterModelId: (modelId) => set({ quoteFilterModelId: modelId }),
+
+  getFilteredQuotes: () => {
+    const { quotes, quoteFilterStatus, quoteFilterCustomerName, quoteFilterModelId } = get()
+    let result = [...quotes]
+    if (quoteFilterStatus !== 'all') {
+      result = result.filter((q) => q.status === quoteFilterStatus)
+    }
+    if (quoteFilterCustomerName) {
+      const q = quoteFilterCustomerName.toLowerCase()
+      result = result.filter((o) => o.customerName.toLowerCase().includes(q))
+    }
+    if (quoteFilterModelId) {
+      result = result.filter((o) => o.modelId === quoteFilterModelId)
+    }
+    return result
+  },
+
+  getQuoteById: (id) => {
+    return get().quotes.find((q) => q.id === id)
+  },
+
+  createQuotePlan: async (quoteId, data) => {
+    try {
+      const plan = await api.createQuotePlan(quoteId, data)
+      set((state) => ({
+        quotes: state.quotes.map((q) =>
+          q.id === quoteId ? { ...q, plans: [...q.plans, plan], updatedAt: new Date().toISOString() } : q
+        ),
+        currentQuote:
+          state.currentQuote?.id === quoteId
+            ? { ...state.currentQuote, plans: [...state.currentQuote.plans, plan], updatedAt: new Date().toISOString() }
+            : state.currentQuote,
+      }))
+      return plan
+    } catch (e) {
+      console.error('Failed to create quote plan:', e)
+    }
+  },
+
+  updateQuotePlan: async (quoteId, planId, data) => {
+    try {
+      const plan = await api.updateQuotePlan(quoteId, planId, data)
+      set((state) => ({
+        quotes: state.quotes.map((q) =>
+          q.id === quoteId
+            ? {
+                ...q,
+                plans: q.plans.map((p) => (p.id === planId ? plan : p)),
+                updatedAt: new Date().toISOString(),
+              }
+            : q
+        ),
+        currentQuote:
+          state.currentQuote?.id === quoteId
+            ? {
+                ...state.currentQuote,
+                plans: state.currentQuote.plans.map((p) => (p.id === planId ? plan : p)),
+                updatedAt: new Date().toISOString(),
+              }
+            : state.currentQuote,
+      }))
+      return plan
+    } catch (e) {
+      console.error('Failed to update quote plan:', e)
+    }
+  },
+
+  deleteQuotePlan: async (quoteId, planId) => {
+    try {
+      await api.deleteQuotePlan(quoteId, planId)
+      set((state) => ({
+        quotes: state.quotes.map((q) =>
+          q.id === quoteId
+            ? {
+                ...q,
+                plans: q.plans.filter((p) => p.id !== planId),
+                activePlanId: q.activePlanId === planId ? q.plans[0]?.id : q.activePlanId,
+                updatedAt: new Date().toISOString(),
+              }
+            : q
+        ),
+        currentQuote:
+          state.currentQuote?.id === quoteId
+            ? {
+                ...state.currentQuote,
+                plans: state.currentQuote.plans.filter((p) => p.id !== planId),
+                activePlanId:
+                  state.currentQuote.activePlanId === planId
+                    ? state.currentQuote.plans[0]?.id
+                    : state.currentQuote.activePlanId,
+                updatedAt: new Date().toISOString(),
+              }
+            : state.currentQuote,
+      }))
+    } catch (e) {
+      console.error('Failed to delete quote plan:', e)
+    }
+  },
+
+  compareQuotePlans: async (quoteId, planA, planB) => {
+    try {
+      const result = await api.compareQuotePlans(quoteId, planA, planB)
+      set({ planComparison: result })
+      return result
+    } catch (e) {
+      console.error('Failed to compare quote plans:', e)
+      return null
+    }
+  },
+
+  setPlanComparison: (data) => set({ planComparison: data }),
+
+  submitQuoteApproval: async (quoteId, data) => {
+    try {
+      const quote = await api.submitQuoteApproval(quoteId, data)
+      set((state) => ({
+        quotes: state.quotes.map((q) => (q.id === quoteId ? quote : q)),
+        currentQuote: state.currentQuote?.id === quoteId ? quote : state.currentQuote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to submit quote approval:', e)
+    }
+  },
+
+  processQuoteApproval: async (quoteId, nodeId, data) => {
+    try {
+      const quote = await api.processQuoteApproval(quoteId, nodeId, data)
+      set((state) => ({
+        quotes: state.quotes.map((q) => (q.id === quoteId ? quote : q)),
+        currentQuote: state.currentQuote?.id === quoteId ? quote : state.currentQuote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to process quote approval:', e)
+    }
+  },
+
+  sendQuoteToCustomer: async (quoteId) => {
+    try {
+      const quote = await api.sendQuoteToCustomer(quoteId)
+      set((state) => ({
+        quotes: state.quotes.map((q) => (q.id === quoteId ? quote : q)),
+        currentQuote: state.currentQuote?.id === quoteId ? quote : state.currentQuote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to send quote to customer:', e)
+    }
+  },
+
+  customerConfirmQuote: async (quoteId, data) => {
+    try {
+      const quote = await api.customerConfirmQuote(quoteId, data)
+      set((state) => ({
+        quotes: state.quotes.map((q) => (q.id === quoteId ? quote : q)),
+        currentQuote: state.currentQuote?.id === quoteId ? quote : state.currentQuote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to confirm quote:', e)
+    }
+  },
+
+  customerRejectQuote: async (quoteId, data) => {
+    try {
+      const quote = await api.customerRejectQuote(quoteId, data)
+      set((state) => ({
+        quotes: state.quotes.map((q) => (q.id === quoteId ? quote : q)),
+        currentQuote: state.currentQuote?.id === quoteId ? quote : state.currentQuote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to reject quote:', e)
+    }
+  },
+
+  exportQuote: async (quoteId, data) => {
+    try {
+      const result = await api.exportQuote(quoteId, data)
+      set((state) => ({
+        quotes: state.quotes.map((q) => (q.id === quoteId ? result.quote : q)),
+        currentQuote: state.currentQuote?.id === quoteId ? result.quote : state.currentQuote,
+      }))
+      return result
+    } catch (e) {
+      console.error('Failed to export quote:', e)
+    }
+  },
+
+  convertQuoteToOrder: async (quoteId, orderId) => {
+    try {
+      const quote = await api.convertQuoteToOrder(quoteId, orderId)
+      set((state) => ({
+        quotes: state.quotes.map((q) => (q.id === quoteId ? quote : q)),
+        currentQuote: state.currentQuote?.id === quoteId ? quote : state.currentQuote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to convert quote to order:', e)
+    }
+  },
+
+  fetchDiscountRules: async (params) => {
+    set({ discountRulesLoading: true })
+    try {
+      const rules = await api.getDiscountRules(params)
+      set({ discountRules: rules, discountRulesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch discount rules:', e)
+      set({ discountRulesLoading: false })
+    }
+  },
+
+  createDiscountRule: async (data) => {
+    try {
+      const rule = await api.createDiscountRule(data)
+      set((state) => ({
+        discountRules: [...state.discountRules, rule],
+      }))
+      return rule
+    } catch (e) {
+      console.error('Failed to create discount rule:', e)
+    }
+  },
+
+  updateDiscountRule: async (id, data) => {
+    try {
+      const rule = await api.updateDiscountRule(id, data)
+      set((state) => ({
+        discountRules: state.discountRules.map((r) => (r.id === id ? rule : r)),
+      }))
+      return rule
+    } catch (e) {
+      console.error('Failed to update discount rule:', e)
+    }
+  },
+
+  deleteDiscountRule: async (id) => {
+    try {
+      await api.deleteDiscountRule(id)
+      set((state) => ({
+        discountRules: state.discountRules.filter((r) => r.id !== id),
+      }))
+    } catch (e) {
+      console.error('Failed to delete discount rule:', e)
+    }
+  },
+
+  calculateDiscount: async (data) => {
+    try {
+      return await api.calculateDiscount(data)
+    } catch (e) {
+      console.error('Failed to calculate discount:', e)
     }
   },
 }))
