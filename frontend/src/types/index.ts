@@ -208,3 +208,89 @@ export interface ModelPackageConfig {
     categoryParts: Record<string, string>
   }[]
 }
+
+export type OrderStatus =
+  | 'pending'
+  | 'quoted'
+  | 'confirmed'
+  | 'in_production'
+  | 'shipped'
+  | 'delivered'
+  | 'completed'
+  | 'cancelled'
+
+export interface OrderItem {
+  partId: string
+  partName: string
+  partBrand: string
+  partImage: string
+  categoryId: string
+  categoryName: string
+  price: number
+  quantity: number
+  laborFee: number
+  subtotal: number
+}
+
+export interface OrderStatusHistory {
+  status: OrderStatus
+  changedAt: string
+  changedBy: string
+  remark?: string
+}
+
+export interface AfterSaleNote {
+  id: string
+  content: string
+  createdAt: string
+  createdBy: string
+  type: 'comment' | 'issue' | 'solution' | 'followup'
+}
+
+export interface Order {
+  id: string
+  orderNo: string
+  dealerName: string
+  dealerContact: string
+  dealerPhone: string
+  modelId: string
+  modelName: string
+  packageType: 'basic' | 'sport' | 'street' | null
+  packageName: string
+  items: OrderItem[]
+  partsTotal: number
+  laborFeeTotal: number
+  discount: number
+  totalAmount: number
+  status: OrderStatus
+  statusHistory: OrderStatusHistory[]
+  afterSaleNotes: AfterSaleNote[]
+  remark?: string
+  createdAt: string
+  updatedAt: string
+  expectedDeliveryDate?: string
+}
+
+export interface CreateOrderRequest {
+  selectionId: string
+  dealerName: string
+  dealerContact: string
+  dealerPhone: string
+  modelId: string
+  packageType: 'basic' | 'sport' | 'street' | null
+  remark?: string
+  expectedDeliveryDate?: string
+  discount?: number
+}
+
+export interface UpdateOrderStatusRequest {
+  status: OrderStatus
+  changedBy: string
+  remark?: string
+}
+
+export interface AddAfterSaleNoteRequest {
+  content: string
+  createdBy: string
+  type: AfterSaleNote['type']
+}

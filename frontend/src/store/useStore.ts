@@ -20,6 +20,11 @@ import type {
   BikeModel,
   FavoriteRecord,
   RecentViewRecord,
+  Order,
+  CreateOrderRequest,
+  UpdateOrderStatusRequest,
+  AddAfterSaleNoteRequest,
+  OrderStatus,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -143,6 +148,23 @@ interface AppState {
   addRecentView: (partId: string) => void
   getFavoriteParts: () => Part[]
   getRecentViewParts: () => Part[]
+
+  orders: Order[]
+  ordersLoading: boolean
+  orderFilterStatus: OrderStatus | 'all'
+  orderFilterDealerName: string
+  orderFilterModelId: string
+  fetchOrders: () => Promise<void>
+  setOrderFilterStatus: (status: OrderStatus | 'all') => void
+  setOrderFilterDealerName: (name: string) => void
+  setOrderFilterModelId: (modelId: string) => void
+  createOrder: (data: CreateOrderRequest) => Promise<Order | undefined>
+  updateOrderStatus: (orderId: string, data: UpdateOrderStatusRequest) => Promise<void>
+  updateOrderDiscount: (orderId: string, discount: number) => Promise<void>
+  addAfterSaleNote: (orderId: string, data: AddAfterSaleNoteRequest) => Promise<void>
+  deleteAfterSaleNote: (orderId: string, noteId: string) => Promise<void>
+  deleteOrder: (orderId: string) => Promise<void>
+  getFilteredOrders: () => Order[]
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -178,6 +200,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   favorites: loadFromStorage<FavoriteRecord[]>('xcf-favorites', []),
   recentViews: loadFromStorage<RecentViewRecord[]>('xcf-recent-views', []),
+
+  orders: [],
+  ordersLoading: false,
+  orderFilterStatus: 'all' as OrderStatus | 'all',
+  orderFilterDealerName: '',
+  orderFilterModelId: '',
 
   bikeModels: BIKE_MODELS,
   currentModelId: null,
@@ -1220,5 +1248,109 @@ export const useStore = create<AppState>((set, get) => ({
     return recentViews
       .map((r) => allParts.find((p) => p.id === r.partId))
       .filter(Boolean) as Part[]
+  },
+
+  fetchOrders: async () => {
+    set({ ordersLoading: true })
+    try {
+      const orders = await api.getOrders()
+      set({ orders, ordersLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch orders:', e)
+      set({ ordersLoading: false })
+    }
+  },
+
+  setOrderFilterStatus: (status) => set({ orderFilterStatus: status }),
+  setOrderFilterDealerName: (name) => set({ orderFilterDealerName: name }),
+  setOrderFilterModelId: (modelId) => set({ orderFilterModelId: modelId }),
+
+  createOrder: async (data) => {
+    try {
+      const order = await api.createOrder(data)
+      set((state) => ({
+        orders: [order, ...state.orders],
+      }))
+      return order
+    } catch (e) {
+      console.error('Failed to create order:', e)
+    }
+  },
+
+  updateOrderStatus: async (orderId, data) => {
+    try {
+      const updated = await api.updateOrderStatus(orderId, data)
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      }))
+    } catch (e) {
+      console.error('Failed to update order status:', e)
+    }
+  },
+
+  updateOrderDiscount: async (orderId, discount) => {
+    try {
+      const updated = await api.updateOrderDiscount(orderId, discount)
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      }))
+    } catch (e) {
+      console.error('Failed to update order discount:', e)
+    }
+  },
+
+  addAfterSaleNote: async (orderId, data) => {
+    try {
+      const note = await api.addAfterSaleNote(orderId, data)
+      set((state) => ({
+        orders: state.orders.map((o) => {
+          if (o.id !== orderId) return o
+          return { ...o, afterSaleNotes: [...o.afterSaleNotes, note] }
+        }),
+      }))
+    } catch (e) {
+      console.error('Failed to add after-sale note:', e)
+    }
+  },
+
+  deleteAfterSaleNote: async (orderId, noteId) => {
+    try {
+      await api.deleteAfterSaleNote(orderId, noteId)
+      set((state) => ({
+        orders: state.orders.map((o) => {
+          if (o.id !== orderId) return o
+          return { ...o, afterSaleNotes: o.afterSaleNotes.filter((n) => n.id !== noteId) }
+        }),
+      }))
+    } catch (e) {
+      console.error('Failed to delete after-sale note:', e)
+    }
+  },
+
+  deleteOrder: async (orderId) => {
+    try {
+      await api.deleteOrder(orderId)
+      set((state) => ({
+        orders: state.orders.filter((o) => o.id !== orderId),
+      }))
+    } catch (e) {
+      console.error('Failed to delete order:', e)
+    }
+  },
+
+  getFilteredOrders: () => {
+    const { orders, orderFilterStatus, orderFilterDealerName, orderFilterModelId } = get()
+    let result = [...orders]
+    if (orderFilterStatus !== 'all') {
+      result = result.filter((o) => o.status === orderFilterStatus)
+    }
+    if (orderFilterDealerName) {
+      const q = orderFilterDealerName.toLowerCase()
+      result = result.filter((o) => o.dealerName.toLowerCase().includes(q))
+    }
+    if (orderFilterModelId) {
+      result = result.filter((o) => o.modelId === orderFilterModelId)
+    }
+    return result
   },
 }))

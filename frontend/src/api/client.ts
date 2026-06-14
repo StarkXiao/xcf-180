@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, Share, CreateShareRequest, UpdateShareRequest } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote } from '@/types'
 
 const BASE = ''
 
@@ -108,4 +108,54 @@ export const api = {
 
   deleteShare: (shareId: string) =>
     fetchJSON<Share>(`/api/shares/${shareId}`, { method: 'DELETE' }),
+
+  getOrders: (params?: { status?: string; dealerName?: string; modelId?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.dealerName) searchParams.set('dealerName', params.dealerName)
+    if (params?.modelId) searchParams.set('modelId', params.modelId)
+    const qs = searchParams.toString()
+    return fetchJSON<Order[]>(`/api/orders${qs ? `?${qs}` : ''}`)
+  },
+
+  getOrder: (id: string) =>
+    fetchJSON<Order>(`/api/orders/${id}`),
+
+  createOrder: (data: CreateOrderRequest) =>
+    fetchJSON<Order>('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateOrder: (id: string, data: Partial<Pick<Order, 'dealerName' | 'dealerContact' | 'dealerPhone' | 'remark' | 'expectedDeliveryDate'>>) =>
+    fetchJSON<Order>(`/api/orders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteOrder: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/orders/${id}`, { method: 'DELETE' }),
+
+  updateOrderStatus: (id: string, data: UpdateOrderStatusRequest) =>
+    fetchJSON<Order>(`/api/orders/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  updateOrderDiscount: (id: string, discount: number) =>
+    fetchJSON<Order>(`/api/orders/${id}/discount`, {
+      method: 'PUT',
+      body: JSON.stringify({ discount }),
+    }),
+
+  addAfterSaleNote: (orderId: string, data: AddAfterSaleNoteRequest) =>
+    fetchJSON<AfterSaleNote>(`/api/orders/${orderId}/after-sale-notes`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteAfterSaleNote: (orderId: string, noteId: string) =>
+    fetchJSON<{ success: boolean }>(`/api/orders/${orderId}/after-sale-notes/${noteId}`, {
+      method: 'DELETE',
+    }),
 }

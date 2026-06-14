@@ -3,10 +3,11 @@ import SelectionPanel from '@/components/SelectionPanel'
 import ConflictAlert from '@/components/ConflictAlert'
 import VersionHistoryPanel from '@/components/VersionHistoryPanel'
 import VersionDiffModal from '@/components/VersionDiffModal'
-import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle, ArrowLeftRight, History, Clock, Share2 } from 'lucide-react'
+import { Trash2, Minus, Plus, Download, RotateCcw, Package, ArrowLeft, AlertTriangle, XCircle, ArrowLeftRight, History, Clock, Share2, ShoppingCart } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import ShareModal from '@/components/ShareModal'
+import QuoteConfirmModal from '@/components/QuoteConfirmModal'
 
 export default function SelectionList() {
   const {
@@ -36,11 +37,13 @@ export default function SelectionList() {
     setCompareVersionB,
     fetchShares,
     shares,
+    currentModelId,
   } = useStore()
   const navigate = useNavigate()
   const [showVersionPanel, setShowVersionPanel] = useState(false)
   const [showVersionDiff, setShowVersionDiff] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showQuoteModal, setShowQuoteModal] = useState(false)
 
   useEffect(() => {
     if (currentSelection) {
@@ -210,6 +213,14 @@ export default function SelectionList() {
                 >
                   <Download size={14} />
                   {hasConflicts ? '仍要导出' : hasWarnings ? '谨慎导出' : '导出清单'}
+                </button>
+                <button
+                  onClick={() => setShowQuoteModal(true)}
+                  disabled={!currentModelId || selectedParts.length === 0}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-moto-orange to-moto-orange-light text-white rounded-lg text-sm font-orbitron transition-all shadow-lg shadow-moto-orange/30 hover:shadow-moto-orange/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                >
+                  <ShoppingCart size={14} />
+                  提交订单
                 </button>
               </>
             )}
@@ -444,6 +455,14 @@ export default function SelectionList() {
       <ShareModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
+      />
+      <QuoteConfirmModal
+        isOpen={showQuoteModal}
+        onClose={() => setShowQuoteModal(false)}
+        onSuccess={(orderId) => {
+          setShowQuoteModal(false)
+          navigate(`/orders/${orderId}`)
+        }}
       />
     </div>
   )

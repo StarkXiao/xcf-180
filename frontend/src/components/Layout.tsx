@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2 } from 'lucide-react'
+import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import ModelSelector from '@/components/ModelSelector'
 
@@ -9,6 +9,7 @@ const navItems = [
   { path: '/preview', label: '机车预览', icon: Bike },
   { path: '/list', label: '选配清单', icon: ClipboardList },
   { path: '/compare', label: '方案对比', icon: ArrowLeftRight },
+  { path: '/orders', label: '订单管理', icon: FileText },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
