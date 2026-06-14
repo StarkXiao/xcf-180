@@ -32,6 +32,13 @@ import type {
   CreateTemplateRequest,
   UpdateTemplateRequest,
   ApplyTemplateResult,
+  InventoryInfo,
+  StockAlert,
+  SubstitutePart,
+  PurchaseOrder,
+  CreatePurchaseOrderRequest,
+  PurchaseOrderStatus,
+  StockLevel,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -226,6 +233,36 @@ interface AppState {
   isTemplateFavorite: (templateId: string) => boolean
   setCurrentSelection: (selection: Selection | null) => void
   setCombinedTemplates: (data: AppState['combinedTemplates']) => void
+
+  inventoryMap: Record<string, InventoryInfo>
+  stockAlerts: StockAlert[]
+  purchaseOrders: PurchaseOrder[]
+  inventoryLoading: boolean
+  substituteCache: Record<string, SubstitutePart[]>
+
+  fetchInventoryOverview: () => Promise<void>
+  fetchInventoryBatchInfo: (partIds: string[]) => Promise<void>
+  getInventoryInfo: (partId: string) => InventoryInfo | undefined
+  getStockLevel: (partId: string) => StockLevel
+  isOutOfStock: (partId: string) => boolean
+  isLowStock: (partId: string) => boolean
+
+  reserveInventoryForSelection: (selectionId: string, items: SelectionItem[]) => Promise<boolean>
+  releaseInventoryForSelection: (selectionId: string, partIds?: string[]) => Promise<void>
+  consumeInventoryForSelection: (selectionId: string) => Promise<void>
+
+  fetchStockAlerts: (params?: { unread?: boolean; alertType?: 'out_of_stock' | 'low_stock' }) => Promise<void>
+  markAlertRead: (alertId: string) => Promise<void>
+  markAllAlertsRead: () => Promise<void>
+  getUnreadAlertCount: () => number
+
+  fetchSubstitutes: (partId: string) => Promise<SubstitutePart[]>
+  getSubstitutesForPart: (partId: string) => SubstitutePart[]
+
+  fetchPurchaseOrders: (params?: { status?: PurchaseOrderStatus }) => Promise<void>
+  createPurchaseOrder: (data: CreatePurchaseOrderRequest) => Promise<PurchaseOrder | undefined>
+  updatePurchaseOrderStatus: (id: string, status: PurchaseOrderStatus) => Promise<void>
+  deletePurchaseOrder: (id: string) => Promise<void>
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -284,6 +321,12 @@ export const useStore = create<AppState>((set, get) => ({
   templateModelFilter: '',
   selectedTemplateIds: [],
   combinedTemplates: null,
+
+  inventoryMap: {},
+  stockAlerts: [],
+  purchaseOrders: [],
+  inventoryLoading: false,
+  substituteCache: {},
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -397,8 +440,12 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addPartToSelection: async (partId) => {
-    const { currentSelection } = get()
+    const { currentSelection, inventoryMap } = get()
     if (!currentSelection) return
+
+    const invInfo = inventoryMap[partId]
+    if (invInfo && invInfo.stockLevel === 'out_of_stock') return
+
     const existingItem = currentSelection.items.find((i) => i.partId === partId)
     if (existingItem) {
       await get().setQuantity(partId, existingItem.quantity + 1)
@@ -410,6 +457,7 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      await get().reserveInventoryForSelection(currentSelection.id, [{ partId, quantity: 1 }])
       await get().fetchVersions()
       setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
@@ -426,6 +474,7 @@ export const useStore = create<AppState>((set, get) => ({
       set((state) => ({
         selections: state.selections.map((s) => (s.id === updated.id ? updated : s)),
       }))
+      await get().releaseInventoryForSelection(currentSelection.id, [partId])
       await get().fetchVersions()
       setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
     } catch (e) {
@@ -1651,5 +1700,173 @@ export const useStore = create<AppState>((set, get) => ({
 
   setCombinedTemplates: (data) => {
     set({ combinedTemplates: data })
+  },
+
+  fetchInventoryOverview: async () => {
+    try {
+      const overview = await api.getInventoryOverview()
+      set({ inventoryMap: overview.inventory })
+    } catch (e) {
+      console.error('Failed to fetch inventory overview:', e)
+    }
+  },
+
+  fetchInventoryBatchInfo: async (partIds) => {
+    if (partIds.length === 0) return
+    try {
+      const batchInfo = await api.getInventoryBatchInfo(partIds)
+      set((state) => ({
+        inventoryMap: { ...state.inventoryMap, ...batchInfo },
+      }))
+    } catch (e) {
+      console.error('Failed to fetch batch inventory info:', e)
+    }
+  },
+
+  getInventoryInfo: (partId) => {
+    return get().inventoryMap[partId]
+  },
+
+  getStockLevel: (partId) => {
+    const info = get().inventoryMap[partId]
+    return info?.stockLevel ?? 'in_stock'
+  },
+
+  isOutOfStock: (partId) => {
+    return get().getStockLevel(partId) === 'out_of_stock'
+  },
+
+  isLowStock: (partId) => {
+    return get().getStockLevel(partId) === 'low_stock'
+  },
+
+  reserveInventoryForSelection: async (selectionId, items) => {
+    try {
+      const result = await api.reserveInventory(selectionId, items)
+      await get().fetchInventoryOverview()
+      return result.success
+    } catch (e) {
+      console.error('Failed to reserve inventory:', e)
+      return false
+    }
+  },
+
+  releaseInventoryForSelection: async (selectionId, partIds) => {
+    try {
+      await api.releaseInventory(selectionId, partIds)
+      await get().fetchInventoryOverview()
+    } catch (e) {
+      console.error('Failed to release inventory:', e)
+    }
+  },
+
+  consumeInventoryForSelection: async (selectionId) => {
+    try {
+      await api.consumeInventory(selectionId)
+      await get().fetchInventoryOverview()
+    } catch (e) {
+      console.error('Failed to consume inventory:', e)
+    }
+  },
+
+  fetchStockAlerts: async (params) => {
+    try {
+      const alerts = await api.getStockAlerts(params)
+      set({ stockAlerts: alerts })
+    } catch (e) {
+      console.error('Failed to fetch stock alerts:', e)
+    }
+  },
+
+  markAlertRead: async (alertId) => {
+    try {
+      await api.markAlertRead(alertId)
+      set((state) => ({
+        stockAlerts: state.stockAlerts.map((a) =>
+          a.id === alertId ? { ...a, isRead: true } : a
+        ),
+      }))
+    } catch (e) {
+      console.error('Failed to mark alert read:', e)
+    }
+  },
+
+  markAllAlertsRead: async () => {
+    try {
+      await api.markAllAlertsRead()
+      set((state) => ({
+        stockAlerts: state.stockAlerts.map((a) => ({ ...a, isRead: true })),
+      }))
+    } catch (e) {
+      console.error('Failed to mark all alerts read:', e)
+    }
+  },
+
+  getUnreadAlertCount: () => {
+    return get().stockAlerts.filter((a) => !a.isRead).length
+  },
+
+  fetchSubstitutes: async (partId) => {
+    try {
+      const substitutes = await api.getSubstitutes(partId)
+      set((state) => ({
+        substituteCache: { ...state.substituteCache, [partId]: substitutes },
+      }))
+      return substitutes
+    } catch (e) {
+      console.error('Failed to fetch substitutes:', e)
+      return []
+    }
+  },
+
+  getSubstitutesForPart: (partId) => {
+    return get().substituteCache[partId] ?? []
+  },
+
+  fetchPurchaseOrders: async (params) => {
+    set({ inventoryLoading: true })
+    try {
+      const orders = await api.getPurchaseOrders(params)
+      set({ purchaseOrders: orders, inventoryLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch purchase orders:', e)
+      set({ inventoryLoading: false })
+    }
+  },
+
+  createPurchaseOrder: async (data) => {
+    try {
+      const order = await api.createPurchaseOrder(data)
+      set((state) => ({
+        purchaseOrders: [order, ...state.purchaseOrders],
+      }))
+      return order
+    } catch (e) {
+      console.error('Failed to create purchase order:', e)
+    }
+  },
+
+  updatePurchaseOrderStatus: async (id, status) => {
+    try {
+      const updated = await api.updatePurchaseOrderStatus(id, status)
+      set((state) => ({
+        purchaseOrders: state.purchaseOrders.map((o) =>
+          o.id === id ? updated : o
+        ),
+      }))
+    } catch (e) {
+      console.error('Failed to update purchase order status:', e)
+    }
+  },
+
+  deletePurchaseOrder: async (id) => {
+    try {
+      await api.deletePurchaseOrder(id)
+      set((state) => ({
+        purchaseOrders: state.purchaseOrders.filter((o) => o.id !== id),
+      }))
+    } catch (e) {
+      console.error('Failed to delete purchase order:', e)
+    }
   },
 }))

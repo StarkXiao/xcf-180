@@ -513,3 +513,87 @@ export interface ApplyTemplateResult {
   compatibility?: TemplateCompatibilityResult
   error?: string
 }
+
+export type StockLevel = 'in_stock' | 'low_stock' | 'out_of_stock'
+
+export interface InventoryInfo {
+  partId: string
+  totalStock: number
+  reservedStock: number
+  availableStock: number
+  stockLevel: StockLevel
+  alertThreshold: number
+}
+
+export interface InventoryReservation {
+  id: string
+  selectionId: string
+  partId: string
+  quantity: number
+  createdAt: string
+  expiresAt?: string
+  status: 'active' | 'released' | 'consumed'
+}
+
+export type PurchaseOrderStatus = 'pending' | 'approved' | 'shipped' | 'received' | 'cancelled'
+
+export interface PurchaseOrderItem {
+  partId: string
+  partName: string
+  partSku: string
+  quantity: number
+  unitCost: number
+  subtotal: number
+}
+
+export interface PurchaseOrder {
+  id: string
+  orderNo: string
+  supplier: string
+  items: PurchaseOrderItem[]
+  totalAmount: number
+  status: PurchaseOrderStatus
+  remark?: string
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+  expectedDate?: string
+  receivedDate?: string
+}
+
+export interface CreatePurchaseOrderRequest {
+  supplier: string
+  items: Omit<PurchaseOrderItem, 'subtotal'>[]
+  remark?: string
+  expectedDate?: string
+  createdBy: string
+}
+
+export interface StockAlert {
+  id: string
+  partId: string
+  partName: string
+  partSku: string
+  categoryId: string
+  currentStock: number
+  alertThreshold: number
+  alertType: 'out_of_stock' | 'low_stock'
+  isRead: boolean
+  createdAt: string
+}
+
+export interface SubstitutePart {
+  partId: string
+  part: Part
+  matchScore: number
+  reasons: string[]
+  priceDiff: number
+  stockLevel: StockLevel
+  availableStock: number
+}
+
+export interface StockReservationResult {
+  success: boolean
+  reservations: InventoryReservation[]
+  failedItems: { partId: string; reason: string }[]
+}

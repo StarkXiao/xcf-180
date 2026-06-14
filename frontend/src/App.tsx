@@ -14,6 +14,7 @@ import AdminReviewPage from "@/pages/AdminReviewPage";
 import TemplateCenterPage from "@/pages/TemplateCenterPage";
 import TemplateDetailPage from "@/pages/TemplateDetailPage";
 import AdminTemplatesPage from "@/pages/AdminTemplatesPage";
+import AdminInventoryPage from "@/pages/AdminInventoryPage";
 import Layout from "@/components/Layout";
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
                 <Route path="/admin/price" element={<AdminPricePage />} />
                 <Route path="/admin/review" element={<AdminReviewPage />} />
                 <Route path="/admin/templates" element={<AdminTemplatesPage />} />
+                <Route path="/admin/inventory" element={<AdminInventoryPage />} />
               </Routes>
             </Layout>
           }

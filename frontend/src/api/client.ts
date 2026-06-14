@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus } from '@/types'
 
 const BASE = ''
 
@@ -338,4 +338,88 @@ export const api = {
 
   getFavoriteTemplates: () =>
     fetchJSON<Template[]>('/api/templates/favorites/list'),
+
+  getInventoryOverview: () =>
+    fetchJSON<{
+      totalParts: number
+      outOfStockCount: number
+      lowStockCount: number
+      inStockCount: number
+      totalReserved: number
+      unreadAlerts: number
+      inventory: Record<string, InventoryInfo>
+    }>('/api/inventory/overview'),
+
+  getInventoryPartInfo: (partId: string) =>
+    fetchJSON<InventoryInfo>(`/api/inventory/part/${partId}`),
+
+  getInventoryBatchInfo: (partIds: string[]) =>
+    fetchJSON<Record<string, InventoryInfo>>(`/api/inventory/batch-info?partIds=${partIds.join(',')}`),
+
+  reserveInventory: (selectionId: string, items: { partId: string; quantity: number }[]) =>
+    fetchJSON<StockReservationResult>('/api/inventory/reserve', {
+      method: 'POST',
+      body: JSON.stringify({ selectionId, items }),
+    }),
+
+  releaseInventory: (selectionId: string, partIds?: string[]) =>
+    fetchJSON<{ success: boolean; releasedCount: number }>('/api/inventory/release', {
+      method: 'POST',
+      body: JSON.stringify({ selectionId, partIds }),
+    }),
+
+  consumeInventory: (selectionId: string) =>
+    fetchJSON<{ success: boolean; consumedCount: number }>('/api/inventory/consume', {
+      method: 'POST',
+      body: JSON.stringify({ selectionId }),
+    }),
+
+  getStockAlerts: (params?: { unread?: boolean; alertType?: 'out_of_stock' | 'low_stock' }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.unread) searchParams.set('unread', 'true')
+    if (params?.alertType) searchParams.set('alertType', params.alertType)
+    const qs = searchParams.toString()
+    return fetchJSON<StockAlert[]>(`/api/inventory/alerts${qs ? `?${qs}` : ''}`)
+  },
+
+  markAlertRead: (alertId: string) =>
+    fetchJSON<StockAlert>(`/api/inventory/alerts/${alertId}/read`, {
+      method: 'PUT',
+    }),
+
+  markAllAlertsRead: () =>
+    fetchJSON<{ success: boolean; count: number }>('/api/inventory/alerts/read-all', {
+      method: 'PUT',
+    }),
+
+  getSubstitutes: (partId: string) =>
+    fetchJSON<SubstitutePart[]>(`/api/inventory/substitutes/${partId}`),
+
+  getPurchaseOrders: (params?: { status?: PurchaseOrderStatus }) => {
+    const qs = params?.status ? `?status=${params.status}` : ''
+    return fetchJSON<PurchaseOrder[]>(`/api/inventory/purchase-orders${qs}`)
+  },
+
+  createPurchaseOrder: (data: CreatePurchaseOrderRequest) =>
+    fetchJSON<PurchaseOrder>('/api/inventory/purchase-orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updatePurchaseOrderStatus: (id: string, status: PurchaseOrderStatus) =>
+    fetchJSON<PurchaseOrder>(`/api/inventory/purchase-orders/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }),
+
+  updatePurchaseOrder: (id: string, data: Partial<PurchaseOrder>) =>
+    fetchJSON<PurchaseOrder>(`/api/inventory/purchase-orders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deletePurchaseOrder: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/inventory/purchase-orders/${id}`, {
+      method: 'DELETE',
+    }),
 }

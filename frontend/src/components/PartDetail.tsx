@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle, Sparkles, RefreshCw, ChevronRight, Heart } from 'lucide-react'
+import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle, Sparkles, RefreshCw, ChevronRight, Heart, PackageX, ArrowRightLeft } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import type { Part, CompatibilityCheckResult, PartRecommendation } from '@/types'
+import type { Part, CompatibilityCheckResult, PartRecommendation, SubstitutePart } from '@/types'
 import ConflictAlert from '@/components/ConflictAlert'
+import StockAlertBadge from '@/components/StockAlertBadge'
 
 interface Props {
   part: Part
@@ -20,15 +21,32 @@ export default function PartDetail({ part, onClose }: Props) {
     isFavorite,
     toggleFavorite,
     addRecentView,
+    getStockLevel,
+    getInventoryInfo,
+    fetchSubstitutes,
+    getSubstitutesForPart,
   } = useStore()
   const isSelected = currentSelection?.items.some((i) => i.partId === part.id) ?? false
   const [partCompat, setPartCompat] = useState<CompatibilityCheckResult | null>(null)
   const [checking, setChecking] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [substitutes, setSubstitutes] = useState<SubstitutePart[]>([])
+
+  const stockLevel = getStockLevel(part.id)
+  const invInfo = getInventoryInfo(part.id)
+  const isOutOfStock = stockLevel === 'out_of_stock'
 
   useEffect(() => {
     addRecentView(part.id)
   }, [part.id])
+
+  useEffect(() => {
+    if (isOutOfStock) {
+      fetchSubstitutes(part.id).then(setSubstitutes)
+    } else {
+      setSubstitutes(getSubstitutesForPart(part.id))
+    }
+  }, [part.id, isOutOfStock])
 
   const recommendations = getPartRecommendations(part.id)
   const { alternatives, pairings } = recommendations
@@ -154,7 +172,56 @@ export default function PartDetail({ part, onClose }: Props) {
               </div>
             </div>
 
-            {!isSelected && (
+            {isOutOfStock && (
+              <div className="mt-6 rounded-xl border border-red-500/40 bg-red-500/5 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <PackageX size={16} className="text-red-400" />
+                  <span className="text-red-400 font-orbitron text-sm">该配件当前缺货</span>
+                </div>
+                <p className="text-moto-steel text-xs leading-relaxed">
+                  此配件库存为零，暂时无法添加到方案中。您可以查看以下替代配件，或联系采购部门补货。
+                </p>
+              </div>
+            )}
+
+            {!isOutOfStock && stockLevel === 'low_stock' && (
+              <div className="mt-6 rounded-xl border border-yellow-500/40 bg-yellow-500/5 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertTriangle size={14} className="text-yellow-500" />
+                  <span className="text-yellow-500 font-orbitron text-xs">库存偏低</span>
+                  <StockAlertBadge stockLevel={stockLevel} availableStock={invInfo?.availableStock} size="sm" showCount />
+                </div>
+                <p className="text-moto-steel text-[11px]">
+                  当前可用库存仅剩 {invInfo?.availableStock ?? '?'} 件，建议尽快确认方案
+                </p>
+              </div>
+            )}
+
+            {isOutOfStock && substitutes.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <ArrowRightLeft size={14} className="text-moto-orange" />
+                  <span className="text-moto-silver text-sm font-orbitron">替代件推荐</span>
+                  <span className="text-[10px] text-moto-steel font-orbitron">
+                    缺货时可替代的同分类配件
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {substitutes.slice(0, 4).map((sub) => (
+                    <SubstituteRow
+                      key={sub.partId}
+                      substitute={sub}
+                      isSelected={currentSelection?.items.some((i) => i.partId === sub.partId) ?? false}
+                      onAdd={() => addPartToSelection(sub.partId)}
+                      onRemove={() => removePartFromSelection(sub.partId)}
+                      categoryName={getCategoryName(sub.part.categoryId)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!isSelected && !isOutOfStock && (
               <div className="mt-6">
                 <div className="flex items-center gap-2 mb-3">
                   {hasError ? (
@@ -267,22 +334,25 @@ export default function PartDetail({ part, onClose }: Props) {
               )}
 
               <div className="flex items-center justify-between">
-                <span className="font-orbitron text-moto-orange text-2xl font-bold">
+                <span className={`font-orbitron text-2xl font-bold ${isOutOfStock ? 'text-moto-steel/50' : 'text-moto-orange'}`}>
                   ¥{part.price.toLocaleString()}
                 </span>
                 <button
                   onClick={handleToggle}
+                  disabled={isOutOfStock && !isSelected}
                   className={`flex items-center gap-2 px-6 py-3 rounded-xl font-orbitron text-sm transition-all duration-200 ${
-                    isSelected
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
-                      : hasError
-                        ? 'bg-red-500/80 text-white hover:bg-red-500 shadow-lg shadow-red-500/20'
-                        : hasWarning
-                          ? 'bg-yellow-500 text-white hover:bg-yellow-400 shadow-lg shadow-yellow-500/20'
-                          : 'bg-moto-orange text-white hover:bg-moto-orange-light shadow-lg shadow-moto-orange/20'
+                    isOutOfStock && !isSelected
+                      ? 'bg-carbon-700/30 text-carbon-500 cursor-not-allowed'
+                      : isSelected
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+                        : hasError
+                          ? 'bg-red-500/80 text-white hover:bg-red-500 shadow-lg shadow-red-500/20'
+                          : hasWarning
+                            ? 'bg-yellow-500 text-white hover:bg-yellow-400 shadow-lg shadow-yellow-500/20'
+                            : 'bg-moto-orange text-white hover:bg-moto-orange-light shadow-lg shadow-moto-orange/20'
                   }`}
                 >
-                  {isSelected ? <><Check size={16} /> 移除</> : <><Plus size={16} /> 添加</>}
+                  {isSelected ? <><Check size={16} /> 移除</> : isOutOfStock ? <><PackageX size={16} /> 缺货</> : <><Plus size={16} /> 添加</>}
                 </button>
               </div>
             </div>
@@ -420,6 +490,81 @@ function AlternativeRow({
           }`}
         >
           {isSelected ? <><Check size={10} /> 已选</> : <><ChevronRight size={10} /> 替换</>}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SubstituteRow({
+  substitute,
+  isSelected,
+  onAdd,
+  onRemove,
+  categoryName,
+}: {
+  substitute: SubstitutePart
+  isSelected: boolean
+  onAdd: () => void
+  onRemove: () => void
+  categoryName: string
+}) {
+  const { part, matchScore, reasons, priceDiff, stockLevel, availableStock } = substitute
+
+  return (
+    <div className={`flex items-center gap-3 rounded-lg p-3 transition-colors border ${
+      isSelected
+        ? 'bg-moto-orange/5 border-moto-orange/30'
+        : 'bg-carbon-800/50 border-carbon-500/20 hover:bg-carbon-700/50 hover:border-carbon-500/40'
+    }`}>
+      <img
+        src={part.image}
+        alt={part.name}
+        className="w-12 h-12 rounded-lg object-cover bg-carbon-600 shrink-0"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+part+icon+minimal&image_size=square`
+        }}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="text-moto-silver text-xs font-medium truncate">{part.name}</p>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-carbon-700 text-moto-steel border border-carbon-500/30 shrink-0">
+            {part.brand}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <StockAlertBadge stockLevel={stockLevel} availableStock={availableStock} size="sm" showCount />
+          {priceDiff < 0 && (
+            <span className="text-[9px] text-green-400">省 ¥{Math.abs(priceDiff).toLocaleString()}</span>
+          )}
+          {priceDiff > 0 && (
+            <span className="text-[9px] text-yellow-500">+¥{priceDiff.toLocaleString()}</span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {reasons.slice(0, 2).map((r, i) => (
+            <span key={i} className="text-[9px] text-moto-steel/70 bg-carbon-700/50 px-1 rounded">
+              {r}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <span className="font-orbitron text-sm text-moto-orange">
+          ¥{part.price.toLocaleString()}
+        </span>
+        <button
+          onClick={isSelected ? onRemove : onAdd}
+          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-orbitron transition-colors ${
+            isSelected
+              ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+              : stockLevel === 'out_of_stock'
+                ? 'bg-carbon-700/30 text-carbon-500 cursor-not-allowed'
+                : 'bg-moto-orange/10 text-moto-orange border border-moto-orange/30 hover:bg-moto-orange/20'
+          }`}
+          disabled={stockLevel === 'out_of_stock' && !isSelected}
+        >
+          {isSelected ? <><Check size={10} /> 已选</> : <><ArrowRightLeft size={10} /> 替代</>}
         </button>
       </div>
     </div>

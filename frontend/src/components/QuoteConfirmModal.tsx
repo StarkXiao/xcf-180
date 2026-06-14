@@ -37,6 +37,7 @@ export default function QuoteConfirmModal({ isOpen, onClose, onSuccess }: Props)
     compatibilityResult,
     laborFeeRates,
     createOrder,
+    consumeInventoryForSelection,
   } = useStore()
 
   const [step, setStep] = useState<Step>('info')
@@ -113,6 +114,7 @@ export default function QuoteConfirmModal({ isOpen, onClose, onSuccess }: Props)
       }
       const order = await createOrder(data)
       if (order) {
+        await consumeInventoryForSelection(currentSelection.id)
         onSuccess(order.id)
       }
     } catch (e) {

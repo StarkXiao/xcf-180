@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight, LayoutGrid, Layers } from 'lucide-react'
+import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight, LayoutGrid, Layers, Warehouse } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import ModelSelector from '@/components/ModelSelector'
 
@@ -20,6 +20,7 @@ const adminNavItems = [
   { path: '/admin/compatibility', label: '兼容配置', icon: Link2 },
   { path: '/admin/price', label: '价格调整', icon: TrendingUp },
   { path: '/admin/review', label: '上下架审核', icon: CheckSquare },
+  { path: '/admin/inventory', label: '库存联动', icon: Warehouse },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     partConflictMap,
     currentModelId,
     bikeModels,
+    fetchInventoryOverview,
   } = useStore()
 
   const currentModel = bikeModels.find((m) => m.id === currentModelId)
@@ -46,6 +48,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       await fetchParts()
       await fetchSelections()
       await initDefaultSelection()
+      fetchInventoryOverview()
     }
     init()
   }, [])

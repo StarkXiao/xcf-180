@@ -1,0 +1,9 @@
+{
+  "reservations": [],
+  "purchaseOrders": [],
+  "stockAlerts": [],
+  "alertConfig": {
+    "defaultThreshold": 10,
+    "lowStockRatio": 0.2
+  }
+}
