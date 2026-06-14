@@ -167,6 +167,23 @@
       "createdAt": "2026-06-13T01:38:39.345Z",
       "versions": [],
       "updatedAt": "2026-06-13T01:38:39.345Z"
+    },
+    {
+      "id": "sel-1781434276630",
+      "name": "我的改装方案",
+      "items": [],
+      "createdAt": "2026-06-14T10:51:16.626Z",
+      "updatedAt": "2026-06-14T10:51:16.626Z",
+      "versions": [
+        {
+          "id": "ver-1781434276631-j8u32v",
+          "name": "我的改装方案",
+          "items": [],
+          "createdAt": "2026-06-14T10:51:16.631Z",
+          "description": "初始版本",
+          "versionNumber": 1
+        }
+      ]
     }
   ]
 }

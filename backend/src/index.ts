@@ -9,6 +9,7 @@ import { selectionsRoutes } from './routes/selections.js';
 import { compatibilityRoutes } from './routes/compatibility.js';
 import { sharesRoutes } from './routes/shares.js';
 import { ordersRoutes } from './routes/orders.js';
+import { templatesRoutes } from './routes/templates.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +35,9 @@ app.use(sharesRoutes.allowedMethods());
 
 app.use(ordersRoutes.routes());
 app.use(ordersRoutes.allowedMethods());
+
+app.use(templatesRoutes.routes());
+app.use(templatesRoutes.allowedMethods());
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);

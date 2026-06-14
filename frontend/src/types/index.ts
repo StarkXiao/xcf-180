@@ -417,3 +417,99 @@ export interface AddAfterSaleNoteRequest {
   createdBy: string
   type: AfterSaleNote['type']
 }
+
+export type TemplateStatus = 'draft' | 'pending_review' | 'published' | 'archived'
+
+export interface TemplateCategory {
+  id: string
+  name: string
+  nameEn: string
+  sortOrder: number
+}
+
+export interface Template {
+  id: string
+  name: string
+  nameEn: string
+  description: string
+  coverImage: string
+  category: string
+  modelIds: string[]
+  items: SelectionItem[]
+  status: TemplateStatus
+  isHot: boolean
+  isRecommended: boolean
+  sortOrder: number
+  useCount: number
+  favoriteCount: number
+  viewCount: number
+  tags: string[]
+  author: string
+  createdAt: string
+  updatedAt: string
+  publishedAt: string | null
+}
+
+export interface CreateTemplateRequest {
+  name: string
+  nameEn: string
+  description: string
+  coverImage: string
+  category: string
+  modelIds: string[]
+  items: SelectionItem[]
+  tags: string[]
+}
+
+export interface UpdateTemplateRequest {
+  name?: string
+  nameEn?: string
+  description?: string
+  coverImage?: string
+  category?: string
+  modelIds?: string[]
+  items?: SelectionItem[]
+  status?: TemplateStatus
+  isHot?: boolean
+  isRecommended?: boolean
+  sortOrder?: number
+  tags?: string[]
+}
+
+export interface BatchPublishRequest {
+  templateIds: string[]
+  publishAt?: string
+}
+
+export interface BatchUpdateStatusRequest {
+  templateIds: string[]
+  status: TemplateStatus
+  reason?: string
+}
+
+export interface TemplateCompatibilityResult {
+  isValid: boolean
+  modelCompatibility: {
+    modelId: string
+    modelName: string
+    isCompatible: boolean
+    incompatibleParts: string[]
+  }[]
+  partConflicts: CompatibilityConflict[]
+  partWarnings: CompatibilityConflict[]
+  totalPrice: number
+  totalLaborFee: number
+  grandTotal: number
+}
+
+export interface TemplateFavorite {
+  templateId: string
+  addedAt: string
+}
+
+export interface ApplyTemplateResult {
+  success: boolean
+  selection?: Selection
+  compatibility?: TemplateCompatibilityResult
+  error?: string
+}

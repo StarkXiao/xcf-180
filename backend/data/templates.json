@@ -1,0 +1,276 @@
+{
+  "templates": [
+    {
+      "id": "tpl-sport-pro",
+      "name": "赛道运动版",
+      "nameEn": "Sport Pro Package",
+      "description": "专为赛道爱好者打造的高性能改装方案，包含全段排气、锻造轮毂、竞技刹车等核心升级",
+      "coverImage": "/images/parts/bodykit-001.svg",
+      "category": "sport",
+      "modelIds": [
+        "XCF-180",
+        "XCF-180R"
+      ],
+      "items": [
+        {
+          "partId": "exhaust-001",
+          "quantity": 1
+        },
+        {
+          "partId": "wheels-001",
+          "quantity": 1
+        },
+        {
+          "partId": "brake-001",
+          "quantity": 1
+        },
+        {
+          "partId": "bodykit-001",
+          "quantity": 1
+        },
+        {
+          "partId": "handlebar-001",
+          "quantity": 1
+        }
+      ],
+      "status": "published",
+      "isHot": true,
+      "isRecommended": true,
+      "sortOrder": 1,
+      "useCount": 128,
+      "favoriteCount": 257,
+      "viewCount": 1027,
+      "tags": [
+        "赛道",
+        "高性能",
+        "热门"
+      ],
+      "author": "官方推荐",
+      "createdAt": "2026-06-01T10:00:00.000Z",
+      "updatedAt": "2026-06-10T15:30:00.000Z",
+      "publishedAt": "2026-06-05T08:00:00.000Z"
+    },
+    {
+      "id": "tpl-street-style",
+      "name": "街头风格版",
+      "nameEn": "Street Style Package",
+      "description": "街头风格改装方案，强调外观个性与日常实用性的完美平衡",
+      "coverImage": "/images/parts/bodykit-002.svg",
+      "category": "street",
+      "modelIds": [
+        "XCF-180",
+        "XCF-180S"
+      ],
+      "items": [
+        {
+          "partId": "exhaust-002",
+          "quantity": 1
+        },
+        {
+          "partId": "wheels-002",
+          "quantity": 1
+        },
+        {
+          "partId": "lighting-002",
+          "quantity": 1
+        },
+        {
+          "partId": "bodykit-002",
+          "quantity": 1
+        },
+        {
+          "partId": "handlebar-002",
+          "quantity": 1
+        }
+      ],
+      "status": "published",
+      "isHot": true,
+      "isRecommended": false,
+      "sortOrder": 2,
+      "useCount": 96,
+      "favoriteCount": 189,
+      "viewCount": 756,
+      "tags": [
+        "街头",
+        "外观",
+        "性价比"
+      ],
+      "author": "官方推荐",
+      "createdAt": "2026-06-02T10:00:00.000Z",
+      "updatedAt": "2026-06-08T14:20:00.000Z",
+      "publishedAt": "2026-06-06T09:00:00.000Z"
+    },
+    {
+      "id": "tpl-basic-commute",
+      "name": "基础通勤版",
+      "nameEn": "Basic Commute Package",
+      "description": "入门级改装方案，提升日常通勤的舒适性与安全性，性价比之选",
+      "coverImage": "/images/parts/lighting-001.svg",
+      "category": "basic",
+      "modelIds": [
+        "XCF-180",
+        "XCF-180R",
+        "XCF-180S"
+      ],
+      "items": [
+        {
+          "partId": "lighting-001",
+          "quantity": 1
+        },
+        {
+          "partId": "brake-002",
+          "quantity": 1
+        },
+        {
+          "partId": "handlebar-003",
+          "quantity": 1
+        }
+      ],
+      "status": "published",
+      "isHot": false,
+      "isRecommended": true,
+      "sortOrder": 3,
+      "useCount": 256,
+      "favoriteCount": 128,
+      "viewCount": 512,
+      "tags": [
+        "入门",
+        "通勤",
+        "性价比"
+      ],
+      "author": "官方推荐",
+      "createdAt": "2026-06-03T10:00:00.000Z",
+      "updatedAt": "2026-06-09T11:00:00.000Z",
+      "publishedAt": "2026-06-07T10:00:00.000Z"
+    },
+    {
+      "id": "tpl-carbon-racing",
+      "name": "碳纤竞技版",
+      "nameEn": "Carbon Racing Package",
+      "description": "全碳纤维轻量化竞技方案，极致减重，赛道利器",
+      "coverImage": "/images/parts/exhaust-001.svg",
+      "category": "sport",
+      "modelIds": [
+        "XCF-180R"
+      ],
+      "items": [
+        {
+          "partId": "exhaust-001",
+          "quantity": 1
+        },
+        {
+          "partId": "wheels-003",
+          "quantity": 1
+        },
+        {
+          "partId": "bodykit-001",
+          "quantity": 1
+        },
+        {
+          "partId": "brake-003",
+          "quantity": 1
+        }
+      ],
+      "status": "published",
+      "isHot": false,
+      "isRecommended": false,
+      "sortOrder": 4,
+      "useCount": 0,
+      "favoriteCount": 0,
+      "viewCount": 0,
+      "tags": [
+        "碳纤维",
+        "竞技",
+        "轻量化"
+      ],
+      "author": "运营团队",
+      "createdAt": "2026-06-10T10:00:00.000Z",
+      "updatedAt": "2026-06-14T12:20:30.889Z",
+      "publishedAt": "2026-06-14T12:20:30.889Z"
+    },
+    {
+      "id": "tpl-night-rider",
+      "name": "暗夜骑士版",
+      "nameEn": "Night Rider Package",
+      "description": "暗夜风格改装方案，熏黑灯组+碳纤维车身，夜间骑行炫酷夺目",
+      "coverImage": "/images/parts/lighting-003.svg",
+      "category": "street",
+      "modelIds": [
+        "XCF-180",
+        "XCF-180S"
+      ],
+      "items": [
+        {
+          "partId": "lighting-003",
+          "quantity": 1
+        },
+        {
+          "partId": "lighting-002",
+          "quantity": 1
+        },
+        {
+          "partId": "bodykit-003",
+          "quantity": 1
+        },
+        {
+          "partId": "exhaust-002",
+          "quantity": 1
+        }
+      ],
+      "status": "published",
+      "isHot": true,
+      "isRecommended": false,
+      "sortOrder": 5,
+      "useCount": 78,
+      "favoriteCount": 145,
+      "viewCount": 623,
+      "tags": [
+        "暗夜",
+        "熏黑",
+        "个性"
+      ],
+      "author": "官方推荐",
+      "createdAt": "2026-06-04T10:00:00.000Z",
+      "updatedAt": "2026-06-11T09:30:00.000Z",
+      "publishedAt": "2026-06-08T08:00:00.000Z"
+    }
+  ],
+  "templateCategories": [
+    {
+      "id": "all",
+      "name": "全部方案",
+      "nameEn": "All Templates",
+      "sortOrder": 0
+    },
+    {
+      "id": "hot",
+      "name": "热门推荐",
+      "nameEn": "Hot & Recommended",
+      "sortOrder": 1
+    },
+    {
+      "id": "sport",
+      "name": "赛道运动",
+      "nameEn": "Sport & Racing",
+      "sortOrder": 2
+    },
+    {
+      "id": "street",
+      "name": "街头风格",
+      "nameEn": "Street Style",
+      "sortOrder": 3
+    },
+    {
+      "id": "basic",
+      "name": "基础入门",
+      "nameEn": "Basic & Entry",
+      "sortOrder": 4
+    }
+  ],
+  "favorites": [
+    {
+      "templateId": "tpl-sport-pro",
+      "addedAt": "2026-06-14T12:20:42.604Z"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite } from '@/types'
 
 const BASE = ''
 
@@ -248,4 +248,94 @@ export const api = {
 
   adminGetBrands: () =>
     fetchJSON<string[]>('/api/admin/brands'),
+
+  getTemplates: (params?: {
+    category?: string
+    status?: string
+    modelId?: string
+    keyword?: string
+    isHot?: boolean
+    isRecommended?: boolean
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.category) searchParams.set('category', params.category)
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.modelId) searchParams.set('modelId', params.modelId)
+    if (params?.keyword) searchParams.set('keyword', params.keyword)
+    if (params?.isHot) searchParams.set('isHot', 'true')
+    if (params?.isRecommended) searchParams.set('isRecommended', 'true')
+    const qs = searchParams.toString()
+    return fetchJSON<{
+      templates: Template[]
+      categories: TemplateCategory[]
+      favorites: TemplateFavorite[]
+    }>(`/api/templates${qs ? `?${qs}` : ''}`)
+  },
+
+  getTemplate: (id: string) =>
+    fetchJSON<Template>(`/api/templates/${id}`),
+
+  createTemplate: (data: CreateTemplateRequest) =>
+    fetchJSON<Template>('/api/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateTemplate: (id: string, data: UpdateTemplateRequest) =>
+    fetchJSON<Template>(`/api/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteTemplate: (id: string) =>
+    fetchJSON<Template>(`/api/templates/${id}`, { method: 'DELETE' }),
+
+  batchPublishTemplates: (data: BatchPublishRequest) =>
+    fetchJSON<{ success: boolean; publishedCount: number; published: Template[] }>(
+      '/api/templates/batch-publish',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+
+  batchUpdateTemplateStatus: (data: BatchUpdateStatusRequest) =>
+    fetchJSON<{ success: boolean; updatedCount: number; updated: Template[] }>(
+      '/api/templates/batch-status',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+
+  checkTemplateCompatibility: (templateId: string) =>
+    fetchJSON<TemplateCompatibilityResult>(`/api/templates/${templateId}/check-compatibility`, {
+      method: 'POST',
+    }),
+
+  applyTemplate: (templateId: string) =>
+    fetchJSON<ApplyTemplateResult>(`/api/templates/${templateId}/apply`, {
+      method: 'POST',
+    }),
+
+  combineTemplates: (templateIds: string[]) =>
+    fetchJSON<{
+      templates: { id: string; name: string }[]
+      combinedItems: SelectionItem[]
+      conflicts: CompatibilityConflict[]
+      warnings: CompatibilityConflict[]
+      totalPrice: number
+      totalLaborFee: number
+      grandTotal: number
+      isValid: boolean
+    }>(`/api/templates/combine?templateIds=${templateIds.join(',')}`),
+
+  toggleTemplateFavorite: (templateId: string) =>
+    fetchJSON<{ favorited: boolean; favoriteCount: number }>(
+      `/api/templates/${templateId}/favorite`,
+      { method: 'POST' }
+    ),
+
+  getFavoriteTemplates: () =>
+    fetchJSON<Template[]>('/api/templates/favorites/list'),
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight } from 'lucide-react'
+import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight, LayoutGrid, Layers } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import ModelSelector from '@/components/ModelSelector'
 
@@ -9,12 +9,14 @@ const navItems = [
   { path: '/preview', label: '机车预览', icon: Bike },
   { path: '/list', label: '选配清单', icon: ClipboardList },
   { path: '/compare', label: '方案对比', icon: ArrowLeftRight },
+  { path: '/templates', label: '模板中心', icon: LayoutGrid },
   { path: '/orders', label: '订单管理', icon: FileText },
 ]
 
 const adminNavItems = [
   { path: '/admin/categories', label: '分类维护', icon: Folder },
   { path: '/admin/parts', label: '配件录入', icon: Package },
+  { path: '/admin/templates', label: '模板管理', icon: Layers },
   { path: '/admin/compatibility', label: '兼容配置', icon: Link2 },
   { path: '/admin/price', label: '价格调整', icon: TrendingUp },
   { path: '/admin/review', label: '上下架审核', icon: CheckSquare },

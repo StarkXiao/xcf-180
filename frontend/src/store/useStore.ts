@@ -25,6 +25,13 @@ import type {
   UpdateOrderStatusRequest,
   AddAfterSaleNoteRequest,
   OrderStatus,
+  Template,
+  TemplateCategory,
+  TemplateStatus,
+  TemplateCompatibilityResult,
+  CreateTemplateRequest,
+  UpdateTemplateRequest,
+  ApplyTemplateResult,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -165,6 +172,59 @@ interface AppState {
   deleteAfterSaleNote: (orderId: string, noteId: string) => Promise<void>
   deleteOrder: (orderId: string) => Promise<void>
   getFilteredOrders: () => Order[]
+
+  templates: Template[]
+  templateCategories: TemplateCategory[]
+  templateFavorites: string[]
+  templatesLoading: boolean
+  currentTemplate: Template | null
+  templateCompatibility: TemplateCompatibilityResult | null
+  templateSearchQuery: string
+  templateCategoryFilter: string
+  templateStatusFilter: string
+  templateModelFilter: string
+  selectedTemplateIds: string[]
+  combinedTemplates: {
+    templates: { id: string; name: string }[]
+    combinedItems: SelectionItem[]
+    conflicts: CompatibilityConflict[]
+    warnings: CompatibilityConflict[]
+    totalPrice: number
+    totalLaborFee: number
+    grandTotal: number
+    isValid: boolean
+  } | null
+
+  fetchTemplates: (params?: {
+    category?: string
+    status?: string
+    modelId?: string
+    keyword?: string
+    isHot?: boolean
+    isRecommended?: boolean
+  }) => Promise<void>
+  fetchTemplateDetail: (id: string) => Promise<void>
+  createTemplate: (data: CreateTemplateRequest) => Promise<Template | undefined>
+  updateTemplate: (id: string, data: UpdateTemplateRequest) => Promise<Template | undefined>
+  deleteTemplate: (id: string) => Promise<void>
+  batchPublishTemplates: (templateIds: string[], publishAt?: string) => Promise<{ success: boolean; publishedCount: number }>
+  batchUpdateTemplateStatus: (templateIds: string[], status: TemplateStatus, reason?: string) => Promise<{ success: boolean; updatedCount: number }>
+  checkTemplateCompatibility: (templateId: string) => Promise<void>
+  applyTemplate: (templateId: string) => Promise<ApplyTemplateResult | undefined>
+  combineTemplates: (templateIds: string[]) => Promise<void>
+  toggleTemplateFavorite: (templateId: string) => Promise<void>
+  setTemplateSearchQuery: (q: string) => void
+  setTemplateCategoryFilter: (cat: string) => void
+  setTemplateStatusFilter: (status: string) => void
+  setTemplateModelFilter: (modelId: string) => void
+  toggleTemplateSelection: (templateId: string) => void
+  clearTemplateSelection: () => void
+  selectAllTemplates: () => void
+  getFilteredTemplates: () => Template[]
+  getTemplateById: (id: string) => Template | undefined
+  isTemplateFavorite: (templateId: string) => boolean
+  setCurrentSelection: (selection: Selection | null) => void
+  setCombinedTemplates: (data: AppState['combinedTemplates']) => void
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -210,6 +270,19 @@ export const useStore = create<AppState>((set, get) => ({
   bikeModels: BIKE_MODELS,
   currentModelId: null,
   currentPackageType: null,
+
+  templates: [],
+  templateCategories: [],
+  templateFavorites: loadFromStorage<string[]>('xcf-template-favorites', []),
+  templatesLoading: false,
+  currentTemplate: null,
+  templateCompatibility: null,
+  templateSearchQuery: '',
+  templateCategoryFilter: 'all',
+  templateStatusFilter: 'all',
+  templateModelFilter: '',
+  selectedTemplateIds: [],
+  combinedTemplates: null,
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -1344,5 +1417,235 @@ export const useStore = create<AppState>((set, get) => ({
       result = result.filter((o) => o.modelId === orderFilterModelId)
     }
     return result
+  },
+
+  fetchTemplates: async (params) => {
+    set({ templatesLoading: true })
+    try {
+      const { templates, categories, favorites } = await api.getTemplates(params)
+      set({
+        templates,
+        templateCategories: categories,
+        templateFavorites: favorites.map((f) => f.templateId),
+        templatesLoading: false,
+      })
+    } catch (e) {
+      console.error('Failed to fetch templates:', e)
+      set({ templatesLoading: false })
+    }
+  },
+
+  fetchTemplateDetail: async (id) => {
+    try {
+      const template = await api.getTemplate(id)
+      set({ currentTemplate: template })
+    } catch (e) {
+      console.error('Failed to fetch template detail:', e)
+    }
+  },
+
+  createTemplate: async (data) => {
+    try {
+      const template = await api.createTemplate(data)
+      set((state) => ({
+        templates: [...state.templates, template],
+      }))
+      return template
+    } catch (e) {
+      console.error('Failed to create template:', e)
+    }
+  },
+
+  updateTemplate: async (id, data) => {
+    try {
+      const template = await api.updateTemplate(id, data)
+      set((state) => ({
+        templates: state.templates.map((t) => (t.id === id ? template : t)),
+        currentTemplate: state.currentTemplate?.id === id ? template : state.currentTemplate,
+      }))
+      return template
+    } catch (e) {
+      console.error('Failed to update template:', e)
+    }
+  },
+
+  deleteTemplate: async (id) => {
+    try {
+      await api.deleteTemplate(id)
+      set((state) => ({
+        templates: state.templates.filter((t) => t.id !== id),
+        currentTemplate: state.currentTemplate?.id === id ? null : state.currentTemplate,
+      }))
+    } catch (e) {
+      console.error('Failed to delete template:', e)
+    }
+  },
+
+  batchPublishTemplates: async (templateIds, publishAt) => {
+    try {
+      const result = await api.batchPublishTemplates({ templateIds, publishAt })
+      set((state) => ({
+        templates: state.templates.map((t) => {
+          const published = result.published.find((p) => p.id === t.id)
+          return published || t
+        }),
+        selectedTemplateIds: [],
+      }))
+      return { success: result.success, publishedCount: result.publishedCount }
+    } catch (e) {
+      console.error('Failed to batch publish templates:', e)
+      return { success: false, publishedCount: 0 }
+    }
+  },
+
+  batchUpdateTemplateStatus: async (templateIds, status, reason) => {
+    try {
+      const result = await api.batchUpdateTemplateStatus({ templateIds, status, reason })
+      set((state) => ({
+        templates: state.templates.map((t) => {
+          const updated = result.updated.find((u) => u.id === t.id)
+          return updated || t
+        }),
+        selectedTemplateIds: [],
+      }))
+      return { success: result.success, updatedCount: result.updatedCount }
+    } catch (e) {
+      console.error('Failed to batch update template status:', e)
+      return { success: false, updatedCount: 0 }
+    }
+  },
+
+  checkTemplateCompatibility: async (templateId) => {
+    try {
+      const result = await api.checkTemplateCompatibility(templateId)
+      set({ templateCompatibility: result })
+    } catch (e) {
+      console.error('Failed to check template compatibility:', e)
+    }
+  },
+
+  applyTemplate: async (templateId) => {
+    try {
+      const result = await api.applyTemplate(templateId)
+      if (result.success && result.selection) {
+        set((state) => ({
+          selections: [...state.selections, result.selection!],
+          currentSelection: result.selection!,
+        }))
+        await get().fetchVersions()
+        setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
+      }
+      return result
+    } catch (e) {
+      console.error('Failed to apply template:', e)
+    }
+  },
+
+  combineTemplates: async (templateIds) => {
+    try {
+      const result = await api.combineTemplates(templateIds)
+      set({ combinedTemplates: result })
+    } catch (e) {
+      console.error('Failed to combine templates:', e)
+    }
+  },
+
+  toggleTemplateFavorite: async (templateId) => {
+    try {
+      const result = await api.toggleTemplateFavorite(templateId)
+      set((state) => {
+        const favorites = result.favorited
+          ? [...state.templateFavorites, templateId]
+          : state.templateFavorites.filter((id) => id !== templateId)
+        saveToStorage('xcf-template-favorites', favorites)
+        return {
+          templateFavorites: favorites,
+          templates: state.templates.map((t) =>
+            t.id === templateId ? { ...t, favoriteCount: result.favoriteCount } : t
+          ),
+          currentTemplate:
+            state.currentTemplate?.id === templateId
+              ? { ...state.currentTemplate, favoriteCount: result.favoriteCount }
+              : state.currentTemplate,
+        }
+      })
+    } catch (e) {
+      console.error('Failed to toggle template favorite:', e)
+    }
+  },
+
+  setTemplateSearchQuery: (q) => set({ templateSearchQuery: q }),
+  setTemplateCategoryFilter: (cat) => set({ templateCategoryFilter: cat }),
+  setTemplateStatusFilter: (status) => set({ templateStatusFilter: status }),
+  setTemplateModelFilter: (modelId) => set({ templateModelFilter: modelId }),
+
+  toggleTemplateSelection: (templateId) =>
+    set((state) => ({
+      selectedTemplateIds: state.selectedTemplateIds.includes(templateId)
+        ? state.selectedTemplateIds.filter((id) => id !== templateId)
+        : [...state.selectedTemplateIds, templateId],
+    })),
+
+  clearTemplateSelection: () => set({ selectedTemplateIds: [] }),
+
+  selectAllTemplates: () =>
+    set((state) => ({
+      selectedTemplateIds: state.getFilteredTemplates().map((t) => t.id),
+    })),
+
+  getFilteredTemplates: () => {
+    const {
+      templates,
+      templateSearchQuery,
+      templateCategoryFilter,
+      templateStatusFilter,
+      templateModelFilter,
+    } = get()
+
+    let result = [...templates]
+
+    if (templateSearchQuery) {
+      const q = templateSearchQuery.toLowerCase()
+      result = result.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q) ||
+          t.description.toLowerCase().includes(q) ||
+          t.tags.some((tag) => tag.toLowerCase().includes(q))
+      )
+    }
+
+    if (templateCategoryFilter && templateCategoryFilter !== 'all') {
+      if (templateCategoryFilter === 'hot') {
+        result = result.filter((t) => t.isHot || t.isRecommended)
+      } else {
+        result = result.filter((t) => t.category === templateCategoryFilter)
+      }
+    }
+
+    if (templateStatusFilter && templateStatusFilter !== 'all') {
+      result = result.filter((t) => t.status === templateStatusFilter)
+    }
+
+    if (templateModelFilter) {
+      result = result.filter((t) => t.modelIds.includes(templateModelFilter))
+    }
+
+    return result
+  },
+
+  getTemplateById: (id) => {
+    return get().templates.find((t) => t.id === id)
+  },
+
+  isTemplateFavorite: (templateId) => {
+    return get().templateFavorites.includes(templateId)
+  },
+
+  setCurrentSelection: (selection) => {
+    set({ currentSelection: selection })
+  },
+
+  setCombinedTemplates: (data) => {
+    set({ combinedTemplates: data })
   },
 }))
