@@ -6,6 +6,11 @@ import ComparePage from "@/pages/ComparePage";
 import SharePage from "@/pages/SharePage";
 import OrderListPage from "@/pages/OrderListPage";
 import OrderDetailPage from "@/pages/OrderDetailPage";
+import AdminCategoriesPage from "@/pages/AdminCategoriesPage";
+import AdminPartsPage from "@/pages/AdminPartsPage";
+import AdminCompatibilityPage from "@/pages/AdminCompatibilityPage";
+import AdminPricePage from "@/pages/AdminPricePage";
+import AdminReviewPage from "@/pages/AdminReviewPage";
 import Layout from "@/components/Layout";
 
 export default function App() {
@@ -24,6 +29,11 @@ export default function App() {
                 <Route path="/compare" element={<ComparePage />} />
                 <Route path="/orders" element={<OrderListPage />} />
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
+                <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+                <Route path="/admin/parts" element={<AdminPartsPage />} />
+                <Route path="/admin/compatibility" element={<AdminCompatibilityPage />} />
+                <Route path="/admin/price" element={<AdminPricePage />} />
+                <Route path="/admin/review" element={<AdminReviewPage />} />
               </Routes>
             </Layout>
           }

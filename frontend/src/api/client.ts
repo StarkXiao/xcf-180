@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus } from '@/types'
 
 const BASE = ''
 
@@ -158,4 +158,93 @@ export const api = {
     fetchJSON<{ success: boolean }>(`/api/orders/${orderId}/after-sale-notes/${noteId}`, {
       method: 'DELETE',
     }),
+
+  adminCreateCategory: (data: CreateCategoryRequest) =>
+    fetchJSON<Category>('/api/admin/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  adminUpdateCategory: (id: string, data: UpdateCategoryRequest) =>
+    fetchJSON<Category>(`/api/admin/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  adminDeleteCategory: (id: string) =>
+    fetchJSON<Category>(`/api/admin/categories/${id}`, {
+      method: 'DELETE',
+    }),
+
+  adminGetParts: (params?: { category?: string; status?: PartStatus; keyword?: string; brand?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.category) searchParams.set('category', params.category)
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.keyword) searchParams.set('keyword', params.keyword)
+    if (params?.brand) searchParams.set('brand', params.brand)
+    const qs = searchParams.toString()
+    return fetchJSON<PartAdmin[]>(`/api/parts${qs ? `?${qs}` : ''}`)
+  },
+
+  adminCreatePart: (data: CreatePartRequest) =>
+    fetchJSON<PartAdmin>('/api/admin/parts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  adminUpdatePart: (id: string, data: UpdatePartRequest) =>
+    fetchJSON<PartAdmin>(`/api/admin/parts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  adminDeletePart: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/admin/parts/${id}`, {
+      method: 'DELETE',
+    }),
+
+  adminReviewPart: (id: string, data: ReviewPartRequest) =>
+    fetchJSON<PartAdmin>(`/api/admin/parts/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  adminBatchPriceAdjust: (data: BatchPriceAdjustRequest) =>
+    fetchJSON<{ success: boolean; updatedCount: number; updated: PartAdmin[] }>('/api/admin/parts/batch-price', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  adminBatchStatusChange: (data: BatchStatusRequest) =>
+    fetchJSON<{ success: boolean; updatedCount: number; updated: PartAdmin[] }>('/api/admin/parts/batch-status', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  adminGetPriceHistory: (partId?: string) => {
+    const qs = partId ? `?partId=${partId}` : ''
+    return fetchJSON<PriceHistoryRecord[]>(`/api/admin/price-history${qs}`)
+  },
+
+  adminGetStatusHistory: (partId?: string) => {
+    const qs = partId ? `?partId=${partId}` : ''
+    return fetchJSON<StatusHistoryRecord[]>(`/api/admin/status-history${qs}`)
+  },
+
+  adminGetCompatibilityRelations: () =>
+    fetchJSON<CompatibilityRelation[]>('/api/admin/compatibility-relations'),
+
+  adminCreateCompatibilityRelation: (data: { partIdA: string; partIdB: string; type: 'compatible' | 'conflict'; severity?: 'warning' | 'error'; remark?: string }) =>
+    fetchJSON<CompatibilityRelation>('/api/admin/compatibility-relations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  adminDeleteCompatibilityRelation: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/admin/compatibility-relations/${id}`, {
+      method: 'DELETE',
+    }),
+
+  adminGetBrands: () =>
+    fetchJSON<string[]>('/api/admin/brands'),
 }

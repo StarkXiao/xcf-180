@@ -5,6 +5,129 @@ export interface Category {
   icon?: string
   description?: string
   sortOrder?: number
+  isActive?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type PartStatus = 'draft' | 'pending_review' | 'active' | 'inactive' | 'rejected'
+
+export interface PartAdmin extends Part {
+  sku: string
+  stock: number
+  status: PartStatus
+  originalPrice?: number
+  costPrice?: number
+  reviewRemark?: string
+  reviewedBy?: string
+  reviewedAt?: string
+  createdBy?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreatePartRequest {
+  name: string
+  brand: string
+  categoryId: string
+  price: number
+  originalPrice?: number
+  costPrice?: number
+  sku: string
+  stock: number
+  image: string
+  description: string
+  specs: Record<string, string | boolean | number>
+  compatible: string[]
+  conflictsWith: string[]
+  position: PartPosition
+  status?: PartStatus
+}
+
+export interface UpdatePartRequest {
+  name?: string
+  brand?: string
+  categoryId?: string
+  price?: number
+  originalPrice?: number
+  costPrice?: number
+  sku?: string
+  stock?: number
+  image?: string
+  description?: string
+  specs?: Record<string, string | boolean | number>
+  compatible?: string[]
+  conflictsWith?: string[]
+  position?: PartPosition
+  status?: PartStatus
+}
+
+export interface ReviewPartRequest {
+  status: 'active' | 'rejected'
+  reviewRemark?: string
+  reviewedBy: string
+}
+
+export interface BatchPriceAdjustRequest {
+  partIds: string[]
+  adjustType: 'fixed' | 'percent'
+  adjustValue: number
+  reason?: string
+}
+
+export interface BatchStatusRequest {
+  partIds: string[]
+  status: PartStatus
+  reason?: string
+}
+
+export interface CreateCategoryRequest {
+  name: string
+  nameEn: string
+  icon?: string
+  description?: string
+  sortOrder?: number
+}
+
+export interface UpdateCategoryRequest {
+  name?: string
+  nameEn?: string
+  icon?: string
+  description?: string
+  sortOrder?: number
+  isActive?: boolean
+}
+
+export interface PriceHistoryRecord {
+  id: string
+  partId: string
+  partName: string
+  oldPrice: number
+  newPrice: number
+  changedAt: string
+  changedBy: string
+  reason?: string
+}
+
+export interface StatusHistoryRecord {
+  id: string
+  partId: string
+  partName: string
+  oldStatus: PartStatus
+  newStatus: PartStatus
+  changedAt: string
+  changedBy: string
+  reason?: string
+}
+
+export interface CompatibilityRelation {
+  id: string
+  partIdA: string
+  partIdB: string
+  type: 'compatible' | 'conflict'
+  severity?: 'warning' | 'error'
+  remark?: string
+  createdAt: string
 }
 
 export interface PartPosition {

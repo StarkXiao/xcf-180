@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText } from 'lucide-react'
+import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import ModelSelector from '@/components/ModelSelector'
 
@@ -12,9 +12,19 @@ const navItems = [
   { path: '/orders', label: '订单管理', icon: FileText },
 ]
 
+const adminNavItems = [
+  { path: '/admin/categories', label: '分类维护', icon: Folder },
+  { path: '/admin/parts', label: '配件录入', icon: Package },
+  { path: '/admin/compatibility', label: '兼容配置', icon: Link2 },
+  { path: '/admin/price', label: '价格调整', icon: TrendingUp },
+  { path: '/admin/review', label: '上下架审核', icon: CheckSquare },
+]
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
+  const [adminMenuOpen, setAdminMenuOpen] = useState(true)
+  const isAdminPage = location.pathname.startsWith('/admin')
   const {
     fetchCategories,
     fetchParts,
@@ -67,7 +77,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           )}
         </div>
-        <div className="flex-1 py-4 space-y-1">
+        <div className="flex-1 py-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const showBadge = item.path === '/list' && (hasConflicts || hasWarnings)
             return (
@@ -76,7 +86,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 to={item.path}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 lg:px-6 py-3 text-sm transition-all duration-200 relative ${
-                    isActive
+                    isActive && !isAdminPage
                       ? 'text-moto-orange bg-moto-orange/10 border-r-2 border-moto-orange'
                       : 'text-moto-steel hover:text-moto-silver hover:bg-carbon-700/50'
                   }`
@@ -111,6 +121,43 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </NavLink>
             )
           })}
+
+          <div className="px-4 lg:px-6 pt-4 pb-2">
+            <button
+              onClick={() => setAdminMenuOpen(!adminMenuOpen)}
+              className="w-full flex items-center justify-between text-xs font-orbitron text-moto-steel hover:text-moto-silver transition-colors uppercase tracking-wider"
+            >
+              <span>运营管理</span>
+              {adminMenuOpen ? (
+                <ChevronDown size={14} className={isAdminPage ? 'text-moto-orange' : ''} />
+              ) : (
+                <ChevronRight size={14} className={isAdminPage ? 'text-moto-orange' : ''} />
+              )}
+            </button>
+          </div>
+
+          {adminMenuOpen && (
+            <div className="space-y-0.5">
+              {adminNavItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 lg:px-6 py-2.5 text-sm transition-all duration-200 relative ${
+                      isActive
+                        ? 'text-moto-orange bg-moto-orange/10 border-r-2 border-moto-orange'
+                        : 'text-moto-steel hover:text-moto-silver hover:bg-carbon-700/50'
+                    }`
+                  }
+                >
+                  <item.icon size={18} />
+                  <div className="hidden lg:inline">
+                    <span>{item.label}</span>
+                  </div>
+                </NavLink>
+              ))}
+            </div>
+          )}
         </div>
         {(hasConflicts || hasWarnings) && location.pathname !== '/list' && (
           <NavLink
