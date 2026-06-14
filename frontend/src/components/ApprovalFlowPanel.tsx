@@ -15,9 +15,9 @@ import { APPROVAL_ROLE_LABELS } from '@/types'
 interface ApprovalFlowPanelProps {
   flow: ApprovalFlow | null
   quoteStatus: QuoteStatus
-  onApprove?: (nodeId: string) => void
-  onReject?: (nodeId: string) => void
-  onReturn?: (nodeId: string) => void
+  onApprove?: (nodeId: string, comment?: string) => void
+  onReject?: (nodeId: string, comment?: string) => void
+  onReturn?: (nodeId: string, comment?: string) => void
   onSubmit?: () => void
   disabled?: boolean
 }
@@ -120,9 +120,10 @@ export default function ApprovalFlowPanel({
 
   const handleAction = (nodeId: string, action: 'approve' | 'reject' | 'return') => {
     if (disabled) return
-    if (action === 'approve') onApprove?.(nodeId)
-    if (action === 'reject') onReject?.(nodeId)
-    if (action === 'return') onReturn?.(nodeId)
+    const finalComment = comment.trim() || undefined
+    if (action === 'approve') onApprove?.(nodeId, finalComment)
+    if (action === 'reject') onReject?.(nodeId, finalComment)
+    if (action === 'return') onReturn?.(nodeId, finalComment)
     setComment('')
     setActiveNodeId(null)
   }
@@ -195,6 +196,11 @@ export default function ApprovalFlowPanel({
                         <div className="flex items-center gap-1 mt-2 text-[10px] text-moto-steel">
                           <User size={10} />
                           <span className="truncate max-w-[80px]">{node.approverName}</span>
+                        </div>
+                      )}
+                      {node?.comment && (
+                        <div className="mt-2 px-2 py-1.5 bg-carbon-700/70 rounded border border-carbon-500/30 text-[10px] text-moto-steel leading-snug max-w-[140px] line-clamp-3" title={node.comment}>
+                          <span className="opacity-70">意见：</span>{node.comment}
                         </div>
                       )}
                     </div>

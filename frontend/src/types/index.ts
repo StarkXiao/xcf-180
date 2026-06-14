@@ -640,6 +640,12 @@ export interface QuotePlan {
   isDefault: boolean
   createdAt: string
   updatedAt: string
+  appliedDiscountRules?: {
+    ruleId: string
+    ruleName: string
+    appliedAmount: number
+    description: string
+  }[]
 }
 
 export interface ApprovalNode {

@@ -548,4 +548,41 @@ export const api = {
         body: JSON.stringify(data),
       }
     ),
+
+  applyDiscountToPlan: (quoteId: string, planId: string) =>
+    fetchJSON<{
+      success: boolean
+      plan: QuotePlan
+      appliedRules: DiscountResult[]
+      totalDiscount: number
+      totalAmount: number
+    }>(`/api/quotes/${quoteId}/plans/${planId}/apply-discount`, {
+      method: 'POST',
+    }),
+
+  async downloadQuoteFile(type: 'pdf' | 'excel', quoteId: string, planId?: string, exportedBy?: string): Promise<void> {
+    const params = new URLSearchParams()
+    if (planId) params.set('planId', planId)
+    if (exportedBy) params.set('exportedBy', exportedBy)
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    const url = BASE + `/api/quotes/${quoteId}/export/${type}${qs}`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`Export Error: ${res.status}`)
+    const contentDisposition = res.headers.get('Content-Disposition') || ''
+    const fileNameMatch = contentDisposition.match(/filename="?(.+?)"?(?:;|$)/i)
+    const blob = await res.blob()
+    const link = document.createElement('a')
+    const objectURL = URL.createObjectURL(blob)
+    link.href = objectURL
+    let extension = type === 'excel' ? 'csv' : 'html'
+    if (type === 'pdf') extension = 'html'
+    const defaultName = `报价单-${Date.now()}.${extension}`
+    const rawName = fileNameMatch ? decodeURIComponent(fileNameMatch[1]) : defaultName
+    const safeName = rawName.endsWith('.html.pdf.html') ? rawName.replace(/\.html\.pdf\.html$/, '.html') : rawName
+    link.download = safeName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setTimeout(() => URL.revokeObjectURL(objectURL), 1000)
+  },
 }

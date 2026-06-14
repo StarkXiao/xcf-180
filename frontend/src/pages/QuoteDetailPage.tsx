@@ -5,7 +5,7 @@ import {
   ArrowLeft, Clock, User, Phone, Wrench, Mail, CalendarDays, FileText,
   ChevronRight, Plus, Layers, ArrowLeftRight, Send, CheckCircle2,
   XCircle, ShieldCheck, Trash2, Edit2, Download, Printer, FileSpreadsheet,
-  DollarSign, Mail as MailIcon, Package, Eye, X, Star,
+  DollarSign, Mail as MailIcon, Package, Eye, X, Star, Percent,
 } from 'lucide-react'
 import type { QuoteStatus, QuotePlan, QUOTE_STATUS_LABELS, QUOTE_STATUS_COLORS, ApprovalRole } from '@/types'
 import { QUOTE_STATUS_LABELS as STATUS_LABELS, APPROVAL_ROLE_LABELS } from '@/types'
@@ -36,6 +36,7 @@ export default function QuoteDetailPage() {
     submitQuoteApproval, processQuoteApproval, sendQuoteToCustomer,
     customerConfirmQuote, customerRejectQuote, exportQuote, convertQuoteToOrder,
     setPlanComparison, planComparison, compareQuotePlans,
+    fetchDiscountRules, discountRules, applyDiscountToPlan, downloadQuoteFile,
   } = useStore()
 
   const [activeTab, setActiveTab] = useState<'plans' | 'approval' | 'customer' | 'export'>('plans')
@@ -54,6 +55,7 @@ export default function QuoteDetailPage() {
   useEffect(() => {
     if (id) fetchQuoteDetail(id)
     if (quotes.length === 0) fetchQuotes()
+    fetchDiscountRules({ isActive: true })
   }, [id])
 
   const quote = currentQuote?.id === id ? currentQuote : quotes.find((q) => q.id === id)
@@ -183,13 +185,26 @@ export default function QuoteDetailPage() {
     if (!id) return
     setSubmitting(true)
     try {
-      const result = await exportQuote(id, {
-        format,
-        planId: activePlan?.id,
-        exportedBy: '当前用户',
-      })
-      if (format === 'print' && result) {
-        window.print()
+      if (format === 'print') {
+        await exportQuote(id, {
+          format,
+          planId: activePlan?.id,
+          exportedBy: '当前用户',
+        })
+        const printWin = window.open('', '_blank', 'width=900,height=1200')
+        if (printWin && activePlan) {
+          const title = `${quote.quoteNo} 报价单`
+          const partsHTML = buildPrintHTML(quote, activePlan)
+          printWin.document.write(partsHTML)
+          printWin.document.title = title
+          printWin.document.close()
+          printWin.focus()
+          setTimeout(() => {
+            printWin.print()
+          }, 400)
+        }
+      } else {
+        await downloadQuoteFile(format, id, activePlan?.id, '当前用户')
       }
       setShowExport(false)
     } finally {
@@ -246,6 +261,16 @@ export default function QuoteDetailPage() {
     await updateQuote(id, { activePlanId: planId })
   }
 
+  const handleApplyDiscount = async (planId: string) => {
+    if (!id) return
+    setSubmitting(true)
+    try {
+      await applyDiscountToPlan(id, planId)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const groupedItems = useMemo(() => {
     if (!activePlan) return {}
     return activePlan.items.reduce<Record<string, typeof activePlan.items>>((acc, item) => {
@@ -254,6 +279,114 @@ export default function QuoteDetailPage() {
       return acc
     }, {})
   }, [activePlan])
+
+  const buildPrintHTML = (q: any, plan: any): string => {
+    const grouped: Record<string, any[]> = {}
+    for (const item of plan.items) {
+      if (!grouped[item.categoryId]) grouped[item.categoryId] = []
+      grouped[item.categoryId].push(item)
+    }
+    let rows = ''
+    let idx = 0
+    for (const [, items] of Object.entries(grouped)) {
+      const catName = items[0]?.categoryName ?? '未分类'
+      const catSub = items.reduce((s: number, it: any) => s + it.subtotal, 0)
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i]
+        idx++
+        rows += `<tr>
+          <td class="bdr" style="text-align:center">${idx}</td>
+          ${i === 0 ? `<td class="bdr" style="font-weight:600;background:#f9fafb" rowspan="${items.length}">${catName}</td>` : ''}
+          <td class="bdr">${it.partName}</td>
+          <td class="bdr" style="text-align:center">${it.partBrand}</td>
+          <td class="bdr" style="text-align:center">×${it.quantity}</td>
+          <td class="bdr" style="text-align:right">¥${it.originalPrice.toLocaleString()}</td>
+          <td class="bdr" style="text-align:right">¥${it.unitPrice.toLocaleString()}</td>
+          <td class="bdr" style="text-align:center">${Math.round((it.discountRate || 0) * 100)}%</td>
+          <td class="bdr" style="text-align:right;font-weight:600">¥${it.subtotal.toLocaleString()}</td>
+        </tr>`
+      }
+      rows += `<tr style="background:#f9fafb">
+        <td class="bdr" colspan="8" style="text-align:right;font-style:italic;color:#6b7280;font-size:12px">${catName} 小计</td>
+        <td class="bdr" style="text-align:right;font-weight:700">¥${catSub.toLocaleString()}</td>
+      </tr>`
+    }
+    const rules = (plan.appliedDiscountRules ?? []).map((r: any) => `<div>· ${r.description}（-¥${r.appliedAmount.toLocaleString()}）</div>`).join('')
+    const approvalHistory = (q.approvalFlow?.history ?? []).map((h: any) => {
+      const roleLabels: Record<string, string> = { sales: '销售', sales_manager: '销售经理', finance: '财务', general_manager: '总经理' }
+      const actionLabels: Record<string, string> = { approve: '通过', reject: '拒绝', return: '退回' }
+      const date = h.actedAt ? new Date(h.actedAt).toLocaleString('zh-CN') : ''
+      return `<div style="margin:8px 0;padding:10px 12px;background:#f9fafb;border-left:3px solid #f97316;border-radius:4px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span><b>${h.approverName || '系统'}</b>（${roleLabels[h.role] || h.role}）<span style="margin-left:8px;padding:2px 6px;background:#fee2e2;color:#b91c1c;border-radius:4px;font-size:12px">${actionLabels[h.action] || h.action}</span></span>
+          <span style="color:#6b7280;font-size:12px">${date}</span>
+        </div>
+        ${h.comment ? `<div style="color:#4b5563;margin-top:4px">📝 ${h.comment}</div>` : ''}
+      </div>`
+    }).join('')
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>${q.quoteNo} 报价单</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#fff;color:#111827;padding:48px 56px;line-height:1.6;font-size:14px}
+h1{font-size:28px;font-weight:700;text-align:center;letter-spacing:2px;padding-bottom:16px;border-bottom:2px solid #e5e7eb;margin-bottom:32px}
+.sub{text-align:center;color:#6b7280;font-size:13px;margin-top:-24px;margin-bottom:32px;letter-spacing:3px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 48px;margin-bottom:28px}
+.info-label{color:#6b7280;min-width:80px}
+.info-val{font-weight:600}
+table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px}
+th{background:#f3f4f6;border:1px solid #d1d5db;padding:10px 8px;font-weight:600;text-align:center}
+.bdr{border:1px solid #d1d5db;padding:8px}
+.sum{background:#f9fafb;border-radius:8px;padding:20px 24px;margin-bottom:24px;border:1px solid #e5e7eb}
+.sum-row{display:flex;justify-content:space-between;padding:6px 0}
+.sum-final{font-size:22px;font-weight:700;color:#ea580c}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:48px;padding-top:32px;border-top:1px solid #e5e7eb}
+.sign-label{font-size:14px;color:#6b7280;margin-bottom:48px}
+.sign-line{border-top:1px solid #6b7280;padding-top:8px;display:flex;justify-content:space-between;font-size:12px;color:#6b7280}
+.foot{margin-top:32px;padding-top:16px;border-top:1px dashed #d1d5db;text-align:center;font-size:12px;color:#9ca3af}
+.ht{font-weight:700;margin:24px 0 12px;font-size:15px;padding-bottom:8px;border-bottom:1px solid #e5e7eb}
+@media print{body{padding:24px}}
+</style></head>
+<body>
+<h1>XCF-180 摩托车改装报价单</h1>
+<div class="sub">MOTORCYCLE CUSTOMIZATION QUOTATION</div>
+<div class="info-grid">
+  <div><span class="info-label">报价单号：</span><span class="info-val">${q.quoteNo}</span></div>
+  <div><span class="info-label">日 期：</span><span class="info-val">${new Date(q.createdAt).toLocaleDateString('zh-CN')}</span></div>
+  <div><span class="info-label">客户名称：</span><span class="info-val">${q.customerName}</span></div>
+  <div><span class="info-label">联 系 人：</span><span class="info-val">${q.customerContact}</span></div>
+  <div><span class="info-label">联系电话：</span><span class="info-val">${q.customerPhone}</span></div>
+  <div><span class="info-label">有效期至：</span><span class="info-val">${q.validUntil ? new Date(q.validUntil).toLocaleDateString('zh-CN') : '-'}</span></div>
+  <div style="grid-column:span 2"><span class="info-label">车 型：</span><span class="info-val">${q.modelName}${q.packageName ? '（' + q.packageName + '）' : ''}</span></div>
+  ${q.plans.length > 1 ? `<div style="grid-column:span 2"><span class="info-label">方 案：</span><span class="info-val">${plan.name}${plan.description ? ' — ' + plan.description : ''}</span></div>` : ''}
+</div>
+<table>
+  <thead><tr>
+    <th style="width:6%">序号</th><th style="width:12%">分类</th><th>配件名称</th><th style="width:10%">品牌</th>
+    <th style="width:8%">数量</th><th style="width:10%">原价</th><th style="width:10%">单价</th>
+    <th style="width:7%">折扣</th><th style="width:12%">小计</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="sum">
+  <div class="sum-row"><span>配件小计：</span><span class="info-val">¥${plan.partsTotal.toLocaleString()}</span></div>
+  <div class="sum-row"><span>工费合计：</span><span class="info-val">¥${plan.laborFeeTotal.toLocaleString()}</span></div>
+  <div class="sum-row"><span style="color:#059669">优惠金额：</span><span style="color:#059669;font-weight:600">-¥${plan.discountTotal.toLocaleString()}</span></div>
+  ${rules ? `<div style="padding:8px 0 4px 24px;color:#059669;font-size:13px">${rules}</div>` : ''}
+  <div class="sum-row" style="padding-top:12px;border-top:1px solid #e5e7eb;margin-top:8px">
+    <span>报价总计（小写）：</span><span class="sum-final">¥${plan.totalAmount.toLocaleString()}</span>
+  </div>
+</div>
+${q.remark ? `<div class="sum-row" style="padding:12px 0"><span style="color:#6b7280">备注：</span><span>${q.remark}</span></div>` : ''}
+${approvalHistory ? `<div class="ht">📋 审批意见留痕</div>${approvalHistory}` : ''}
+<div class="sign">
+  <div><div class="sign-label">审批人签字：</div><div class="sign-line"><span>签字：_______________</span><span>日期：_______________</span></div></div>
+  <div><div class="sign-label">客户确认：</div><div class="sign-line"><span>签字：_______________</span><span>日期：_______________</span></div></div>
+</div>
+<div class="foot">本报价单由 XCF-180 摩托车改装系统自动生成 | 如有疑问请联系销售人员</div>
+</body></html>`
+  }
 
   const tabs = [
     { key: 'plans' as const, label: '方案管理', icon: Layers },
@@ -473,6 +606,16 @@ export default function QuoteDetailPage() {
                       <span className="text-green-400 font-orbitron">-¥{activePlan.discountTotal.toLocaleString()}</span>
                     </div>
                   )}
+                  {activePlan.appliedDiscountRules && activePlan.appliedDiscountRules.length > 0 && (
+                    <div className="pl-3 space-y-0.5 py-1 border-l-2 border-emerald-500/30">
+                      {activePlan.appliedDiscountRules.map((r: any) => (
+                        <div key={r.ruleId} className="flex justify-between text-[11px]">
+                          <span className="text-moto-steel">{r.description}</span>
+                          <span className="text-emerald-400">-¥{r.appliedAmount.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="border-t border-carbon-500/30 pt-2 mt-2">
                     <div className="flex justify-between">
                       <span className="text-moto-silver font-medium">总计</span>
@@ -588,9 +731,39 @@ export default function QuoteDetailPage() {
                                     合计 ¥{plan.totalAmount.toLocaleString()}
                                   </span>
                                 </div>
+                                {plan.appliedDiscountRules && plan.appliedDiscountRules.length > 0 && (
+                                  <div className="mt-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                      <Percent size={12} className="text-emerald-400" />
+                                      <span className="text-[11px] font-orbitron text-emerald-400 uppercase tracking-wider">已应用折扣规则</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                      {plan.appliedDiscountRules.map((r: any) => (
+                                        <div key={r.ruleId} className="flex items-center justify-between text-xs">
+                                          <span className="text-moto-silver">
+                                            {r.description}
+                                            <span className="mx-1.5 text-carbon-500">·</span>
+                                            <span className="text-moto-steel">{r.ruleName}</span>
+                                          </span>
+                                          <span className="text-emerald-400 font-orbitron">-¥{r.appliedAmount.toLocaleString()}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 shrink-0 ml-4">
+                            <div className="flex items-center gap-2 shrink-0 ml-4">
+                              {quote.status === 'draft' && discountRules.length > 0 && (
+                                <button
+                                  onClick={() => handleApplyDiscount(plan.id)}
+                                  disabled={submitting}
+                                  className="p-1.5 text-moto-steel hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors"
+                                  title={`应用折扣规则（共 ${discountRules.length} 条启用）`}
+                                >
+                                  <Percent size={14} />
+                                </button>
+                              )}
                               {plan.id !== quote.activePlanId && quote.status === 'draft' && (
                                 <button
                                   onClick={() => handleSetActivePlan(plan.id)}
@@ -660,9 +833,9 @@ export default function QuoteDetailPage() {
                     flow={quote.approvalFlow}
                     quoteStatus={quote.status}
                     onSubmit={handleSubmitApproval}
-                    onApprove={(nodeId) => handleApprovalAction(nodeId, 'approve')}
-                    onReject={(nodeId) => handleApprovalAction(nodeId, 'reject')}
-                    onReturn={(nodeId) => handleApprovalAction(nodeId, 'return')}
+                    onApprove={(nodeId, comment) => handleApprovalAction(nodeId, 'approve', comment)}
+                    onReject={(nodeId, comment) => handleApprovalAction(nodeId, 'reject', comment)}
+                    onReturn={(nodeId, comment) => handleApprovalAction(nodeId, 'return', comment)}
                   />
                 )}
 

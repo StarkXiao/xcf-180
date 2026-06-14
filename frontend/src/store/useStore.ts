@@ -324,6 +324,8 @@ interface AppState {
     items: { partId: string; categoryId: string; brand: string; unitPrice: number; quantity: number }[];
     totalAmount: number
   }) => Promise<{ results: DiscountResult[]; totalDiscount: number; finalAmount: number } | undefined>
+  applyDiscountToPlan: (quoteId: string, planId: string) => Promise<QuotePlan | undefined>
+  downloadQuoteFile: (type: 'pdf' | 'excel', quoteId: string, planId?: string, exportedBy?: string) => Promise<void>
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -2265,6 +2267,50 @@ export const useStore = create<AppState>((set, get) => ({
       return await api.calculateDiscount(data)
     } catch (e) {
       console.error('Failed to calculate discount:', e)
+    }
+  },
+
+  applyDiscountToPlan: async (quoteId, planId) => {
+    try {
+      const res = await api.applyDiscountToPlan(quoteId, planId)
+      if (res?.success && res.plan) {
+        set((state) => {
+          const quotes = state.quotes.map((q) => {
+            if (q.id !== quoteId) return q
+            return {
+              ...q,
+              plans: q.plans.map((p) => (p.id === res.plan.id ? res.plan : p)),
+              updatedAt: new Date().toISOString(),
+            }
+          })
+          const currentQuote = state.currentQuote?.id === quoteId
+            ? {
+                ...state.currentQuote,
+                plans: state.currentQuote.plans.map((p) =>
+                  p.id === res.plan.id ? res.plan : p
+                ),
+                updatedAt: new Date().toISOString(),
+              }
+            : state.currentQuote
+          return { quotes, currentQuote }
+        })
+        return res.plan
+      }
+    } catch (e) {
+      console.error('Failed to apply discount to plan:', e)
+    }
+  },
+
+  downloadQuoteFile: async (type, quoteId, planId, exportedBy) => {
+    try {
+      await api.downloadQuoteFile(type, quoteId, planId, exportedBy)
+      const quote = get().currentQuote || get().quotes.find((q) => q.id === quoteId)
+      if (quote) {
+        await get().fetchQuoteDetail(quoteId)
+      }
+    } catch (e) {
+      console.error('Failed to download quote file:', e)
+      throw e
     }
   },
 }))

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileDown, Printer, FileSpreadsheet, FileText, X, Calendar, User, Phone } from 'lucide-react'
+import { FileDown, Printer, FileSpreadsheet, FileText, X, Calendar, User, Phone, MessageSquare } from 'lucide-react'
 import type { Quote, QuotePlan } from '@/types'
 
 interface Props {
@@ -274,6 +274,16 @@ export default function QuoteExportPanel({ quote, selectedPlan, onExport, onClos
                   <span className="text-gray-600">优惠金额：</span>
                   <span className="font-medium text-green-600">-¥{currentPlan?.discountTotal.toLocaleString() ?? 0}</span>
                 </div>
+                {currentPlan && (currentPlan.appliedDiscountRules ?? []).length > 0 && (
+                  <div className="col-span-2 pl-4 space-y-0.5 py-1 border-l-2 border-green-400/40 text-xs text-green-700">
+                    {currentPlan.appliedDiscountRules.map((r: any) => (
+                      <div key={r.ruleId} className="flex justify-between">
+                        <span>{r.description}</span>
+                        <span className="font-medium">-¥{r.appliedAmount.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">报价总计（小写）：</span>
                   <span className="font-orbitron text-xl font-bold text-orange-600">
@@ -293,6 +303,38 @@ export default function QuoteExportPanel({ quote, selectedPlan, onExport, onClos
               <div className="mb-6 text-sm">
                 <span className="text-gray-500">备注：</span>
                 <span className="text-gray-800">{quote.remark}</span>
+              </div>
+            )}
+
+            {quote.approvalFlow?.history?.length > 0 && (
+              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="font-orbitron font-bold text-sm text-orange-700 mb-3 flex items-center gap-2">
+                  <MessageSquare size={14} /> 审批意见留痕
+                </div>
+                <div className="space-y-2">
+                  {quote.approvalFlow.history.map((h: any, i: number) => {
+                    const roleMap: Record<string,string> = {sales:'销售',sales_manager:'销售经理',finance:'财务',general_manager:'总经理'}
+                    const actMap: Record<string,string> = {approve:'通过',reject:'拒绝',return:'退回'}
+                    const actColor = h.action==='approve'?'text-green-600 bg-green-100':h.action==='reject'?'text-red-600 bg-red-100':'text-yellow-700 bg-yellow-100'
+                    return (
+                      <div key={i} className="bg-white rounded border border-orange-100 p-3 text-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-gray-900">{h.approverName || '系统'}</span>
+                            <span className="text-gray-500 text-xs">· {roleMap[h.role] || h.role}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${actColor}`}>{actMap[h.action] || h.action}</span>
+                          </div>
+                          <span className="text-[11px] text-gray-500">{h.actedAt ? new Date(h.actedAt).toLocaleString('zh-CN') : '-'}</span>
+                        </div>
+                        {h.comment && (
+                          <div className="mt-2 pl-3 border-l-2 border-orange-300 text-gray-700 text-xs">
+                            📝 {h.comment}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
