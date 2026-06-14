@@ -1,7 +1,7 @@
 import { useStore } from '@/store/useStore'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { AlertTriangle, XCircle, Plus, Check, ArrowRight, X, Heart } from 'lucide-react'
-import type { Part } from '@/types'
+import type { Part, SelectionItem } from '@/types'
 
 const ZONE_MAP: Record<string, { x: number; y: number; w: number; h: number; label: string }> = {
   exhaust: { x: 62, y: 50, w: 20, h: 15, label: '排气' },
@@ -12,7 +12,12 @@ const ZONE_MAP: Record<string, { x: number; y: number; w: number; h: number; lab
   brake: { x: 10, y: 58, w: 15, h: 15, label: '制动' },
 }
 
-export default function BikePreview() {
+interface BikePreviewProps {
+  previewItems?: SelectionItem[]
+  readOnly?: boolean
+}
+
+export default function BikePreview({ previewItems, readOnly = false }: BikePreviewProps) {
   const {
     currentSelection,
     allParts,
@@ -33,10 +38,25 @@ export default function BikePreview() {
   const containerRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
-  const selectedItems = currentSelection?.items ?? []
-  const selectedParts = selectedItems
-    .map((item) => allParts.find((p) => p.id === item.partId))
-    .filter(Boolean) as Part[]
+  const selectedItems = previewItems ?? currentSelection?.items ?? []
+  const selectedParts = useMemo(
+    () =>
+      selectedItems
+        .map((item) => allParts.find((p) => p.id === item.partId))
+        .filter(Boolean) as Part[],
+    [selectedItems, allParts]
+  )
+
+  const previewPartIds = useMemo(() => new Set(selectedParts.map((p) => p.id)), [selectedParts])
+
+  const previewConflictMap = useMemo(() => {
+    if (!previewItems) return partConflictMap
+    const map: Record<string, { hasError: boolean; hasWarning: boolean }> = {}
+    previewPartIds.forEach((id) => {
+      map[id] = { hasError: false, hasWarning: false }
+    })
+    return map
+  }, [previewItems, previewPartIds, partConflictMap])
 
   const uniqueCategories = [...new Set(selectedParts.map((p) => p.categoryId))]
 
@@ -44,6 +64,14 @@ export default function BikePreview() {
   const hasWarnings = compatibilityResult?.warnings && compatibilityResult.warnings.length > 0
 
   const handleZoneClick = useCallback((categoryId: string) => {
+    if (readOnly) {
+      if (selectedZone === categoryId) {
+        setSelectedZone(null)
+      } else {
+        setSelectedZone(categoryId)
+      }
+      return
+    }
     if (selectedZone === categoryId) {
       setSelectedZone(null)
       setPanelVisible(false)
@@ -53,7 +81,7 @@ export default function BikePreview() {
       setActiveCategory(categoryId)
       setPanelVisible(true)
     }
-  }, [selectedZone, setActiveCategory])
+  }, [selectedZone, setActiveCategory, readOnly])
 
   useEffect(() => {
     if (activeCategory && activeCategory !== 'all' && activeCategory !== selectedZone) {
@@ -153,7 +181,7 @@ export default function BikePreview() {
           </g>
 
           {selectedParts.map((part) => {
-            const conflictStatus = partConflictMap[part.id]
+            const conflictStatus = previewConflictMap[part.id]
             const hasError = conflictStatus?.hasError
             const hasWarning = conflictStatus?.hasWarning
             const isSelected = selectedZone === part.categoryId
@@ -326,18 +354,18 @@ export default function BikePreview() {
 
         {hoveredPart && !selectedZone && (
           <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 backdrop-blur px-4 py-2 rounded-lg border animate-fade-in flex items-center gap-2 ${
-            partConflictMap[hoveredPart]?.hasError
+            previewConflictMap[hoveredPart]?.hasError
               ? 'bg-red-500/10 border-red-500/30'
-              : partConflictMap[hoveredPart]?.hasWarning
+              : previewConflictMap[hoveredPart]?.hasWarning
                 ? 'bg-yellow-500/10 border-yellow-500/30'
                 : 'bg-carbon-800/95 border-moto-orange/30'
           }`}>
-            {partConflictMap[hoveredPart]?.hasError && <XCircle size={14} className="text-red-400" />}
-            {partConflictMap[hoveredPart]?.hasWarning && !partConflictMap[hoveredPart]?.hasError && <AlertTriangle size={14} className="text-yellow-500" />}
+            {previewConflictMap[hoveredPart]?.hasError && <XCircle size={14} className="text-red-400" />}
+            {previewConflictMap[hoveredPart]?.hasWarning && !previewConflictMap[hoveredPart]?.hasError && <AlertTriangle size={14} className="text-yellow-500" />}
             <span className={`font-orbitron text-sm ${
-              partConflictMap[hoveredPart]?.hasError
+              previewConflictMap[hoveredPart]?.hasError
                 ? 'text-red-400'
-                : partConflictMap[hoveredPart]?.hasWarning
+                : previewConflictMap[hoveredPart]?.hasWarning
                   ? 'text-yellow-500'
                   : 'text-moto-orange'
             }`}>
@@ -354,8 +382,8 @@ export default function BikePreview() {
           const installedPart = hasInstalled
             ? selectedParts.find((p) => p.categoryId === zoneId)
             : null
-          const hasError = installedPart && partConflictMap[installedPart.id]?.hasError
-          const hasWarning = installedPart && partConflictMap[installedPart.id]?.hasWarning
+          const hasError = installedPart && previewConflictMap[installedPart.id]?.hasError
+          const hasWarning = installedPart && previewConflictMap[installedPart.id]?.hasWarning
 
           return (
             <button
@@ -387,7 +415,7 @@ export default function BikePreview() {
         })}
       </div>
 
-      {panelVisible && selectedZone && (
+      {(panelVisible || (readOnly && selectedZone && currentInstalledPart)) && selectedZone && (
         <div
           ref={panelRef}
           className="absolute bottom-16 left-1/2 -translate-x-1/2 w-[90%] max-w-lg bg-carbon-900/95 backdrop-blur-lg rounded-xl border border-carbon-500/30 shadow-2xl animate-fade-in z-20 overflow-hidden"
@@ -399,7 +427,7 @@ export default function BikePreview() {
               </span>
               {currentInstalledPart && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-moto-orange/20 text-moto-orange font-orbitron">
-                  已安装
+                  {readOnly ? '已配置' : '已安装'}
                 </span>
               )}
             </div>
@@ -407,7 +435,7 @@ export default function BikePreview() {
               onClick={() => {
                 setSelectedZone(null)
                 setPanelVisible(false)
-                setActiveCategory('all')
+                if (!readOnly) setActiveCategory('all')
               }}
               className="p-1 text-moto-steel hover:text-white transition-colors"
             >
@@ -416,12 +444,20 @@ export default function BikePreview() {
           </div>
 
           {currentInstalledPart && (
-            <div className={`px-4 py-3 border-b border-carbon-500/20 ${
-              partConflictMap[currentInstalledPart.id]?.hasError
-                ? 'bg-red-500/5'
-                : partConflictMap[currentInstalledPart.id]?.hasWarning
-                  ? 'bg-yellow-500/5'
-                  : 'bg-carbon-800/50'
+            <div className={`px-4 py-3 ${
+              !readOnly
+                ? `border-b border-carbon-500/20 ${
+                    previewConflictMap[currentInstalledPart.id]?.hasError
+                      ? 'bg-red-500/5'
+                      : previewConflictMap[currentInstalledPart.id]?.hasWarning
+                        ? 'bg-yellow-500/5'
+                        : 'bg-carbon-800/50'
+                  }`
+                : previewConflictMap[currentInstalledPart.id]?.hasError
+                  ? 'bg-red-500/5'
+                  : previewConflictMap[currentInstalledPart.id]?.hasWarning
+                    ? 'bg-yellow-500/5'
+                    : 'bg-carbon-800/50'
             }`}>
               <div className="flex items-center gap-3">
                 <img
@@ -437,10 +473,10 @@ export default function BikePreview() {
                     <p className="text-moto-silver text-sm font-medium truncate">
                       {currentInstalledPart.name}
                     </p>
-                    {partConflictMap[currentInstalledPart.id]?.hasError && (
+                    {previewConflictMap[currentInstalledPart.id]?.hasError && (
                       <XCircle size={12} className="text-red-400 shrink-0" />
                     )}
-                    {partConflictMap[currentInstalledPart.id]?.hasWarning && !partConflictMap[currentInstalledPart.id]?.hasError && (
+                    {previewConflictMap[currentInstalledPart.id]?.hasWarning && !previewConflictMap[currentInstalledPart.id]?.hasError && (
                       <AlertTriangle size={12} className="text-yellow-500 shrink-0" />
                     )}
                   </div>
@@ -448,97 +484,103 @@ export default function BikePreview() {
                     ¥{currentInstalledPart.price.toLocaleString()}
                   </p>
                 </div>
-                <button
-                  onClick={() => toggleFavorite(currentInstalledPart.id)}
-                  className={`p-1.5 rounded-lg transition-colors ${
-                    isFavorite(currentInstalledPart.id)
-                      ? 'text-red-400 hover:text-red-300'
-                      : 'text-moto-steel hover:text-red-400'
-                  }`}
-                >
-                  <Heart size={14} fill={isFavorite(currentInstalledPart.id) ? 'currentColor' : 'none'} />
-                </button>
-                <button
-                  onClick={handleRemoveCurrent}
-                  className="px-3 py-1.5 rounded-lg text-xs bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors font-orbitron"
-                >
-                  移除
-                </button>
+                {!readOnly && (
+                  <>
+                    <button
+                      onClick={() => toggleFavorite(currentInstalledPart.id)}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        isFavorite(currentInstalledPart.id)
+                          ? 'text-red-400 hover:text-red-300'
+                          : 'text-moto-steel hover:text-red-400'
+                      }`}
+                    >
+                      <Heart size={14} fill={isFavorite(currentInstalledPart.id) ? 'currentColor' : 'none'} />
+                    </button>
+                    <button
+                      onClick={handleRemoveCurrent}
+                      className="px-3 py-1.5 rounded-lg text-xs bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors font-orbitron"
+                    >
+                      移除
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )}
 
-          <div className="max-h-48 overflow-y-auto px-4 py-3">
-            <p className="text-moto-steel text-[10px] mb-2 font-orbitron uppercase tracking-wider">
-              {currentInstalledPart ? '可替换配件' : '可选配件'}
-            </p>
-            {alternativeParts.length === 0 ? (
-              <p className="text-moto-steel text-xs text-center py-4">该分类暂无其他配件</p>
-            ) : (
-              <div className="space-y-2">
-                {alternativeParts.map((part) => {
-                  const conflictStatus = partConflictMap[part.id]
-                  const pHasError = conflictStatus?.hasError
-                  const pHasWarning = conflictStatus?.hasWarning
-                  return (
-                    <div
-                      key={part.id}
-                      className={`flex items-center gap-3 rounded-lg p-2 transition-colors ${
-                        pHasError
-                          ? 'bg-red-500/5 border border-red-500/20'
-                          : pHasWarning
-                            ? 'bg-yellow-500/5 border border-yellow-500/20'
-                            : 'bg-carbon-800/50 hover:bg-carbon-700/50 border border-transparent'
-                      }`}
-                    >
-                      <img
-                        src={part.image}
-                        alt={part.name}
-                        className="w-10 h-10 rounded object-cover bg-carbon-600 shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+part+icon+dark+minimal&image_size=square_hd`
-                        }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-moto-silver text-xs truncate">{part.name}</p>
-                          {pHasError && <XCircle size={10} className="text-red-400 shrink-0" />}
-                          {pHasWarning && !pHasError && <AlertTriangle size={10} className="text-yellow-500 shrink-0" />}
+          {!readOnly && (
+            <div className="max-h-48 overflow-y-auto px-4 py-3">
+              <p className="text-moto-steel text-[10px] mb-2 font-orbitron uppercase tracking-wider">
+                {currentInstalledPart ? '可替换配件' : '可选配件'}
+              </p>
+              {alternativeParts.length === 0 ? (
+                <p className="text-moto-steel text-xs text-center py-4">该分类暂无其他配件</p>
+              ) : (
+                <div className="space-y-2">
+                  {alternativeParts.map((part) => {
+                    const conflictStatus = previewConflictMap[part.id]
+                    const pHasError = conflictStatus?.hasError
+                    const pHasWarning = conflictStatus?.hasWarning
+                    return (
+                      <div
+                        key={part.id}
+                        className={`flex items-center gap-3 rounded-lg p-2 transition-colors ${
+                          pHasError
+                            ? 'bg-red-500/5 border border-red-500/20'
+                            : pHasWarning
+                              ? 'bg-yellow-500/5 border border-yellow-500/20'
+                              : 'bg-carbon-800/50 hover:bg-carbon-700/50 border border-transparent'
+                        }`}
+                      >
+                        <img
+                          src={part.image}
+                          alt={part.name}
+                          className="w-10 h-10 rounded object-cover bg-carbon-600 shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+part+icon+dark+minimal&image_size=square_hd`
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            <p className="text-moto-silver text-xs truncate">{part.name}</p>
+                            {pHasError && <XCircle size={10} className="text-red-400 shrink-0" />}
+                            {pHasWarning && !pHasError && <AlertTriangle size={10} className="text-yellow-500 shrink-0" />}
+                          </div>
+                          <p className="font-orbitron text-[10px] text-moto-orange mt-0.5">
+                            ¥{part.price.toLocaleString()}
+                          </p>
                         </div>
-                        <p className="font-orbitron text-[10px] text-moto-orange mt-0.5">
-                          ¥{part.price.toLocaleString()}
-                        </p>
+                        <button
+                          onClick={() => toggleFavorite(part.id)}
+                          className={`shrink-0 p-1 rounded transition-colors ${
+                            isFavorite(part.id)
+                              ? 'text-red-400 hover:text-red-300'
+                              : 'text-moto-steel hover:text-red-400'
+                          }`}
+                        >
+                          <Heart size={12} fill={isFavorite(part.id) ? 'currentColor' : 'none'} />
+                        </button>
+                        <button
+                          onClick={() => handleReplace(part.id)}
+                          className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-orbitron transition-colors ${
+                            currentInstalledPart
+                              ? 'bg-moto-orange/10 border border-moto-orange/30 text-moto-orange hover:bg-moto-orange/20'
+                              : 'bg-carbon-600 text-moto-steel hover:text-white hover:bg-carbon-500'
+                          }`}
+                        >
+                          {currentInstalledPart ? (
+                            <><ArrowRight size={10} /> 替换</>
+                          ) : (
+                            <><Plus size={10} /> 添加</>
+                          )}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => toggleFavorite(part.id)}
-                        className={`shrink-0 p-1 rounded transition-colors ${
-                          isFavorite(part.id)
-                            ? 'text-red-400 hover:text-red-300'
-                            : 'text-moto-steel hover:text-red-400'
-                        }`}
-                      >
-                        <Heart size={12} fill={isFavorite(part.id) ? 'currentColor' : 'none'} />
-                      </button>
-                      <button
-                        onClick={() => handleReplace(part.id)}
-                        className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-orbitron transition-colors ${
-                          currentInstalledPart
-                            ? 'bg-moto-orange/10 border border-moto-orange/30 text-moto-orange hover:bg-moto-orange/20'
-                            : 'bg-carbon-600 text-moto-steel hover:text-white hover:bg-carbon-500'
-                        }`}
-                      >
-                        {currentInstalledPart ? (
-                          <><ArrowRight size={10} /> 替换</>
-                        ) : (
-                          <><Plus size={10} /> 添加</>
-                        )}
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

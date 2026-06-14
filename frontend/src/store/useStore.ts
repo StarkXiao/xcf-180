@@ -220,6 +220,7 @@ interface AppState {
   toggleTemplateSelection: (templateId: string) => void
   clearTemplateSelection: () => void
   selectAllTemplates: () => void
+  selectTemplatesByIds: (templateIds: string[]) => void
   getFilteredTemplates: () => Template[]
   getTemplateById: (id: string) => Template | undefined
   isTemplateFavorite: (templateId: string) => boolean
@@ -1592,6 +1593,9 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       selectedTemplateIds: state.getFilteredTemplates().map((t) => t.id),
     })),
+
+  selectTemplatesByIds: (templateIds) =>
+    set({ selectedTemplateIds: templateIds }),
 
   getFilteredTemplates: () => {
     const {

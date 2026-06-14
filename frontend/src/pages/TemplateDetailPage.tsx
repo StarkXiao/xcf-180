@@ -302,7 +302,7 @@ export default function TemplateDetailPage() {
                         <span>{template.favoriteCount} 收藏</span>
                       </div>
                     </div>
-                    <BikePreview />
+                    <BikePreview previewItems={template.items} readOnly={true} />
                   </div>
                 )}
 

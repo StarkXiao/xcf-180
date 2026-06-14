@@ -59,6 +59,7 @@ export default function AdminTemplatesPage() {
     toggleTemplateSelection,
     clearTemplateSelection,
     selectAllTemplates,
+    selectTemplatesByIds,
     getFilteredTemplates,
   } = useStore()
 
@@ -159,7 +160,7 @@ export default function AdminTemplatesPage() {
     if (selectAllChecked) {
       clearTemplateSelection()
     } else {
-      selectAllTemplates()
+      selectTemplatesByIds(filteredTemplates.map((t) => t.id))
     }
   }
 

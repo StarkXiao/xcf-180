@@ -38,8 +38,8 @@
       "isRecommended": true,
       "sortOrder": 1,
       "useCount": 128,
-      "favoriteCount": 257,
-      "viewCount": 1027,
+      "favoriteCount": 256,
+      "viewCount": 1029,
       "tags": [
         "赛道",
         "高性能",
@@ -267,10 +267,5 @@
       "sortOrder": 4
     }
   ],
-  "favorites": [
-    {
-      "templateId": "tpl-sport-pro",
-      "addedAt": "2026-06-14T12:20:42.604Z"
-    }
-  ]
+  "favorites": []
 }
