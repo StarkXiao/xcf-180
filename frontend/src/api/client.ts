@@ -574,11 +574,10 @@ export const api = {
     const link = document.createElement('a')
     const objectURL = URL.createObjectURL(blob)
     link.href = objectURL
-    let extension = type === 'excel' ? 'csv' : 'html'
-    if (type === 'pdf') extension = 'html'
+    const extension = type === 'excel' ? 'csv' : 'pdf'
     const defaultName = `报价单-${Date.now()}.${extension}`
     const rawName = fileNameMatch ? decodeURIComponent(fileNameMatch[1]) : defaultName
-    const safeName = rawName.endsWith('.html.pdf.html') ? rawName.replace(/\.html\.pdf\.html$/, '.html') : rawName
+    const safeName = rawName.endsWith(`.html`) && type === 'pdf' ? rawName.replace(/\.html$/, '.pdf') : rawName
     link.download = safeName
     document.body.appendChild(link)
     link.click()

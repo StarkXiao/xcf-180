@@ -2,6 +2,7 @@ import Router from 'koa-router';
 import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import PdfPrinter from 'pdfmake';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -350,6 +351,13 @@ router.post('/api/quotes/:id/plans', (ctx) => {
     updatedAt: now,
   };
 
+  const { appliedRules, totalDiscount } = applyDiscountRulesToPlan(newPlan);
+  newPlan.appliedDiscountRules = appliedRules;
+  if (appliedRules.length > 0) {
+    newPlan.discountTotal = discountTotal + totalDiscount;
+    newPlan.totalAmount = Math.max(0, newPlan.partsTotal + newPlan.laborFeeTotal - newPlan.discountTotal);
+  }
+
   if (isDefault) {
     quote.plans.forEach((p: any) => { p.isDefault = false; });
   }
@@ -404,6 +412,13 @@ router.put('/api/quotes/:id/plans/:planId', (ctx) => {
     plan.laborFeeTotal = laborFeeTotal;
     plan.discountTotal = discountTotal;
     plan.totalAmount = Math.max(0, partsTotal + laborFeeTotal - discountTotal);
+
+    const { appliedRules, totalDiscount } = applyDiscountRulesToPlan(plan);
+    plan.appliedDiscountRules = appliedRules;
+    if (appliedRules.length > 0) {
+      plan.discountTotal = discountTotal + totalDiscount;
+      plan.totalAmount = Math.max(0, plan.partsTotal + plan.laborFeeTotal - plan.discountTotal);
+    }
   }
 
   plan.updatedAt = new Date().toISOString();
@@ -904,26 +919,7 @@ router.post('/api/discount-rules/calculate', (ctx) => {
   };
 });
 
-router.post('/api/quotes/:id/plans/:planId/apply-discount', (ctx) => {
-  const data = loadQuotesData();
-  const quote = data.quotes.find((q: any) => q.id === ctx.params.id);
-  if (!quote) {
-    ctx.status = 404;
-    ctx.body = { error: 'Quote not found' };
-    return;
-  }
-  const plan = quote.plans.find((p: any) => p.id === ctx.params.planId);
-  if (!plan) {
-    ctx.status = 404;
-    ctx.body = { error: 'Plan not found' };
-    return;
-  }
-  if (quote.status !== 'draft') {
-    ctx.status = 400;
-    ctx.body = { error: 'Only draft quotes can apply discount rules' };
-    return;
-  }
-
+function applyDiscountRulesToPlan(plan: any): { appliedRules: any[]; totalDiscount: number } {
   const rulesData = loadDiscountRulesData();
   const activeRules = rulesData.rules
     .filter((r: any) => r.isActive)
@@ -940,7 +936,7 @@ router.post('/api/quotes/:id/plans/:planId/apply-discount', (ctx) => {
   const baseTotal = basePartsTotal + plan.laborFeeTotal;
 
   const appliedRules: any[] = [];
-  let totalDiscount = plan.discountTotal;
+  let totalDiscount = 0;
 
   for (const rule of activeRules) {
     let appliedAmount = 0;
@@ -998,7 +994,32 @@ router.post('/api/quotes/:id/plans/:planId/apply-discount', (ctx) => {
     }
   }
 
-  plan.discountTotal = Math.round(totalDiscount);
+  return { appliedRules, totalDiscount };
+}
+
+router.post('/api/quotes/:id/plans/:planId/apply-discount', (ctx) => {
+  const data = loadQuotesData();
+  const quote = data.quotes.find((q: any) => q.id === ctx.params.id);
+  if (!quote) {
+    ctx.status = 404;
+    ctx.body = { error: 'Quote not found' };
+    return;
+  }
+  const plan = quote.plans.find((p: any) => p.id === ctx.params.planId);
+  if (!plan) {
+    ctx.status = 404;
+    ctx.body = { error: 'Plan not found' };
+    return;
+  }
+  if (quote.status !== 'draft') {
+    ctx.status = 400;
+    ctx.body = { error: 'Only draft quotes can apply discount rules' };
+    return;
+  }
+
+  const { appliedRules, totalDiscount } = applyDiscountRulesToPlan(plan);
+
+  plan.discountTotal = totalDiscount;
   plan.totalAmount = Math.max(0, plan.partsTotal + plan.laborFeeTotal - plan.discountTotal);
   plan.appliedDiscountRules = appliedRules;
   plan.updatedAt = new Date().toISOString();
@@ -1195,7 +1216,339 @@ function buildQuotationHTML(quote: any, plan: any): string {
 </html>`;
 }
 
-router.get('/api/quotes/:id/export/pdf', (ctx) => {
+const FONTS_DIR = path.resolve(__dirname, '../../fonts');
+const pdfFonts: any = {
+  SimSun: {
+    normal: path.join(FONTS_DIR, 'simsun.ttf'),
+    bold: path.join(FONTS_DIR, 'simsun.ttf'),
+    italics: path.join(FONTS_DIR, 'simsun.ttf'),
+    bolditalics: path.join(FONTS_DIR, 'simsun.ttf'),
+  },
+};
+
+function numberToChinese(num: number): string {
+  const digitToChinese = ['零','壹','贰','叁','肆','伍','陆','柒','捌','玖'];
+  const unitSection = ['','拾','佰','仟'];
+  const unitBig = ['','万','亿','兆'];
+  if (num <= 0) return '零元整';
+  const yuan = Math.floor(num);
+  const jiao = Math.floor((num - yuan) * 10);
+  const convertInt = (n: number): string => {
+    if (n === 0) return '零';
+    let res = '', zeroFlag = false;
+    const str = n.toString();
+    for (let i = 0; i < str.length; i++) {
+      const d = parseInt(str[i]);
+      const pos = str.length - 1 - i;
+      const sp = Math.floor(pos / 4);
+      const up = pos % 4;
+      if (d === 0) { zeroFlag = true; }
+      else {
+        if (zeroFlag) { res += '零'; zeroFlag = false; }
+        res += digitToChinese[d] + unitSection[up];
+      }
+      if (up === 0 && sp > 0) { if (!zeroFlag || res.slice(-1) !== unitBig[sp]) res += unitBig[sp]; zeroFlag = false; }
+    }
+    return res;
+  };
+  return convertInt(yuan) + '元' + (jiao > 0 ? digitToChinese[Math.floor(jiao)] + '角' : '整');
+}
+
+async function buildQuotationPDF(quote: any, plan: any): Promise<Buffer> {
+  const printer = new PdfPrinter(pdfFonts);
+
+  const groupedItems: Record<string, any[]> = {};
+  for (const item of plan.items) {
+    if (!groupedItems[item.categoryId]) groupedItems[item.categoryId] = [];
+    groupedItems[item.categoryId].push(item);
+  }
+
+  const tableBody: any[][] = [
+    [
+      { text: '序号', style: 'tableHeader', alignment: 'center' },
+      { text: '分类', style: 'tableHeader', alignment: 'center' },
+      { text: '配件名称', style: 'tableHeader', alignment: 'center' },
+      { text: '品牌', style: 'tableHeader', alignment: 'center' },
+      { text: '数量', style: 'tableHeader', alignment: 'center' },
+      { text: '原价', style: 'tableHeader', alignment: 'center' },
+      { text: '单价', style: 'tableHeader', alignment: 'center' },
+      { text: '折扣', style: 'tableHeader', alignment: 'center' },
+      { text: '小计', style: 'tableHeader', alignment: 'center' },
+    ],
+  ];
+
+  let globalIdx = 0;
+  for (const [, items] of Object.entries(groupedItems)) {
+    const categoryName = items[0]?.categoryName ?? '未分类';
+    const categorySubtotal = items.reduce((s: number, it: any) => s + it.subtotal, 0);
+    for (let idx = 0; idx < items.length; idx++) {
+      const item = items[idx];
+      const isFirst = idx === 0;
+      globalIdx++;
+      const row: any[] = [
+        { text: String(globalIdx), style: 'tableCell', alignment: 'center' },
+      ];
+      if (isFirst) {
+        row.push({ text: categoryName, style: 'tableCell', bold: true, fillColor: '#f9fafb', rowSpan: items.length });
+      } else {
+        row.push({ text: '', style: 'tableCell' });
+      }
+      row.push(
+        { text: item.partName, style: 'tableCell' },
+        { text: item.partBrand, style: 'tableCell', alignment: 'center' },
+        { text: `×${item.quantity}`, style: 'tableCell', alignment: 'center' },
+        { text: `¥${item.originalPrice.toLocaleString()}`, style: 'tableCell', alignment: 'right' },
+        { text: `¥${item.unitPrice.toLocaleString()}`, style: 'tableCell', alignment: 'right' },
+        { text: `${Math.round((item.discountRate || 0) * 100)}%`, style: 'tableCell', alignment: 'center' },
+        { text: `¥${item.subtotal.toLocaleString()}`, style: 'tableCell', bold: true, alignment: 'right' },
+      );
+      tableBody.push(row);
+    }
+    tableBody.push([
+      { text: `${categoryName} 小计`, style: 'tableCell', alignment: 'right', italics: true, color: '#6b7280', fillColor: '#f9fafb', colSpan: 8 },
+      { text: '', style: 'tableCell', fillColor: '#f9fafb' },
+      { text: '', style: 'tableCell', fillColor: '#f9fafb' },
+      { text: '', style: 'tableCell', fillColor: '#f9fafb' },
+      { text: '', style: 'tableCell', fillColor: '#f9fafb' },
+      { text: '', style: 'tableCell', fillColor: '#f9fafb' },
+      { text: '', style: 'tableCell', fillColor: '#f9fafb' },
+      { text: '', style: 'tableCell', fillColor: '#f9fafb' },
+      { text: `¥${categorySubtotal.toLocaleString()}`, style: 'tableCell', bold: true, alignment: 'right', fillColor: '#f9fafb' },
+    ]);
+  }
+
+  const roleLabels: Record<string, string> = { sales: '销售', sales_manager: '销售经理', finance: '财务', general_manager: '总经理' };
+  const actionLabels: Record<string, string> = { approve: '通过', reject: '拒绝', return: '退回' };
+  const actionColors: Record<string, string> = { approve: '#15803d', reject: '#b91c1c', return: '#a16207' };
+
+  const content: any[] = [];
+
+  content.push({ text: 'XCF-180 摩托车改装报价单', style: 'title' });
+  content.push({ text: 'MOTORCYCLE CUSTOMIZATION QUOTATION', style: 'subtitle' });
+
+  content.push({
+    columns: [
+      { width: '50%', text: [{ text: '报价单号：', bold: true, color: '#6b7280' }, { text: quote.quoteNo }] },
+      { width: '50%', text: [{ text: '日  期：', bold: true, color: '#6b7280' }, { text: formatDate(quote.createdAt) }] },
+    ],
+    margin: [0, 4, 0, 4],
+  });
+
+  content.push({
+    columns: [
+      { width: '50%', text: [{ text: '客户名称：', bold: true, color: '#6b7280' }, { text: quote.customerName }] },
+      { width: '50%', text: [{ text: '联 系 人：', bold: true, color: '#6b7280' }, { text: quote.customerContact }] },
+    ],
+    margin: [0, 4, 0, 4],
+  });
+
+  content.push({
+    columns: [
+      { width: '50%', text: [{ text: '联系电话：', bold: true, color: '#6b7280' }, { text: quote.customerPhone }] },
+      { width: '50%', text: [{ text: '有效期至：', bold: true, color: '#6b7280' }, { text: formatDate(quote.validUntil) }] },
+    ],
+    margin: [0, 4, 0, 4],
+  });
+
+  content.push({
+    text: [{ text: '车  型：', bold: true, color: '#6b7280' }, { text: `${quote.modelName}${quote.packageName ? '（' + quote.packageName + '）' : ''}` }],
+    margin: [0, 4, 0, 4],
+  });
+
+  if (quote.plans.length > 1) {
+    content.push({
+      text: [{ text: '方  案：', bold: true, color: '#6b7280' }, { text: `${plan.name}${plan.description ? ' — ' + plan.description : ''}` }],
+      margin: [0, 4, 0, 4],
+    });
+  }
+
+  content.push({ text: '', margin: [0, 12, 0, 8] });
+
+  content.push({
+    table: {
+      headerRows: 1,
+      widths: ['5%', '12%', '*', '10%', '7%', '10%', '10%', '7%', '12%'],
+      body: tableBody,
+    },
+    layout: {
+      hLineWidth: () => 0.5,
+      vLineWidth: () => 0.5,
+      hLineColor: () => '#d1d5db',
+      vLineColor: () => '#d1d5db',
+      paddingLeft: () => 6,
+      paddingRight: () => 6,
+      paddingTop: () => 6,
+      paddingBottom: () => 6,
+    },
+  });
+
+  content.push({ text: '', margin: [0, 12, 0, 8] });
+
+  const summaryStack: any[] = [];
+  summaryStack.push({
+    columns: [
+      { text: '配件小计', color: '#6b7280' },
+      { text: `¥${plan.partsTotal.toLocaleString()}`, alignment: 'right' },
+    ],
+    margin: [0, 4, 0, 4],
+  });
+  summaryStack.push({
+    columns: [
+      { text: '工费合计', color: '#6b7280' },
+      { text: `¥${plan.laborFeeTotal.toLocaleString()}`, alignment: 'right' },
+    ],
+    margin: [0, 4, 0, 4],
+  });
+  if (plan.discountTotal > 0) {
+    summaryStack.push({
+      columns: [
+        { text: '优惠减免', color: '#15803d' },
+        { text: `-¥${plan.discountTotal.toLocaleString()}`, alignment: 'right', color: '#15803d' },
+      ],
+      margin: [0, 4, 0, 4],
+    });
+  }
+  if ((plan.appliedDiscountRules ?? []).length > 0) {
+    for (const r of plan.appliedDiscountRules) {
+      summaryStack.push({
+        columns: [
+          { width: '*', text: `  ${r.description}`, fontSize: 9, color: '#15803d', margin: [16, 0, 0, 0] },
+          { width: 'auto', text: `-¥${r.appliedAmount.toLocaleString()}`, alignment: 'right', fontSize: 9, color: '#15803d' },
+        ],
+        margin: [0, 1, 0, 1],
+      });
+    }
+  }
+  summaryStack.push({
+    canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#e5e7eb' }],
+    margin: [0, 8, 0, 8],
+  });
+  summaryStack.push({
+    columns: [
+      { text: '报价总计（小写）', bold: true, fontSize: 12 },
+      { text: `¥${plan.totalAmount.toLocaleString()}`, alignment: 'right', bold: true, color: '#ea580c', fontSize: 16 },
+    ],
+    margin: [0, 4, 0, 4],
+  });
+  summaryStack.push({
+    columns: [
+      { text: '报价总计（大写）', bold: true },
+      { text: numberToChinese(plan.totalAmount), alignment: 'right', bold: true, fontSize: 11 },
+    ],
+    margin: [0, 6, 0, 4],
+  });
+
+  content.push({
+    stack: summaryStack,
+  });
+
+  if (quote.remark) {
+    content.push({ text: `备注：${quote.remark}`, margin: [0, 12, 0, 8] });
+  }
+
+  if ((quote.approvalFlow?.history ?? []).length > 0) {
+    content.push({ text: '📋 审批意见留痕', style: 'sectionTitle', margin: [0, 16, 0, 8] });
+    for (const h of quote.approvalFlow.history) {
+      const date = h.actedAt ? new Date(h.actedAt).toLocaleString('zh-CN') : '';
+      const historyStack: any[] = [];
+      historyStack.push({
+        columns: [
+          { width: '*', text: [{ text: h.approverName || '系统', bold: true }, { text: `（${roleLabels[h.role] || h.role}）` }] },
+          { width: 'auto', text: actionLabels[h.action] || h.action, color: '#fff', fillColor: actionColors[h.action] || '#6b7280', fontSize: 9, alignment: 'center', margin: [8, 0, 0, 0], padding: [6, 2, 6, 2] },
+          { width: 'auto', text: date, color: '#6b7280', alignment: 'right', fontSize: 9, margin: [8, 0, 0, 0] },
+        ],
+      });
+      if (h.comment) {
+        historyStack.push({ text: `📝 ${h.comment}`, margin: [8, 4, 0, 0], fontSize: 10, color: '#4b5563' });
+      }
+      content.push({
+        stack: historyStack,
+        margin: [0, 4, 0, 10],
+      });
+    }
+  }
+
+  content.push({ text: '', margin: [0, 24, 0, 8] });
+
+  content.push({
+    columns: [
+      {
+        width: '50%',
+        stack: [
+          { text: '审批人签字：', color: '#6b7280', margin: [0, 0, 0, 48] },
+          { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 240, y2: 0, lineWidth: 0.5, lineColor: '#6b7280' }] },
+          { text: '签字：_______________  日期：_______________', color: '#6b7280', fontSize: 10, margin: [0, 6, 0, 0] },
+        ],
+      },
+      {
+        width: '50%',
+        stack: [
+          { text: '客户确认：', color: '#6b7280', margin: [0, 0, 0, 48] },
+          { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 240, y2: 0, lineWidth: 0.5, lineColor: '#6b7280' }] },
+          { text: '签字：_______________  日期：_______________', color: '#6b7280', fontSize: 10, margin: [0, 6, 0, 0] },
+        ],
+      },
+    ],
+  });
+
+  content.push({ text: '本报价单由 XCF-180 摩托车改装系统自动生成 | 如有疑问请联系销售人员', style: 'footer' });
+
+  const docDefinition: any = {
+    defaultStyle: {
+      font: 'SimSun',
+      fontSize: 10,
+      color: '#111827',
+    },
+    pageSize: 'A4',
+    pageMargins: [40, 50, 40, 50],
+    content,
+    styles: {
+      title: {
+        fontSize: 22,
+        bold: true,
+        alignment: 'center',
+        margin: [0, 0, 0, 4],
+      },
+      subtitle: {
+        fontSize: 10,
+        color: '#6b7280',
+        alignment: 'center',
+        margin: [0, 0, 0, 24],
+        letterSpacing: 3,
+      },
+      tableHeader: {
+        bold: true,
+        fillColor: '#f3f4f6',
+        fontSize: 10,
+      },
+      tableCell: {
+        fontSize: 10,
+      },
+      sectionTitle: {
+        fontSize: 13,
+        bold: true,
+        color: '#1f2937',
+      },
+      footer: {
+        fontSize: 9,
+        color: '#9ca3af',
+        alignment: 'center',
+        margin: [0, 32, 0, 0],
+      },
+    },
+  };
+
+  return new Promise((resolve, reject) => {
+    const chunks: any[] = [];
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    pdfDoc.on('data', (chunk: any) => chunks.push(chunk));
+    pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+    pdfDoc.on('error', reject);
+    pdfDoc.end();
+  });
+}
+
+router.get('/api/quotes/:id/export/pdf', async (ctx) => {
   const data = loadQuotesData();
   const quote = data.quotes.find((q: any) => q.id === ctx.params.id);
   if (!quote) {
@@ -1206,7 +1559,6 @@ router.get('/api/quotes/:id/export/pdf', (ctx) => {
   const planId = (ctx.query.planId as string) || quote.activePlanId;
   const plan = quote.plans.find((p: any) => p.id === planId) || quote.plans[0];
 
-  const body = ctx.request.body as any;
   const exportedBy = (ctx.query.exportedBy as string) || '系统';
   const exportRecord: any = {
     id: `export-${Date.now()}`,
@@ -1219,12 +1571,12 @@ router.get('/api/quotes/:id/export/pdf', (ctx) => {
   quote.updatedAt = exportRecord.exportedAt;
   saveQuotesData(data);
 
-  const html = buildQuotationHTML(quote, plan);
+  const pdfBuffer = await buildQuotationPDF(quote, plan);
   const fileName = `${quote.quoteNo}-${plan.name}.pdf`;
-  ctx.set('Content-Type', 'text/html; charset=utf-8');
-  ctx.set('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}.html"`);
-  ctx.set('X-Quotation-Mode', 'pdf-printable');
-  ctx.body = html;
+  ctx.set('Content-Type', 'application/pdf');
+  ctx.set('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+  ctx.set('Content-Length', String(pdfBuffer.length));
+  ctx.body = pdfBuffer;
 });
 
 router.get('/api/quotes/:id/export/excel', (ctx) => {
