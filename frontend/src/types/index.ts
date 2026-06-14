@@ -171,3 +171,30 @@ export interface UpdateShareRequest {
   expiresAt?: string
   isActive?: boolean
 }
+
+export interface BikeModel {
+  id: string
+  name: string
+  nameEn: string
+  description: string
+  basePrice: number
+  image?: string
+}
+
+export interface DefaultPackage {
+  modelId: string
+  packageType: 'basic' | 'sport' | 'street'
+  name: string
+  description: string
+  partIds: string[]
+}
+
+export interface ModelPackageConfig {
+  modelId: string
+  packages: {
+    type: 'basic' | 'sport' | 'street'
+    name: string
+    description: string
+    categoryParts: Record<string, string>
+  }[]
+}

@@ -5,13 +5,147 @@
       "name": "我的改装方案",
       "items": [
         {
-          "partId": "exhaust-001",
+          "partId": "exhaust-002",
+          "quantity": 1
+        },
+        {
+          "partId": "wheels-002",
+          "quantity": 1
+        },
+        {
+          "partId": "handlebar-001",
+          "quantity": 1
+        },
+        {
+          "partId": "lighting-001",
+          "quantity": 1
+        },
+        {
+          "partId": "bodykit-002",
+          "quantity": 1
+        },
+        {
+          "partId": "brake-002",
           "quantity": 1
         }
       ],
       "createdAt": "2026-06-12T17:05:23.455Z",
-      "versions": [],
-      "updatedAt": "2026-06-12T17:05:23.455Z"
+      "versions": [
+        {
+          "id": "ver-1781369634179-8kfq07",
+          "name": "我的改装方案",
+          "items": [],
+          "createdAt": "2026-06-13T16:53:54.179Z",
+          "description": "添加配件前快照",
+          "versionNumber": 1
+        },
+        {
+          "id": "ver-1781369634423-02lypb",
+          "name": "我的改装方案",
+          "items": [
+            {
+              "partId": "exhaust-002",
+              "quantity": 1
+            }
+          ],
+          "createdAt": "2026-06-13T16:53:54.423Z",
+          "description": "添加配件前快照",
+          "versionNumber": 2
+        },
+        {
+          "id": "ver-1781369634632-ewnlwu",
+          "name": "我的改装方案",
+          "items": [
+            {
+              "partId": "exhaust-002",
+              "quantity": 1
+            },
+            {
+              "partId": "wheels-002",
+              "quantity": 1
+            }
+          ],
+          "createdAt": "2026-06-13T16:53:54.632Z",
+          "description": "添加配件前快照",
+          "versionNumber": 3
+        },
+        {
+          "id": "ver-1781369634850-g1wd5f",
+          "name": "我的改装方案",
+          "items": [
+            {
+              "partId": "exhaust-002",
+              "quantity": 1
+            },
+            {
+              "partId": "wheels-002",
+              "quantity": 1
+            },
+            {
+              "partId": "handlebar-001",
+              "quantity": 1
+            }
+          ],
+          "createdAt": "2026-06-13T16:53:54.850Z",
+          "description": "添加配件前快照",
+          "versionNumber": 4
+        },
+        {
+          "id": "ver-1781369635056-792r21",
+          "name": "我的改装方案",
+          "items": [
+            {
+              "partId": "exhaust-002",
+              "quantity": 1
+            },
+            {
+              "partId": "wheels-002",
+              "quantity": 1
+            },
+            {
+              "partId": "handlebar-001",
+              "quantity": 1
+            },
+            {
+              "partId": "lighting-001",
+              "quantity": 1
+            }
+          ],
+          "createdAt": "2026-06-13T16:53:55.056Z",
+          "description": "添加配件前快照",
+          "versionNumber": 5
+        },
+        {
+          "id": "ver-1781369635260-ilg0wg",
+          "name": "我的改装方案",
+          "items": [
+            {
+              "partId": "exhaust-002",
+              "quantity": 1
+            },
+            {
+              "partId": "wheels-002",
+              "quantity": 1
+            },
+            {
+              "partId": "handlebar-001",
+              "quantity": 1
+            },
+            {
+              "partId": "lighting-001",
+              "quantity": 1
+            },
+            {
+              "partId": "bodykit-002",
+              "quantity": 1
+            }
+          ],
+          "createdAt": "2026-06-13T16:53:55.260Z",
+          "description": "添加配件前快照",
+          "versionNumber": 6
+        }
+      ],
+      "updatedAt": "2026-06-13T16:53:55.260Z"
     },
     {
       "id": "sel-1781283923551",

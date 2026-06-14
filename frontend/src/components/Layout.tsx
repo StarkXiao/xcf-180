@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight } from 'lucide-react'
+import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2 } from 'lucide-react'
 import { useStore } from '@/store/useStore'
+import ModelSelector from '@/components/ModelSelector'
 
 const navItems = [
   { path: '/', label: '配件浏览', icon: Wrench },
@@ -12,6 +13,7 @@ const navItems = [
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
   const {
     fetchCategories,
     fetchParts,
@@ -19,7 +21,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     initDefaultSelection,
     compatibilityResult,
     partConflictMap,
+    currentModelId,
+    bikeModels,
   } = useStore()
+
+  const currentModel = bikeModels.find((m) => m.id === currentModelId)
 
   useEffect(() => {
     const init = async () => {
@@ -39,8 +45,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-carbon-900 font-body flex">
       <nav className="w-20 lg:w-56 bg-carbon-800 border-r border-carbon-500/30 flex flex-col fixed h-full z-30">
         <div className="p-4 lg:p-6 border-b border-carbon-500/30">
-          <h1 className="font-orbitron text-moto-orange text-sm lg:text-xl font-bold tracking-wider">XCF-180</h1>
-          <p className="text-moto-steel text-[10px] lg:text-xs mt-1 hidden lg:block">MOTO CUSTOM</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-orbitron text-moto-orange text-sm lg:text-xl font-bold tracking-wider">
+                {currentModel ? currentModel.name : 'XCF-180'}
+              </h1>
+              <p className="text-moto-steel text-[10px] lg:text-xs mt-1 hidden lg:block">MOTO CUSTOM</p>
+            </div>
+            <button
+              onClick={() => setModelSelectorOpen(true)}
+              className="p-1.5 rounded-lg text-moto-steel hover:text-moto-orange hover:bg-moto-orange/10 transition-colors"
+              title="切换车型"
+            >
+              <Settings2 size={16} />
+            </button>
+          </div>
+          {currentModel && (
+            <div className="mt-2 hidden lg:block">
+              <p className="text-[10px] text-moto-steel line-clamp-1">{currentModel.description}</p>
+            </div>
+          )}
         </div>
         <div className="flex-1 py-4 space-y-1">
           {navItems.map((item) => {
@@ -118,6 +142,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       <main className="flex-1 ml-20 lg:ml-56">{children}</main>
+      <ModelSelector isOpen={modelSelectorOpen} onClose={() => setModelSelectorOpen(false)} />
     </div>
   )
 }

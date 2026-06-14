@@ -17,8 +17,10 @@ import type {
   CreateShareRequest,
   PartRecommendations,
   PartRecommendation,
+  BikeModel,
 } from '@/types'
 import { api } from '@/api/client'
+import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
 
 interface AppState {
   categories: Category[]
@@ -105,6 +107,16 @@ interface AppState {
   deleteShare: (shareId: string) => Promise<void>
   getShareById: (shareId: string) => Share | undefined
   getPartRecommendations: (partId: string) => PartRecommendations
+
+  bikeModels: BikeModel[]
+  currentModelId: string | null
+  currentPackageType: 'basic' | 'sport' | 'street' | null
+  setCurrentModel: (modelId: string) => void
+  setCurrentPackageType: (type: 'basic' | 'sport' | 'street') => void
+  applyDefaultPackage: (modelId: string, packageType: 'basic' | 'sport' | 'street') => Promise<void>
+  getPackagesForCurrentModel: () => ReturnType<typeof getPackagesForModel>
+  getPackagePrice: (modelId: string, packageType: 'basic' | 'sport' | 'street') => number
+  initDefaultSelectionWithModel: (modelId: string, packageType: 'basic' | 'sport' | 'street') => Promise<void>
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -137,6 +149,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   shares: [],
   sharesLoading: false,
+
+  bikeModels: BIKE_MODELS,
+  currentModelId: null,
+  currentPackageType: null,
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -1071,5 +1087,71 @@ export const useStore = create<AppState>((set, get) => ({
       .slice(0, 6)
 
     return { alternatives, pairings }
+  },
+
+  setCurrentModel: (modelId) => {
+    set({ currentModelId: modelId })
+  },
+
+  setCurrentPackageType: (type) => {
+    set({ currentPackageType: type })
+  },
+
+  getPackagesForCurrentModel: () => {
+    const { currentModelId } = get()
+    if (!currentModelId) return []
+    return getPackagesForModel(currentModelId)
+  },
+
+  getPackagePrice: (modelId, packageType) => {
+    const { allParts } = get()
+    const partIds = getPackagePartIds(modelId, packageType)
+    return partIds.reduce((total, partId) => {
+      const part = allParts.find((p) => p.id === partId)
+      return total + (part?.price ?? 0)
+    }, 0)
+  },
+
+  applyDefaultPackage: async (modelId, packageType) => {
+    const { currentSelection, clearSelection, addPartToSelection, allParts } = get()
+    if (!currentSelection) return
+
+    const partIds = getPackagePartIds(modelId, packageType)
+    const validPartIds = partIds.filter((id) => allParts.some((p) => p.id === id))
+
+    await clearSelection()
+
+    for (const partId of validPartIds) {
+      await addPartToSelection(partId)
+    }
+
+    set({ currentModelId: modelId, currentPackageType: packageType })
+  },
+
+  initDefaultSelectionWithModel: async (modelId, packageType) => {
+    const { selections, createSelection, allParts } = get()
+
+    let selection: Selection | undefined
+    if (selections.length === 0) {
+      const model = BIKE_MODELS.find((m) => m.id === modelId)
+      const pkg = getPackagesForModel(modelId).find((p) => p.type === packageType)
+      const selectionName = model && pkg ? `${model.name} - ${pkg.name}` : '我的改装方案'
+      selection = await createSelection(selectionName)
+    } else {
+      selection = selections[0]
+      set({ currentSelection: selection })
+    }
+
+    const partIds = getPackagePartIds(modelId, packageType)
+    const validPartIds = partIds.filter((id) => allParts.some((p) => p.id === id))
+
+    if (selection && validPartIds.length > 0) {
+      for (const partId of validPartIds) {
+        await get().addPartToSelection(partId)
+      }
+    }
+
+    set({ currentModelId: modelId, currentPackageType: packageType })
+    setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
   },
 }))
