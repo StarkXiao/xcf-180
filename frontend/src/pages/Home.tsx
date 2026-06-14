@@ -7,7 +7,7 @@ import SearchBar from '@/components/SearchBar'
 import SelectionPanel from '@/components/SelectionPanel'
 import ConflictAlert from '@/components/ConflictAlert'
 import AdvancedFilter from '@/components/AdvancedFilter'
-import { SlidersHorizontal, ArrowRight } from 'lucide-react'
+import { SlidersHorizontal, ArrowRight, Heart, Clock } from 'lucide-react'
 import type { Part } from '@/types'
 import { Link } from 'react-router-dom'
 
@@ -19,6 +19,8 @@ export default function Home() {
     compatibilityResult,
     compatibilityLoading,
     getFilteredParts,
+    getFavoriteParts,
+    getRecentViewParts,
   } = useStore()
   const [detailPart, setDetailPart] = useState<Part | null>(null)
 
@@ -84,6 +86,23 @@ export default function Home() {
               <AdvancedFilter />
             </div>
 
+            <HomeQuickSection
+              title="收藏配件"
+              icon={<Heart size={14} />}
+              parts={getFavoriteParts()}
+              onViewDetail={setDetailPart}
+              emptyText="暂无收藏配件"
+              emptyHint="浏览配件时点击 ♥ 即可收藏"
+            />
+            <HomeQuickSection
+              title="最近浏览"
+              icon={<Clock size={14} />}
+              parts={getRecentViewParts().slice(0, 8)}
+              onViewDetail={setDetailPart}
+              emptyText="暂无浏览记录"
+              emptyHint="浏览配件后这里会显示记录"
+            />
+
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -116,6 +135,60 @@ export default function Home() {
 
       {detailPart && <PartDetail part={detailPart} onClose={() => setDetailPart(null)} />}
       <SelectionPanel />
+    </div>
+  )
+}
+
+function HomeQuickSection({
+  title,
+  icon,
+  parts,
+  onViewDetail,
+  emptyText,
+  emptyHint,
+}: {
+  title: string
+  icon: React.ReactNode
+  parts: Part[]
+  onViewDetail: (part: Part) => void
+  emptyText: string
+  emptyHint: string
+}) {
+  if (parts.length === 0) return null
+
+  return (
+    <div className="bg-carbon-800/50 rounded-xl border border-carbon-500/15 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-moto-orange">{icon}</span>
+        <span className="font-orbitron text-xs text-moto-silver">{title}</span>
+        <span className="text-[10px] text-moto-steel/60">{parts.length}</span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+        {parts.slice(0, 10).map((part) => (
+          <div
+            key={part.id}
+            onClick={() => onViewDetail(part)}
+            className="shrink-0 w-28 cursor-pointer group"
+          >
+            <div className="aspect-square rounded-lg overflow-hidden bg-carbon-700 mb-1.5">
+              <img
+                src={part.image}
+                alt={part.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+part+icon+minimal&image_size=square`
+                }}
+              />
+            </div>
+            <p className="text-moto-silver text-[11px] truncate group-hover:text-moto-orange transition-colors">
+              {part.name}
+            </p>
+            <p className="font-orbitron text-[10px] text-moto-orange">
+              ¥{part.price.toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

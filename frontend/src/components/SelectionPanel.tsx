@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ShoppingCart, ChevronRight, Trash2, Minus, Plus, AlertTriangle, XCircle } from 'lucide-react'
+import { ShoppingCart, ChevronRight, Trash2, Minus, Plus, AlertTriangle, XCircle, Heart, Clock } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { Link } from 'react-router-dom'
+import type { Part } from '@/types'
 
 export default function SelectionPanel() {
   const [isOpen, setIsOpen] = useState(false)
@@ -13,6 +14,11 @@ export default function SelectionPanel() {
     getTotalPrice,
     partConflictMap,
     compatibilityResult,
+    getFavoriteParts,
+    getRecentViewParts,
+    isFavorite,
+    toggleFavorite,
+    addPartToSelection,
   } = useStore()
   const totalPrice = getTotalPrice()
   const itemCount = currentSelection?.items.reduce((sum, i) => sum + i.quantity, 0) ?? 0
@@ -152,6 +158,26 @@ export default function SelectionPanel() {
             })}
           </div>
 
+          <SidePartList
+            title="收藏配件"
+            icon="heart"
+            parts={getFavoriteParts()}
+            isFavorite={isFavorite}
+            toggleFavorite={toggleFavorite}
+            addPartToSelection={addPartToSelection}
+            emptyText="暂无收藏"
+          />
+
+          <SidePartList
+            title="最近浏览"
+            icon="clock"
+            parts={getRecentViewParts().slice(0, 10)}
+            isFavorite={isFavorite}
+            toggleFavorite={toggleFavorite}
+            addPartToSelection={addPartToSelection}
+            emptyText="暂无浏览记录"
+          />
+
           <div className={`p-4 border-t bg-carbon-900/50 ${
             hasConflicts
               ? 'border-red-500/30'
@@ -193,5 +219,86 @@ export default function SelectionPanel() {
         </div>
       )}
     </>
+  )
+}
+
+function SidePartList({
+  title,
+  icon,
+  parts,
+  isFavorite,
+  toggleFavorite,
+  addPartToSelection,
+  emptyText,
+}: {
+  title: string
+  icon: 'heart' | 'clock'
+  parts: Part[]
+  isFavorite: (partId: string) => boolean
+  toggleFavorite: (partId: string) => void
+  addPartToSelection: (partId: string) => Promise<void>
+  emptyText: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  if (parts.length === 0 && !expanded) return null
+
+  return (
+    <div className="border-t border-carbon-500/20">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-moto-steel hover:text-moto-silver transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {icon === 'heart' ? <Heart size={12} /> : <Clock size={12} />}
+          <span className="text-xs font-orbitron">{title}</span>
+          <span className="text-[10px] text-moto-steel/60">{parts.length}</span>
+        </div>
+        <ChevronRight size={12} className={`transition-transform ${expanded ? 'rotate-90' : ''}`} />
+      </button>
+      {expanded && (
+        <div className="px-4 pb-3 space-y-2 max-h-48 overflow-y-auto">
+          {parts.length === 0 ? (
+            <p className="text-moto-steel/60 text-[11px] text-center py-3">{emptyText}</p>
+          ) : (
+            parts.map((part) => (
+              <div
+                key={part.id}
+                className="flex items-center gap-2 rounded-lg p-2 bg-carbon-700/30 hover:bg-carbon-700/50 transition-colors"
+              >
+                <img
+                  src={part.image}
+                  alt={part.name}
+                  className="w-8 h-8 rounded object-cover bg-carbon-600 shrink-0"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=motorcycle+part+icon+dark+minimal&image_size=square_hd`
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-moto-silver text-[11px] truncate">{part.name}</p>
+                  <p className="font-orbitron text-[10px] text-moto-orange">¥{part.price.toLocaleString()}</p>
+                </div>
+                <button
+                  onClick={() => toggleFavorite(part.id)}
+                  className={`p-1 rounded transition-colors ${
+                    isFavorite(part.id)
+                      ? 'text-red-400 hover:text-red-300'
+                      : 'text-moto-steel hover:text-red-400'
+                  }`}
+                >
+                  <Heart size={11} fill={isFavorite(part.id) ? 'currentColor' : 'none'} />
+                </button>
+                <button
+                  onClick={() => addPartToSelection(part.id)}
+                  className="p-1 rounded text-moto-steel hover:text-moto-orange transition-colors"
+                >
+                  <Plus size={11} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   )
 }

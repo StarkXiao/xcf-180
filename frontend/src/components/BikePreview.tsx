@@ -1,6 +1,6 @@
 import { useStore } from '@/store/useStore'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { AlertTriangle, XCircle, Plus, Check, ArrowRight, X } from 'lucide-react'
+import { AlertTriangle, XCircle, Plus, Check, ArrowRight, X, Heart } from 'lucide-react'
 import type { Part } from '@/types'
 
 const ZONE_MAP: Record<string, { x: number; y: number; w: number; h: number; label: string }> = {
@@ -23,6 +23,8 @@ export default function BikePreview() {
     categories,
     addPartToSelection,
     removePartFromSelection,
+    isFavorite,
+    toggleFavorite,
   } = useStore()
 
   const [hoveredPart, setHoveredPart] = useState<string | null>(null)
@@ -447,6 +449,16 @@ export default function BikePreview() {
                   </p>
                 </div>
                 <button
+                  onClick={() => toggleFavorite(currentInstalledPart.id)}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    isFavorite(currentInstalledPart.id)
+                      ? 'text-red-400 hover:text-red-300'
+                      : 'text-moto-steel hover:text-red-400'
+                  }`}
+                >
+                  <Heart size={14} fill={isFavorite(currentInstalledPart.id) ? 'currentColor' : 'none'} />
+                </button>
+                <button
                   onClick={handleRemoveCurrent}
                   className="px-3 py-1.5 rounded-lg text-xs bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-colors font-orbitron"
                 >
@@ -497,6 +509,16 @@ export default function BikePreview() {
                           ¥{part.price.toLocaleString()}
                         </p>
                       </div>
+                      <button
+                        onClick={() => toggleFavorite(part.id)}
+                        className={`shrink-0 p-1 rounded transition-colors ${
+                          isFavorite(part.id)
+                            ? 'text-red-400 hover:text-red-300'
+                            : 'text-moto-steel hover:text-red-400'
+                        }`}
+                      >
+                        <Heart size={12} fill={isFavorite(part.id) ? 'currentColor' : 'none'} />
+                      </button>
                       <button
                         onClick={() => handleReplace(part.id)}
                         className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-orbitron transition-colors ${

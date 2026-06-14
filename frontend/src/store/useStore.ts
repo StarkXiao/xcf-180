@@ -18,9 +18,27 @@ import type {
   PartRecommendations,
   PartRecommendation,
   BikeModel,
+  FavoriteRecord,
+  RecentViewRecord,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
+
+const MAX_RECENT_VIEWS = 50
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw) return JSON.parse(raw) as T
+  } catch {}
+  return fallback
+}
+
+function saveToStorage(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {}
+}
 
 interface AppState {
   categories: Category[]
@@ -117,6 +135,14 @@ interface AppState {
   getPackagesForCurrentModel: () => ReturnType<typeof getPackagesForModel>
   getPackagePrice: (modelId: string, packageType: 'basic' | 'sport' | 'street') => number
   initDefaultSelectionWithModel: (modelId: string, packageType: 'basic' | 'sport' | 'street') => Promise<void>
+
+  favorites: FavoriteRecord[]
+  recentViews: RecentViewRecord[]
+  isFavorite: (partId: string) => boolean
+  toggleFavorite: (partId: string) => void
+  addRecentView: (partId: string) => void
+  getFavoriteParts: () => Part[]
+  getRecentViewParts: () => Part[]
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -149,6 +175,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   shares: [],
   sharesLoading: false,
+
+  favorites: loadFromStorage<FavoriteRecord[]>('xcf-favorites', []),
+  recentViews: loadFromStorage<RecentViewRecord[]>('xcf-recent-views', []),
 
   bikeModels: BIKE_MODELS,
   currentModelId: null,
@@ -1153,5 +1182,43 @@ export const useStore = create<AppState>((set, get) => ({
 
     set({ currentModelId: modelId, currentPackageType: packageType })
     setTimeout(() => get().checkCurrentSelectionCompatibility(), 0)
+  },
+
+  isFavorite: (partId) => {
+    return get().favorites.some((f) => f.partId === partId)
+  },
+
+  toggleFavorite: (partId) => {
+    set((state) => {
+      const exists = state.favorites.some((f) => f.partId === partId)
+      const next = exists
+        ? state.favorites.filter((f) => f.partId !== partId)
+        : [...state.favorites, { partId, addedAt: new Date().toISOString() }]
+      saveToStorage('xcf-favorites', next)
+      return { favorites: next }
+    })
+  },
+
+  addRecentView: (partId) => {
+    set((state) => {
+      const filtered = state.recentViews.filter((r) => r.partId !== partId)
+      const next = [{ partId, viewedAt: new Date().toISOString() }, ...filtered].slice(0, MAX_RECENT_VIEWS)
+      saveToStorage('xcf-recent-views', next)
+      return { recentViews: next }
+    })
+  },
+
+  getFavoriteParts: () => {
+    const { favorites, allParts } = get()
+    return favorites
+      .map((f) => allParts.find((p) => p.id === f.partId))
+      .filter(Boolean) as Part[]
+  },
+
+  getRecentViewParts: () => {
+    const { recentViews, allParts } = get()
+    return recentViews
+      .map((r) => allParts.find((p) => p.id === r.partId))
+      .filter(Boolean) as Part[]
   },
 }))

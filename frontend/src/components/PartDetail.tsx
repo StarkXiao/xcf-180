@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle, Sparkles, RefreshCw, ChevronRight } from 'lucide-react'
+import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle, Sparkles, RefreshCw, ChevronRight, Heart } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import type { Part, CompatibilityCheckResult, PartRecommendation } from '@/types'
 import ConflictAlert from '@/components/ConflictAlert'
@@ -17,11 +17,18 @@ export default function PartDetail({ part, onClose }: Props) {
     checkPartAgainstSelection,
     getPartRecommendations,
     getCategoryName,
+    isFavorite,
+    toggleFavorite,
+    addRecentView,
   } = useStore()
   const isSelected = currentSelection?.items.some((i) => i.partId === part.id) ?? false
   const [partCompat, setPartCompat] = useState<CompatibilityCheckResult | null>(null)
   const [checking, setChecking] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+
+  useEffect(() => {
+    addRecentView(part.id)
+  }, [part.id])
 
   const recommendations = getPartRecommendations(part.id)
   const { alternatives, pairings } = recommendations
@@ -76,6 +83,16 @@ export default function PartDetail({ part, onClose }: Props) {
         className="relative bg-carbon-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-carbon-500/30"
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          onClick={() => toggleFavorite(part.id)}
+          className={`absolute top-4 right-14 z-10 p-2 rounded-full transition-colors ${
+            isFavorite(part.id)
+              ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+              : 'bg-carbon-900/80 text-moto-steel hover:text-red-400'
+          }`}
+        >
+          <Heart size={20} fill={isFavorite(part.id) ? 'currentColor' : 'none'} />
+        </button>
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 rounded-full bg-carbon-900/80 text-moto-steel hover:text-white transition-colors"

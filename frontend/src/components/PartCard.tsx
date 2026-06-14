@@ -1,4 +1,4 @@
-import { Plus, Check, AlertTriangle, XCircle } from 'lucide-react'
+import { Plus, Check, AlertTriangle, XCircle, Heart } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import type { Part } from '@/types'
 
@@ -15,6 +15,9 @@ export default function PartCard({ part, onViewDetail }: Props) {
     getConflictsForPart,
     getWarningsForPart,
     partConflictMap,
+    isFavorite,
+    toggleFavorite,
+    addRecentView,
   } = useStore()
   const isSelected = currentSelection?.items.some((i) => i.partId === part.id) ?? false
   const conflictStatus = partConflictMap[part.id]
@@ -30,9 +33,19 @@ export default function PartCard({ part, onViewDetail }: Props) {
     }
   }
 
+  const handleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleFavorite(part.id)
+  }
+
+  const handleClick = () => {
+    addRecentView(part.id)
+    onViewDetail(part)
+  }
+
   return (
     <div
-      onClick={() => onViewDetail(part)}
+      onClick={handleClick}
       className={`group relative bg-carbon-800 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 part-card-hover border ${
         hasError
           ? 'border-red-500/50'
@@ -53,6 +66,16 @@ export default function PartCard({ part, onViewDetail }: Props) {
           }}
         />
         <div className="absolute top-2 right-2 flex gap-1">
+          <button
+            onClick={handleFavorite}
+            className={`p-1.5 rounded-full backdrop-blur transition-all duration-200 ${
+              isFavorite(part.id)
+                ? 'bg-red-500/80 text-white'
+                : 'bg-carbon-900/60 text-moto-steel hover:text-red-400 hover:bg-red-500/20'
+            }`}
+          >
+            <Heart size={12} fill={isFavorite(part.id) ? 'currentColor' : 'none'} />
+          </button>
           {hasError && (
             <div className="bg-red-500/90 text-white text-xs px-2 py-1 rounded-full font-orbitron flex items-center gap-1">
               <XCircle size={10} />

@@ -172,6 +172,16 @@ export interface UpdateShareRequest {
   isActive?: boolean
 }
 
+export interface FavoriteRecord {
+  partId: string
+  addedAt: string
+}
+
+export interface RecentViewRecord {
+  partId: string
+  viewedAt: string
+}
+
 export interface BikeModel {
   id: string
   name: string
