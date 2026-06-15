@@ -47,6 +47,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 type TabType = 'overview' | 'specs' | 'zones' | 'restrictions' | 'regulations' | 'diagrams'
+type DiagramHotspot = DiagramConfig['hotspots'][number]
 
 const TABS: { key: TabType; label: string; icon: typeof Gauge }[] = [
   { key: 'overview', label: '概览', icon: BookOpen },
@@ -56,6 +57,19 @@ const TABS: { key: TabType; label: string; icon: typeof Gauge }[] = [
   { key: 'regulations', label: '法规备注', icon: FileText },
   { key: 'diagrams', label: '示意图配置', icon: Image },
 ]
+
+function normalizeDateInput(value?: string) {
+  return value ? value.slice(0, 10) : ''
+}
+
+function createDiagramHotspot(): DiagramHotspot {
+  return {
+    id: `hotspot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    position: { x: 50, y: 50 },
+    label: '',
+    description: '',
+  }
+}
 
 export default function AdminVehicleProfileDetailPage() {
   const navigate = useNavigate()
@@ -93,6 +107,24 @@ export default function AdminVehicleProfileDetailPage() {
   const [isDiagramModalOpen, setIsDiagramModalOpen] = useState(false)
   const [editingDiagram, setEditingDiagram] = useState<DiagramConfig | null>(null)
   const [diagramFormData, setDiagramFormData] = useState<Partial<DiagramConfig>>({})
+
+  const closeRestrictionModal = () => {
+    setIsRestrictionModalOpen(false)
+    setEditingRestriction(null)
+    setRestrictionFormData({})
+  }
+
+  const closeRegulationModal = () => {
+    setIsRegulationModalOpen(false)
+    setEditingRegulation(null)
+    setRegulationFormData({})
+  }
+
+  const closeDiagramModal = () => {
+    setIsDiagramModalOpen(false)
+    setEditingDiagram(null)
+    setDiagramFormData({})
+  }
 
   useEffect(() => {
     if (id) {
@@ -316,6 +348,16 @@ export default function AdminVehicleProfileDetailPage() {
     setIsRestrictionModalOpen(true)
   }
 
+  const openEditRestrictionModal = (restriction: ModificationRestriction) => {
+    setEditingRestriction(restriction)
+    setRestrictionFormData({
+      ...restriction,
+      effectiveDate: normalizeDateInput(restriction.effectiveDate),
+      expiryDate: normalizeDateInput(restriction.expiryDate),
+    })
+    setIsRestrictionModalOpen(true)
+  }
+
   const handleSaveRestriction = () => {
     if (!profile || !restrictionFormData.title || !restrictionFormData.description) {
       alert('请填写必填字段')
@@ -354,7 +396,7 @@ export default function AdminVehicleProfileDetailPage() {
         modificationRestrictions: [...profile.modificationRestrictions, newRestriction],
       })
     }
-    setIsRestrictionModalOpen(false)
+    closeRestrictionModal()
   }
 
   const handleDeleteRestriction = (restrictionId: string) => {
@@ -374,6 +416,16 @@ export default function AdminVehicleProfileDetailPage() {
       content: '',
       noteType: 'national',
       isActive: true,
+    })
+    setIsRegulationModalOpen(true)
+  }
+
+  const openEditRegulationModal = (regulation: RegulationNote) => {
+    setEditingRegulation(regulation)
+    setRegulationFormData({
+      ...regulation,
+      effectiveDate: normalizeDateInput(regulation.effectiveDate),
+      expiryDate: normalizeDateInput(regulation.expiryDate),
     })
     setIsRegulationModalOpen(true)
   }
@@ -410,7 +462,7 @@ export default function AdminVehicleProfileDetailPage() {
       }
       setProfile({ ...profile, regulationNotes: [...profile.regulationNotes, newRegulation] })
     }
-    setIsRegulationModalOpen(false)
+    closeRegulationModal()
   }
 
   const handleDeleteRegulation = (regulationId: string) => {
@@ -434,6 +486,19 @@ export default function AdminVehicleProfileDetailPage() {
       hotspots: [],
       sortOrder: (profile?.diagrams.length || 0) + 1,
       isActive: true,
+    })
+    setIsDiagramModalOpen(true)
+  }
+
+  const openEditDiagramModal = (diagram: DiagramConfig) => {
+    setEditingDiagram(diagram)
+    setDiagramFormData({
+      ...diagram,
+      zones: [...diagram.zones],
+      hotspots: diagram.hotspots.map((hotspot) => ({
+        ...hotspot,
+        position: { ...hotspot.position },
+      })),
     })
     setIsDiagramModalOpen(true)
   }
@@ -469,13 +534,73 @@ export default function AdminVehicleProfileDetailPage() {
       }
       setProfile({ ...profile, diagrams: [...profile.diagrams, newDiagram] })
     }
-    setIsDiagramModalOpen(false)
+    closeDiagramModal()
   }
 
   const handleDeleteDiagram = (diagramId: string) => {
     if (!confirm('确定删除此示意图？')) return
     if (!profile) return
     setProfile({ ...profile, diagrams: profile.diagrams.filter((d) => d.id !== diagramId) })
+  }
+
+  const toggleDiagramZone = (zone: AssemblyZone, checked: boolean) => {
+    setDiagramFormData((current) => {
+      const zones = current.zones || []
+      if (checked) {
+        if (zones.some((item) => item.id === zone.id)) {
+          return current
+        }
+        return { ...current, zones: [...zones, zone] }
+      }
+      return {
+        ...current,
+        zones: zones.filter((item) => item.id !== zone.id),
+      }
+    })
+  }
+
+  const addDiagramHotspot = () => {
+    setDiagramFormData((current) => ({
+      ...current,
+      hotspots: [...(current.hotspots || []), createDiagramHotspot()],
+    }))
+  }
+
+  const updateDiagramHotspot = (hotspotId: string, updates: Partial<DiagramHotspot>) => {
+    setDiagramFormData((current) => ({
+      ...current,
+      hotspots: (current.hotspots || []).map((hotspot) =>
+        hotspot.id === hotspotId ? { ...hotspot, ...updates } : hotspot
+      ),
+    }))
+  }
+
+  const updateDiagramHotspotPosition = (
+    hotspotId: string,
+    axis: keyof DiagramHotspot['position'],
+    value: number
+  ) => {
+    setDiagramFormData((current) => ({
+      ...current,
+      hotspots: (current.hotspots || []).map((hotspot) =>
+        hotspot.id === hotspotId
+          ? {
+              ...hotspot,
+              position: {
+                ...hotspot.position,
+                [axis]: value,
+              },
+            }
+          : hotspot
+      ),
+    }))
+  }
+
+  const removeDiagramHotspot = (hotspotId: string) => {
+    setDiagramFormData((current) => ({
+      ...current,
+      hotspots: (current.hotspots || []).filter((hotspot) => hotspot.id !== hotspotId),
+    }))
   }
 
   return (
@@ -1003,9 +1128,7 @@ export default function AdminVehicleProfileDetailPage() {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => {
-                            setEditingRestriction(restriction)
-                            setRestrictionFormData({ ...restriction })
-                            setIsRestrictionModalOpen(true)
+                            openEditRestrictionModal(restriction)
                           }}
                           className="p-2 text-moto-steel hover:text-moto-orange transition-colors"
                         >
@@ -1077,9 +1200,7 @@ export default function AdminVehicleProfileDetailPage() {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => {
-                            setEditingRegulation(regulation)
-                            setRegulationFormData({ ...regulation })
-                            setIsRegulationModalOpen(true)
+                            openEditRegulationModal(regulation)
                           }}
                           className="p-2 text-moto-steel hover:text-moto-orange transition-colors"
                         >
@@ -1158,9 +1279,7 @@ export default function AdminVehicleProfileDetailPage() {
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => {
-                              setEditingDiagram(diagram)
-                              setDiagramFormData({ ...diagram })
-                              setIsDiagramModalOpen(true)
+                              openEditDiagramModal(diagram)
                             }}
                             className="p-1.5 text-moto-steel hover:text-moto-orange transition-colors"
                           >
@@ -1488,15 +1607,15 @@ export default function AdminVehicleProfileDetailPage() {
         </div>
       )}
 
-      {isRestrictionModalOpen && editingRestriction && (
+      {isRestrictionModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-carbon-800 rounded-2xl border border-carbon-500/30 w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-carbon-500/30 flex items-center justify-between">
               <h2 className="text-lg font-bold text-moto-silver">
-                {editingRestriction.id.startsWith('restriction-') ? '编辑改装限制' : '添加改装限制'}
+                {editingRestriction ? '编辑改装限制' : '添加改装限制'}
               </h2>
               <button
-                onClick={() => setIsRestrictionModalOpen(false)}
+                onClick={closeRestrictionModal}
                 className="p-1 text-moto-steel hover:text-moto-silver transition-colors"
               >
                 <X size={20} />
@@ -1601,7 +1720,7 @@ export default function AdminVehicleProfileDetailPage() {
             </div>
             <div className="p-4 border-t border-carbon-500/30 flex justify-end gap-3">
               <button
-                onClick={() => setIsRestrictionModalOpen(false)}
+                onClick={closeRestrictionModal}
                 className="px-4 py-2 text-moto-steel hover:text-moto-silver transition-colors"
               >
                 取消
@@ -1617,7 +1736,7 @@ export default function AdminVehicleProfileDetailPage() {
         </div>
       )}
 
-      {isRegulationModalOpen && editingRegulation && (
+      {isRegulationModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-carbon-800 rounded-2xl border border-carbon-500/30 w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-carbon-500/30 flex items-center justify-between">
@@ -1625,7 +1744,7 @@ export default function AdminVehicleProfileDetailPage() {
                 {editingRegulation.id.startsWith('regulation-') ? '编辑法规备注' : '添加法规备注'}
               </h2>
               <button
-                onClick={() => setIsRegulationModalOpen(false)}
+                onClick={closeRegulationModal}
                 className="p-1 text-moto-steel hover:text-moto-silver transition-colors"
               >
                 <X size={20} />
@@ -1718,7 +1837,7 @@ export default function AdminVehicleProfileDetailPage() {
             </div>
             <div className="p-4 border-t border-carbon-500/30 flex justify-end gap-3">
               <button
-                onClick={() => setIsRegulationModalOpen(false)}
+                onClick={closeRegulationModal}
                 className="px-4 py-2 text-moto-steel hover:text-moto-silver transition-colors"
               >
                 取消
@@ -1727,22 +1846,22 @@ export default function AdminVehicleProfileDetailPage() {
                 onClick={handleSaveRegulation}
                 className="px-6 py-2 bg-moto-orange hover:bg-moto-orange/90 text-white rounded-lg transition-colors"
               >
-                {editingRegulation.id.startsWith('regulation-') ? '保存修改' : '添加'}
+                {editingRegulation ? '保存修改' : '添加'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {isDiagramModalOpen && editingDiagram && (
+      {isDiagramModalOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-carbon-800 rounded-2xl border border-carbon-500/30 w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-carbon-500/30 flex items-center justify-between">
               <h2 className="text-lg font-bold text-moto-silver">
-                {editingDiagram.id.startsWith('diagram-') ? '编辑示意图' : '添加示意图'}
+                {editingDiagram ? '编辑示意图' : '添加示意图'}
               </h2>
               <button
-                onClick={() => setIsDiagramModalOpen(false)}
+                onClick={closeDiagramModal}
                 className="p-1 text-moto-steel hover:text-moto-silver transition-colors"
               >
                 <X size={20} />
@@ -1827,7 +1946,7 @@ export default function AdminVehicleProfileDetailPage() {
             </div>
             <div className="p-4 border-t border-carbon-500/30 flex justify-end gap-3">
               <button
-                onClick={() => setIsDiagramModalOpen(false)}
+                onClick={closeDiagramModal}
                 className="px-4 py-2 text-moto-steel hover:text-moto-silver transition-colors"
               >
                 取消
@@ -1836,7 +1955,7 @@ export default function AdminVehicleProfileDetailPage() {
                 onClick={handleSaveDiagram}
                 className="px-6 py-2 bg-moto-orange hover:bg-moto-orange/90 text-white rounded-lg transition-colors"
               >
-                {editingDiagram.id.startsWith('diagram-') ? '保存修改' : '添加'}
+                {editingDiagram ? '保存修改' : '添加'}
               </button>
             </div>
           </div>
