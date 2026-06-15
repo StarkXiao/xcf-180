@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, FileCheck, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight, LayoutGrid, Layers, Warehouse, Percent, User, LogIn, LogOut, Heart, Clock, FileEdit, Users } from 'lucide-react'
+import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, FileCheck, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight, LayoutGrid, Layers, Warehouse, Percent, User, LogIn, LogOut, Heart, Clock, FileEdit, Users, BookOpen } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import ModelSelector from '@/components/ModelSelector'
 
@@ -24,6 +24,7 @@ const adminNavItems = [
   { path: '/admin/discount-rules', label: '折扣规则', icon: Percent },
   { path: '/admin/review', label: '上下架审核', icon: CheckSquare },
   { path: '/admin/inventory', label: '库存联动', icon: Warehouse },
+  { path: '/admin/vehicle-profiles', label: '车型资料', icon: BookOpen },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {

@@ -19,6 +19,7 @@ import { requirementsRoutes } from './routes/requirements.js';
 import { schedulesRoutes } from './routes/schedules.js';
 import receptionRoutes from './routes/reception.js';
 import { reviewsRoutes } from './routes/reviews.js';
+import { vehicleModelsRoutes } from './routes/vehicle-models.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,6 +79,9 @@ app.use(receptionRoutes.allowedMethods());
 
 app.use(reviewsRoutes.routes());
 app.use(reviewsRoutes.allowedMethods());
+
+app.use(vehicleModelsRoutes.routes());
+app.use(vehicleModelsRoutes.allowedMethods());
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);

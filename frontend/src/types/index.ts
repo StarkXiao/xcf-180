@@ -1762,4 +1762,237 @@ export const DIFFICULTY_LABELS: Record<string, string> = {
   hard: '困难',
 }
 
+export interface AssemblyZone {
+  id: string
+  name: string
+  nameEn: string
+  description?: string
+  position: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  categoryIds: string[]
+  sortOrder: number
+  isActive: boolean
+}
+
+export interface ModificationRestriction {
+  id: string
+  modelId: string
+  zoneId?: string
+  categoryId?: string
+  restrictionType: 'prohibited' | 'limited' | 'requires_approval' | 'street_legal'
+  title: string
+  description: string
+  regulationReference?: string
+  severity: 'warning' | 'danger' | 'info'
+  affectedPartIds?: string[]
+  exceptions?: string[]
+  effectiveDate?: string
+  expiryDate?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RegulationNote {
+  id: string
+  modelId: string
+  title: string
+  content: string
+  noteType: 'national' | 'local' | 'industry' | 'internal'
+  region?: string
+  regulationCode?: string
+  effectiveDate?: string
+  expiryDate?: string
+  attachments?: string[]
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DiagramConfig {
+  id: string
+  modelId: string
+  name: string
+  description?: string
+  diagramType: 'front' | 'side' | 'rear' | 'top' | 'exploded' | 'custom'
+  imageUrl: string
+  zones: AssemblyZone[]
+  hotspots: {
+    id: string
+    zoneId?: string
+    partId?: string
+    position: { x: number; y: number }
+    label: string
+    description?: string
+  }[]
+  sortOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface VehicleSpec {
+  id: string
+  category: 'engine' | 'chassis' | 'body' | 'electrical' | 'performance' | 'dimensions' | 'other'
+  name: string
+  nameEn?: string
+  value: string
+  valueType: 'string' | 'number' | 'boolean' | 'range'
+  unit?: string
+  minValue?: number
+  maxValue?: number
+  isModifiable: boolean
+  modificationImpact?: string
+  sortOrder: number
+}
+
+export interface VehicleModelProfile {
+  id: string
+  modelId: string
+  modelName: string
+  modelNameEn: string
+  year: number
+  trimLevel?: string
+  basePrice: number
+  description: string
+  imageUrl?: string
+  specs: VehicleSpec[]
+  assemblyZones: AssemblyZone[]
+  modificationRestrictions: ModificationRestriction[]
+  regulationNotes: RegulationNote[]
+  diagrams: DiagramConfig[]
+  compatiblePartCategories: string[]
+  streetLegalStatus: 'legal' | 'conditional' | 'off_road_only'
+  warrantyNotes?: string
+  maintenanceSchedule?: {
+    intervalKm: number
+    items: string[]
+  }[]
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateVehicleModelProfileRequest {
+  modelId: string
+  modelName: string
+  modelNameEn: string
+  year: number
+  trimLevel?: string
+  basePrice: number
+  description: string
+  imageUrl?: string
+  specs: Omit<VehicleSpec, 'id'>[]
+  assemblyZones: Omit<AssemblyZone, 'id'>[]
+  modificationRestrictions: Omit<ModificationRestriction, 'id' | 'createdAt' | 'updatedAt'>[]
+  regulationNotes: Omit<RegulationNote, 'id' | 'createdAt' | 'updatedAt'>[]
+  diagrams: Omit<DiagramConfig, 'id' | 'createdAt' | 'updatedAt'>[]
+  compatiblePartCategories: string[]
+  streetLegalStatus: 'legal' | 'conditional' | 'off_road_only'
+  warrantyNotes?: string
+  maintenanceSchedule?: {
+    intervalKm: number
+    items: string[]
+  }[]
+}
+
+export interface UpdateVehicleModelProfileRequest {
+  modelName?: string
+  modelNameEn?: string
+  year?: number
+  trimLevel?: string
+  basePrice?: number
+  description?: string
+  imageUrl?: string
+  specs?: Omit<VehicleSpec, 'id'>[]
+  assemblyZones?: Omit<AssemblyZone, 'id'>[]
+  modificationRestrictions?: Omit<ModificationRestriction, 'id' | 'createdAt' | 'updatedAt'>[]
+  regulationNotes?: Omit<RegulationNote, 'id' | 'createdAt' | 'updatedAt'>[]
+  diagrams?: Omit<DiagramConfig, 'id' | 'createdAt' | 'updatedAt'>[]
+  compatiblePartCategories?: string[]
+  streetLegalStatus?: 'legal' | 'conditional' | 'off_road_only'
+  warrantyNotes?: string
+  maintenanceSchedule?: {
+    intervalKm: number
+    items: string[]
+  }[]
+  isActive?: boolean
+}
+
+export interface VehicleModelProfileSummary {
+  id: string
+  modelId: string
+  modelName: string
+  modelNameEn: string
+  year: number
+  trimLevel?: string
+  basePrice: number
+  description: string
+  imageUrl?: string
+  specsCount: number
+  zonesCount: number
+  restrictionsCount: number
+  regulationsCount: number
+  diagramsCount: number
+  streetLegalStatus: 'legal' | 'conditional' | 'off_road_only'
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export const SPEC_CATEGORY_LABELS: Record<VehicleSpec['category'], string> = {
+  engine: '动力系统',
+  chassis: '底盘系统',
+  body: '车身外观',
+  electrical: '电气系统',
+  performance: '性能参数',
+  dimensions: '尺寸重量',
+  other: '其他参数',
+}
+
+export const RESTRICTION_TYPE_LABELS: Record<ModificationRestriction['restrictionType'], string> = {
+  prohibited: '严格禁止',
+  limited: '限制改装',
+  requires_approval: '需审批',
+  street_legal: '上路法规',
+}
+
+export const RESTRICTION_SEVERITY_COLORS: Record<ModificationRestriction['severity'], string> = {
+  warning: 'bg-yellow-500',
+  danger: 'bg-red-500',
+  info: 'bg-blue-500',
+}
+
+export const NOTE_TYPE_LABELS: Record<RegulationNote['noteType'], string> = {
+  national: '国家法规',
+  local: '地方法规',
+  industry: '行业标准',
+  internal: '内部规定',
+}
+
+export const DIAGRAM_TYPE_LABELS: Record<DiagramConfig['diagramType'], string> = {
+  front: '前视图',
+  side: '侧视图',
+  rear: '后视图',
+  top: '俯视图',
+  exploded: '分解图',
+  custom: '自定义',
+}
+
+export const STREET_LEGAL_STATUS_LABELS: Record<VehicleModelProfile['streetLegalStatus'], string> = {
+  legal: '合法上路',
+  conditional: '有条件上路',
+  off_road_only: '仅限赛道',
+}
+
+export const STREET_LEGAL_STATUS_COLORS: Record<VehicleModelProfile['streetLegalStatus'], string> = {
+  legal: 'text-green-400 bg-green-500/10 border-green-500/30',
+  conditional: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+  off_road_only: 'text-red-400 bg-red-500/10 border-red-500/30',
+}
+
 

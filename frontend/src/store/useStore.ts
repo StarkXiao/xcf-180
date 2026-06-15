@@ -100,6 +100,13 @@ import type {
   CreateIssueRequest,
   UpdateIssueStatusRequest,
   AcknowledgeWarningRequest,
+  VehicleModelProfile,
+  VehicleModelProfileSummary,
+  CreateVehicleModelProfileRequest,
+  UpdateVehicleModelProfileRequest,
+  ModificationRestriction,
+  RegulationNote,
+  AssemblyZone,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -537,6 +544,30 @@ interface AppState {
   fetchWarnings: (params?: { isActive?: boolean; warningLevel?: string; partId?: string; page?: number; pageSize?: number }) => Promise<void>
   acknowledgeWarning: (warningId: string, data: AcknowledgeWarningRequest) => Promise<PartWarning | null>
   deleteWarning: (warningId: string) => Promise<boolean>
+
+  vehicleProfiles: VehicleModelProfileSummary[]
+  vehicleProfilesLoading: boolean
+  currentVehicleProfile: VehicleModelProfile | null
+  vehicleProfileFilterModelId: string
+  vehicleProfileFilterStatus: string
+  vehicleProfileSearchKeyword: string
+
+  fetchVehicleProfiles: (params?: {
+    modelId?: string
+    year?: number
+    status?: string
+    keyword?: string
+  }) => Promise<void>
+  fetchVehicleProfileDetail: (id: string) => Promise<void>
+  createVehicleProfile: (data: CreateVehicleModelProfileRequest) => Promise<VehicleModelProfile | undefined>
+  updateVehicleProfile: (id: string, data: UpdateVehicleModelProfileRequest) => Promise<VehicleModelProfile | undefined>
+  deleteVehicleProfile: (id: string) => Promise<boolean>
+  updateVehicleProfileStatus: (id: string, isActive: boolean) => Promise<VehicleModelProfile | undefined>
+  getVehicleProfileById: (id: string) => VehicleModelProfileSummary | undefined
+  setVehicleProfileFilterModelId: (modelId: string) => void
+  setVehicleProfileFilterStatus: (status: string) => void
+  setVehicleProfileSearchKeyword: (keyword: string) => void
+  getFilteredVehicleProfiles: () => VehicleModelProfileSummary[]
 }
 
 const useStore = create<AppState>((set, get) => ({
@@ -659,6 +690,13 @@ const useStore = create<AppState>((set, get) => ({
   warningsLoading: false,
   warningsTotal: 0,
   warningsSummary: null,
+
+  vehicleProfiles: [],
+  vehicleProfilesLoading: false,
+  currentVehicleProfile: null,
+  vehicleProfileFilterModelId: '',
+  vehicleProfileFilterStatus: 'all',
+  vehicleProfileSearchKeyword: '',
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -3729,6 +3767,181 @@ const useStore = create<AppState>((set, get) => ({
       console.error('Failed to delete warning:', e)
       return false
     }
+  },
+
+  fetchVehicleProfiles: async (params) => {
+    set({ vehicleProfilesLoading: true })
+    try {
+      const profiles = await api.getVehicleProfiles(params)
+      set({ vehicleProfiles: profiles, vehicleProfilesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch vehicle profiles:', e)
+      set({ vehicleProfilesLoading: false })
+    }
+  },
+
+  fetchVehicleProfileDetail: async (id) => {
+    try {
+      const profile = await api.getVehicleProfile(id)
+      set({ currentVehicleProfile: profile })
+    } catch (e) {
+      console.error('Failed to fetch vehicle profile detail:', e)
+      set({ currentVehicleProfile: null })
+    }
+  },
+
+  createVehicleProfile: async (data) => {
+    try {
+      const profile = await api.adminCreateVehicleProfile(data)
+      set((state) => ({
+        vehicleProfiles: [
+          {
+            id: profile.id,
+            modelId: profile.modelId,
+            modelName: profile.modelName,
+            modelNameEn: profile.modelNameEn,
+            year: profile.year,
+            trimLevel: profile.trimLevel,
+            basePrice: profile.basePrice,
+            description: profile.description,
+            imageUrl: profile.imageUrl,
+            specsCount: profile.specs.length,
+            zonesCount: profile.assemblyZones.length,
+            restrictionsCount: profile.modificationRestrictions.length,
+            regulationsCount: profile.regulationNotes.length,
+            diagramsCount: profile.diagrams.length,
+            streetLegalStatus: profile.streetLegalStatus,
+            isActive: profile.isActive,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt,
+          },
+          ...state.vehicleProfiles,
+        ],
+      }))
+      return profile
+    } catch (e) {
+      console.error('Failed to create vehicle profile:', e)
+    }
+  },
+
+  updateVehicleProfile: async (id, data) => {
+    try {
+      const profile = await api.adminUpdateVehicleProfile(id, data)
+      set((state) => ({
+        vehicleProfiles: state.vehicleProfiles.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                modelName: profile.modelName,
+                modelNameEn: profile.modelNameEn,
+                year: profile.year,
+                trimLevel: profile.trimLevel,
+                basePrice: profile.basePrice,
+                description: profile.description,
+                imageUrl: profile.imageUrl,
+                specsCount: profile.specs.length,
+                zonesCount: profile.assemblyZones.length,
+                restrictionsCount: profile.modificationRestrictions.length,
+                regulationsCount: profile.regulationNotes.length,
+                diagramsCount: profile.diagrams.length,
+                streetLegalStatus: profile.streetLegalStatus,
+                isActive: profile.isActive,
+                updatedAt: profile.updatedAt,
+              }
+            : p
+        ),
+        currentVehicleProfile:
+          state.currentVehicleProfile?.id === id
+            ? profile
+            : state.currentVehicleProfile,
+      }))
+      return profile
+    } catch (e) {
+      console.error('Failed to update vehicle profile:', e)
+    }
+  },
+
+  deleteVehicleProfile: async (id) => {
+    try {
+      await api.adminDeleteVehicleProfile(id)
+      set((state) => ({
+        vehicleProfiles: state.vehicleProfiles.filter((p) => p.id !== id),
+        currentVehicleProfile:
+          state.currentVehicleProfile?.id === id
+            ? null
+            : state.currentVehicleProfile,
+      }))
+      return true
+    } catch (e) {
+      console.error('Failed to delete vehicle profile:', e)
+      return false
+    }
+  },
+
+  updateVehicleProfileStatus: async (id, isActive) => {
+    try {
+      const profile = await api.adminToggleVehicleProfileActive(id)
+      set((state) => ({
+        vehicleProfiles: state.vehicleProfiles.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                isActive: profile.isActive,
+                updatedAt: profile.updatedAt,
+              }
+            : p
+        ),
+        currentVehicleProfile:
+          state.currentVehicleProfile?.id === id
+            ? { ...state.currentVehicleProfile, isActive: profile.isActive, updatedAt: profile.updatedAt }
+            : state.currentVehicleProfile,
+      }))
+      return profile
+    } catch (e) {
+      console.error('Failed to update vehicle profile status:', e)
+    }
+  },
+
+  getVehicleProfileById: (id) => {
+    return get().vehicleProfiles.find((p) => p.id === id)
+  },
+
+  setVehicleProfileFilterModelId: (modelId) =>
+    set({ vehicleProfileFilterModelId: modelId }),
+
+  setVehicleProfileFilterStatus: (status) =>
+    set({ vehicleProfileFilterStatus: status }),
+
+  setVehicleProfileSearchKeyword: (keyword) =>
+    set({ vehicleProfileSearchKeyword: keyword }),
+
+  getFilteredVehicleProfiles: () => {
+    const {
+      vehicleProfiles,
+      vehicleProfileFilterModelId,
+      vehicleProfileFilterStatus,
+      vehicleProfileSearchKeyword,
+    } = get()
+    let result = [...vehicleProfiles]
+    if (vehicleProfileFilterModelId) {
+      result = result.filter((p) => p.modelId === vehicleProfileFilterModelId)
+    }
+    if (vehicleProfileFilterStatus !== 'all') {
+      result = result.filter(
+        (p) =>
+          vehicleProfileFilterStatus === 'active' ? p.isActive : !p.isActive
+      )
+    }
+    if (vehicleProfileSearchKeyword) {
+      const q = vehicleProfileSearchKeyword.toLowerCase()
+      result = result.filter(
+        (p) =>
+          p.modelName.toLowerCase().includes(q) ||
+          p.modelNameEn.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q)
+      )
+    }
+    return result
   },
 }))
 

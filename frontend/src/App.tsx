@@ -18,6 +18,8 @@ import AdminInventoryPage from "@/pages/AdminInventoryPage";
 import QuoteListPage from "@/pages/QuoteListPage";
 import QuoteDetailPage from "@/pages/QuoteDetailPage";
 import AdminDiscountRulesPage from "@/pages/AdminDiscountRulesPage";
+import AdminVehicleProfilesPage from "@/pages/AdminVehicleProfilesPage";
+import AdminVehicleProfileDetailPage from "@/pages/AdminVehicleProfileDetailPage";
 import AuthPage from "@/pages/AuthPage";
 import ProfilePage from "@/pages/ProfilePage";
 import StoreReceptionPage from "@/pages/StoreReceptionPage";
@@ -54,6 +56,8 @@ export default function App() {
                 <Route path="/admin/review" element={<AdminReviewPage />} />
                 <Route path="/admin/templates" element={<AdminTemplatesPage />} />
                 <Route path="/admin/inventory" element={<AdminInventoryPage />} />
+                <Route path="/admin/vehicle-profiles" element={<AdminVehicleProfilesPage />} />
+                <Route path="/admin/vehicle-profiles/:id" element={<AdminVehicleProfileDetailPage />} />
               </Routes>
             </Layout>
           }

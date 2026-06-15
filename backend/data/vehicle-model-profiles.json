@@ -1,0 +1,180 @@
+{
+  "profiles": [
+    {
+      "id": "profile-xcf-180",
+      "modelId": "XCF-180",
+      "modelName": "XCF-180 标准版",
+      "modelNameEn": "XCF-180 Standard",
+      "year": 2026,
+      "trimLevel": "Standard",
+      "basePrice": 29800,
+      "description": "经典街车造型，均衡性能表现，适合日常通勤与周末兜风",
+      "imageUrl": "",
+      "specs": [
+        { "id": "spec-1", "category": "engine", "name": "发动机类型", "nameEn": "Engine Type", "value": "单缸水冷四冲程", "valueType": "string", "isModifiable": false, "sortOrder": 1 },
+        { "id": "spec-2", "category": "engine", "name": "排量", "nameEn": "Displacement", "value": "180", "valueType": "number", "unit": "cc", "isModifiable": false, "sortOrder": 2 },
+        { "id": "spec-3", "category": "engine", "name": "最大功率", "nameEn": "Max Power", "value": "12.5", "valueType": "number", "unit": "kW", "isModifiable": true, "modificationImpact": "升级排气和ECU可提升约10-15%", "sortOrder": 3 },
+        { "id": "spec-4", "category": "engine", "name": "最大扭矩", "nameEn": "Max Torque", "value": "15.5", "valueType": "number", "unit": "N·m", "isModifiable": true, "modificationImpact": "改装进排气系统可提升扭矩输出", "sortOrder": 4 },
+        { "id": "spec-5", "category": "chassis", "name": "车架类型", "nameEn": "Frame Type", "value": "钢管钻石车架", "valueType": "string", "isModifiable": false, "sortOrder": 5 },
+        { "id": "spec-6", "category": "chassis", "name": "前悬挂", "nameEn": "Front Suspension", "value": "正立式前叉", "valueType": "string", "isModifiable": true, "modificationImpact": "可升级为可调式前叉", "sortOrder": 6 },
+        { "id": "spec-7", "category": "chassis", "name": "后悬挂", "nameEn": "Rear Suspension", "value": "中置单枪后避震", "valueType": "string", "isModifiable": true, "modificationImpact": "可升级为多段可调避震", "sortOrder": 7 },
+        { "id": "spec-8", "category": "chassis", "name": "前制动", "nameEn": "Front Brake", "value": "单碟267mm", "valueType": "string", "isModifiable": true, "modificationImpact": "可升级为大碟或对向卡钳", "sortOrder": 8 },
+        { "id": "spec-9", "category": "chassis", "name": "后制动", "nameEn": "Rear Brake", "value": "单碟220mm", "valueType": "string", "isModifiable": true, "sortOrder": 9 },
+        { "id": "spec-10", "category": "dimensions", "name": "长×宽×高", "nameEn": "Dimensions", "value": "2020×760×1080", "valueType": "string", "unit": "mm", "isModifiable": false, "sortOrder": 10 },
+        { "id": "spec-11", "category": "dimensions", "name": "轴距", "nameEn": "Wheelbase", "value": "1360", "valueType": "number", "unit": "mm", "isModifiable": false, "sortOrder": 11 },
+        { "id": "spec-12", "category": "dimensions", "name": "座高", "nameEn": "Seat Height", "value": "780", "valueType": "number", "unit": "mm", "isModifiable": true, "modificationImpact": "可通过改装座垫或连杆调整", "sortOrder": 12 },
+        { "id": "spec-13", "category": "dimensions", "name": "整备质量", "nameEn": "Curb Weight", "value": "138", "valueType": "number", "unit": "kg", "isModifiable": true, "modificationImpact": "轻量化改装可降低5-15kg", "sortOrder": 13 },
+        { "id": "spec-14", "category": "performance", "name": "0-100km/h加速", "nameEn": "0-100 Acceleration", "value": "9.8", "valueType": "number", "unit": "s", "isModifiable": true, "sortOrder": 14 },
+        { "id": "spec-15", "category": "performance", "name": "最高车速", "nameEn": "Top Speed", "value": "128", "valueType": "number", "unit": "km/h", "isModifiable": true, "sortOrder": 15 },
+        { "id": "spec-16", "category": "electrical", "name": "电瓶规格", "nameEn": "Battery", "value": "12V 7Ah", "valueType": "string", "isModifiable": true, "sortOrder": 16 },
+        { "id": "spec-17", "category": "body", "name": "油箱容量", "nameEn": "Fuel Tank", "value": "14", "valueType": "number", "unit": "L", "isModifiable": false, "sortOrder": 17 }
+      ],
+      "assemblyZones": [
+        { "id": "zone-1", "name": "车头区域", "nameEn": "Front", "description": "大灯、仪表、把手等", "position": { "x": 0, "y": 0, "width": 30, "height": 40 }, "categoryIds": ["lighting", "handlebar"], "sortOrder": 1, "isActive": true },
+        { "id": "zone-2", "name": "车身中部", "nameEn": "Mid", "description": "油箱、座椅、侧盖等", "position": { "x": 30, "y": 10, "width": 40, "height": 50 }, "categoryIds": ["bodykit"], "sortOrder": 2, "isActive": true },
+        { "id": "zone-3", "name": "车尾区域", "nameEn": "Rear", "description": "尾灯、牌照架、后扶手等", "position": { "x": 70, "y": 0, "width": 30, "height": 40 }, "categoryIds": ["bodykit", "lighting"], "sortOrder": 3, "isActive": true },
+        { "id": "zone-4", "name": "排气系统", "nameEn": "Exhaust", "description": "排气管、消音器等", "position": { "x": 60, "y": 50, "width": 40, "height": 30 }, "categoryIds": ["exhaust"], "sortOrder": 4, "isActive": true },
+        { "id": "zone-5", "name": "前轮组", "nameEn": "Front Wheel", "description": "轮毂、轮胎、前刹", "position": { "x": 5, "y": 55, "width": 25, "height": 40 }, "categoryIds": ["wheels", "brake"], "sortOrder": 5, "isActive": true },
+        { "id": "zone-6", "name": "后轮组", "nameEn": "Rear Wheel", "description": "轮毂、轮胎、后刹", "position": { "x": 70, "y": 55, "width": 25, "height": 40 }, "categoryIds": ["wheels", "brake"], "sortOrder": 6, "isActive": true }
+      ],
+      "modificationRestrictions": [
+        { "id": "restrict-1", "modelId": "XCF-180", "restrictionType": "prohibited", "title": "禁止改装车架结构", "description": "严禁切割、焊接或改变车架几何结构，涉及安全结构的改动必须由原厂授权进行", "severity": "danger", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "restrict-2", "modelId": "XCF-180", "restrictionType": "street_legal", "title": "排气噪音限制", "description": "改装排气系统需符合当地噪音法规，一般城市道路不超过80分贝，赛道使用不受限", "regulationReference": "GB 16169-2018", "severity": "warning", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "restrict-3", "modelId": "XCF-180", "restrictionType": "street_legal", "title": "灯光改装限制", "description": "大灯改装不得超过原厂亮度的150%，不可使用影响对向车辆的光源，须保留远近光切换功能", "regulationReference": "GB 4599-2007", "severity": "warning", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "restrict-4", "modelId": "XCF-180", "zoneId": "zone-5", "restrictionType": "limited", "title": "前轮规格限制", "description": "前轮改装轮毂尺寸不得超过原厂±1英寸，轮胎宽度差不超过20mm", "severity": "warning", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "restrict-5", "modelId": "XCF-180", "restrictionType": "requires_approval", "title": "ECU调校需专业认证", "description": "任何涉及ECU映射调整的改装必须由经认证的技师操作，并保留调校记录", "severity": "info", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "regulationNotes": [
+        { "id": "reg-1", "modelId": "XCF-180", "title": "机动车登记规定", "content": "根据《机动车登记规定》，改变车身颜色、更换发动机、车身或者车架的，机动车所有人应当在变更后十日内向车辆管理所申请变更登记", "noteType": "national", "regulationCode": "公安部令第164号", "effectiveDate": "2022-05-01", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "reg-2", "modelId": "XCF-180", "title": "摩托车安全标准", "content": "GB 7258-2017《机动车运行安全技术条件》对摩托车制动、灯光、信号装置等有强制性要求，改装不得降低车辆安全性能", "noteType": "national", "regulationCode": "GB 7258-2017", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "reg-3", "modelId": "XCF-180", "title": "改装保修期说明", "content": "非原厂配件改装可能导致车辆保修失效，建议在改装前咨询授权服务中心确认保修政策", "noteType": "internal", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "diagrams": [
+        { "id": "diag-1", "modelId": "XCF-180", "name": "整车侧视图", "description": "标准左侧视图，标注主要装配区域", "diagramType": "side", "imageUrl": "", "zones": [], "hotspots": [], "sortOrder": 1, "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "diag-2", "modelId": "XCF-180", "name": "整车前视图", "description": "车头正视图", "diagramType": "front", "imageUrl": "", "zones": [], "hotspots": [], "sortOrder": 2, "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "diag-3", "modelId": "XCF-180", "name": "整车后视图", "description": "车尾正视图", "diagramType": "rear", "imageUrl": "", "zones": [], "hotspots": [], "sortOrder": 3, "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "compatiblePartCategories": ["exhaust", "wheels", "handlebar", "lighting", "bodykit", "brake"],
+      "streetLegalStatus": "legal",
+      "warrantyNotes": "整车保修2年或20000公里，以先到为准。改装配件单独保修12个月。",
+      "maintenanceSchedule": [
+        { "intervalKm": 1000, "items": ["首次保养", "更换机油机滤", "全车检查"] },
+        { "intervalKm": 5000, "items": ["更换机油机滤", "检查链条张紧度", "检查制动系统"] },
+        { "intervalKm": 10000, "items": ["更换机油机滤", "更换空气滤芯", "检查火花塞", "轮胎换位"] },
+        { "intervalKm": 20000, "items": ["大保养", "更换全车油液", "检查气门间隙", "更换传动链条"] }
+      ],
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "profile-xcf-180r",
+      "modelId": "XCF-180R",
+      "modelName": "XCF-180R 运动版",
+      "modelNameEn": "XCF-180R Sport",
+      "year": 2026,
+      "trimLevel": "Sport",
+      "basePrice": 36800,
+      "description": "赛道基因加持，轻量化设计，追求极致操控与动力表现",
+      "imageUrl": "",
+      "specs": [
+        { "id": "spec-r1", "category": "engine", "name": "发动机类型", "value": "单缸水冷四冲程", "valueType": "string", "isModifiable": false, "sortOrder": 1 },
+        { "id": "spec-r2", "category": "engine", "name": "排量", "value": "180", "valueType": "number", "unit": "cc", "isModifiable": false, "sortOrder": 2 },
+        { "id": "spec-r3", "category": "engine", "name": "最大功率", "value": "14.2", "valueType": "number", "unit": "kW", "isModifiable": true, "modificationImpact": "高角度凸轮轴+ECU特调可提升约15-20%", "sortOrder": 3 },
+        { "id": "spec-r4", "category": "engine", "name": "最大扭矩", "value": "16.8", "valueType": "number", "unit": "N·m", "isModifiable": true, "sortOrder": 4 },
+        { "id": "spec-r5", "category": "chassis", "name": "车架类型", "value": "钢管钻石车架（加强）", "valueType": "string", "isModifiable": false, "sortOrder": 5 },
+        { "id": "spec-r6", "category": "chassis", "name": "前悬挂", "value": "倒立式前叉（可调预载/阻尼）", "valueType": "string", "isModifiable": true, "sortOrder": 6 },
+        { "id": "spec-r7", "category": "chassis", "name": "后悬挂", "value": "中置单枪多段可调", "valueType": "string", "isModifiable": true, "sortOrder": 7 },
+        { "id": "spec-r8", "category": "chassis", "name": "前制动", "value": "对向四活塞卡钳300mm碟", "valueType": "string", "isModifiable": true, "sortOrder": 8 },
+        { "id": "spec-r9", "category": "chassis", "name": "后制动", "value": "单碟240mm", "valueType": "string", "isModifiable": true, "sortOrder": 9 },
+        { "id": "spec-r10", "category": "dimensions", "name": "整备质量", "value": "132", "valueType": "number", "unit": "kg", "isModifiable": true, "modificationImpact": "赛道化改装可降低10-20kg", "sortOrder": 10 },
+        { "id": "spec-r11", "category": "dimensions", "name": "座高", "value": "810", "valueType": "number", "unit": "mm", "isModifiable": true, "sortOrder": 11 },
+        { "id": "spec-r12", "category": "performance", "name": "0-100km/h加速", "value": "8.2", "valueType": "number", "unit": "s", "isModifiable": true, "sortOrder": 12 },
+        { "id": "spec-r13", "category": "performance", "name": "最高车速", "value": "140", "valueType": "number", "unit": "km/h", "isModifiable": true, "sortOrder": 13 }
+      ],
+      "assemblyZones": [
+        { "id": "zone-r1", "name": "车头区域", "nameEn": "Front", "position": { "x": 0, "y": 0, "width": 30, "height": 40 }, "categoryIds": ["lighting", "handlebar"], "sortOrder": 1, "isActive": true },
+        { "id": "zone-r2", "name": "车身中部", "nameEn": "Mid", "position": { "x": 30, "y": 10, "width": 40, "height": 50 }, "categoryIds": ["bodykit"], "sortOrder": 2, "isActive": true },
+        { "id": "zone-r3", "name": "车尾区域", "nameEn": "Rear", "position": { "x": 70, "y": 0, "width": 30, "height": 40 }, "categoryIds": ["bodykit", "lighting"], "sortOrder": 3, "isActive": true },
+        { "id": "zone-r4", "name": "排气系统", "nameEn": "Exhaust", "position": { "x": 60, "y": 50, "width": 40, "height": 30 }, "categoryIds": ["exhaust"], "sortOrder": 4, "isActive": true },
+        { "id": "zone-r5", "name": "前轮组", "nameEn": "Front Wheel", "position": { "x": 5, "y": 55, "width": 25, "height": 40 }, "categoryIds": ["wheels", "brake"], "sortOrder": 5, "isActive": true },
+        { "id": "zone-r6", "name": "后轮组", "nameEn": "Rear Wheel", "position": { "x": 70, "y": 55, "width": 25, "height": 40 }, "categoryIds": ["wheels", "brake"], "sortOrder": 6, "isActive": true }
+      ],
+      "modificationRestrictions": [
+        { "id": "restrict-r1", "modelId": "XCF-180R", "restrictionType": "prohibited", "title": "禁止改装车架结构", "description": "赛道版车架为加强设计，严禁任何结构改动", "severity": "danger", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "restrict-r2", "modelId": "XCF-180R", "restrictionType": "limited", "title": "轮胎扁平比限制", "description": "赛道使用推荐扁平比70以下，街道使用需符合当地法规", "severity": "warning", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" },
+        { "id": "restrict-r3", "modelId": "XCF-180R", "restrictionType": "street_legal", "title": "赛道版上路提示", "description": "部分赛道化改装配件不适合街道使用，请确认配件合规性", "severity": "info", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "regulationNotes": [
+        { "id": "reg-r1", "modelId": "XCF-180R", "title": "赛道改装免责", "content": "赛道专用改装配件不保证道路使用合规性，使用前请确认当地法规", "noteType": "internal", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "diagrams": [
+        { "id": "diag-r1", "modelId": "XCF-180R", "name": "整车侧视图", "diagramType": "side", "imageUrl": "", "zones": [], "hotspots": [], "sortOrder": 1, "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "compatiblePartCategories": ["exhaust", "wheels", "handlebar", "lighting", "bodykit", "brake"],
+      "streetLegalStatus": "conditional",
+      "warrantyNotes": "整车保修2年或20000公里。赛道使用造成的损坏不在保修范围内。",
+      "maintenanceSchedule": [
+        { "intervalKm": 1000, "items": ["首次保养", "更换机油机滤", "全车检查"] },
+        { "intervalKm": 3000, "items": ["赛道保养", "更换机油机滤", "检查制动片磨损"] },
+        { "intervalKm": 6000, "items": ["更换机油机滤", "更换空气滤芯", "检查火花塞"] },
+        { "intervalKm": 12000, "items": ["大保养", "更换全车油液", "检查气门间隙"] }
+      ],
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "profile-xcf-180s",
+      "modelId": "XCF-180S",
+      "modelName": "XCF-180S 街道版",
+      "modelNameEn": "XCF-180S Street",
+      "year": 2026,
+      "trimLevel": "Street",
+      "basePrice": 32800,
+      "description": "时尚街跑风格，舒适骑行姿态，城市街道的个性之选",
+      "imageUrl": "",
+      "specs": [
+        { "id": "spec-s1", "category": "engine", "name": "发动机类型", "value": "单缸水冷四冲程", "valueType": "string", "isModifiable": false, "sortOrder": 1 },
+        { "id": "spec-s2", "category": "engine", "name": "排量", "value": "180", "valueType": "number", "unit": "cc", "isModifiable": false, "sortOrder": 2 },
+        { "id": "spec-s3", "category": "engine", "name": "最大功率", "value": "13.2", "valueType": "number", "unit": "kW", "isModifiable": true, "sortOrder": 3 },
+        { "id": "spec-s4", "category": "engine", "name": "最大扭矩", "value": "16.0", "valueType": "number", "unit": "N·m", "isModifiable": true, "sortOrder": 4 },
+        { "id": "spec-s5", "category": "chassis", "name": "前悬挂", "value": "正立式前叉（可调预载）", "valueType": "string", "isModifiable": true, "sortOrder": 5 },
+        { "id": "spec-s6", "category": "chassis", "name": "后悬挂", "value": "双枪后避震（可调）", "valueType": "string", "isModifiable": true, "sortOrder": 6 },
+        { "id": "spec-s7", "category": "chassis", "name": "前制动", "value": "单碟280mm", "valueType": "string", "isModifiable": true, "sortOrder": 7 },
+        { "id": "spec-s8", "category": "dimensions", "name": "座高", "value": "760", "valueType": "number", "unit": "mm", "isModifiable": true, "sortOrder": 8 },
+        { "id": "spec-s9", "category": "dimensions", "name": "整备质量", "value": "135", "valueType": "number", "unit": "kg", "isModifiable": true, "sortOrder": 9 },
+        { "id": "spec-s10", "category": "performance", "name": "0-100km/h加速", "value": "9.0", "valueType": "number", "unit": "s", "isModifiable": true, "sortOrder": 10 }
+      ],
+      "assemblyZones": [
+        { "id": "zone-s1", "name": "车头区域", "nameEn": "Front", "position": { "x": 0, "y": 0, "width": 30, "height": 40 }, "categoryIds": ["lighting", "handlebar"], "sortOrder": 1, "isActive": true },
+        { "id": "zone-s2", "name": "车身中部", "nameEn": "Mid", "position": { "x": 30, "y": 10, "width": 40, "height": 50 }, "categoryIds": ["bodykit"], "sortOrder": 2, "isActive": true },
+        { "id": "zone-s3", "name": "车尾区域", "nameEn": "Rear", "position": { "x": 70, "y": 0, "width": 30, "height": 40 }, "categoryIds": ["bodykit", "lighting"], "sortOrder": 3, "isActive": true },
+        { "id": "zone-s4", "name": "排气系统", "nameEn": "Exhaust", "position": { "x": 60, "y": 50, "width": 40, "height": 30 }, "categoryIds": ["exhaust"], "sortOrder": 4, "isActive": true },
+        { "id": "zone-s5", "name": "前轮组", "nameEn": "Front Wheel", "position": { "x": 5, "y": 55, "width": 25, "height": 40 }, "categoryIds": ["wheels", "brake"], "sortOrder": 5, "isActive": true },
+        { "id": "zone-s6", "name": "后轮组", "nameEn": "Rear Wheel", "position": { "x": 70, "y": 55, "width": 25, "height": 40 }, "categoryIds": ["wheels", "brake"], "sortOrder": 6, "isActive": true }
+      ],
+      "modificationRestrictions": [
+        { "id": "restrict-s1", "modelId": "XCF-180S", "restrictionType": "street_legal", "title": "外观改装合规", "description": "街道版外观改装需保持车辆可识别性，不可遮盖品牌标识", "severity": "warning", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "regulationNotes": [
+        { "id": "reg-s1", "modelId": "XCF-180S", "title": "城市骑行提示", "content": "城市使用建议加装防摔保护装置，定期检查灯具和制动系统", "noteType": "internal", "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "diagrams": [
+        { "id": "diag-s1", "modelId": "XCF-180S", "name": "整车侧视图", "diagramType": "side", "imageUrl": "", "zones": [], "hotspots": [], "sortOrder": 1, "isActive": true, "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z" }
+      ],
+      "compatiblePartCategories": ["exhaust", "wheels", "handlebar", "lighting", "bodykit", "brake"],
+      "streetLegalStatus": "legal",
+      "warrantyNotes": "整车保修2年或20000公里。外观改装件保修6个月。",
+      "maintenanceSchedule": [
+        { "intervalKm": 1000, "items": ["首次保养", "更换机油机滤", "全车检查"] },
+        { "intervalKm": 5000, "items": ["更换机油机滤", "检查链条", "检查制动"] },
+        { "intervalKm": 10000, "items": ["更换机油机滤", "更换空滤", "检查火花塞"] },
+        { "intervalKm": 20000, "items": ["大保养", "更换全车油液"] }
+      ],
+      "isActive": true,
+      "createdAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

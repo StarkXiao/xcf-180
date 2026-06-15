@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest, ReceptionSelection, CreateReceptionSelectionRequest, CreateScheduleFromQuoteRequest, QuoteItem, PartReview, ReviewStats, PartIssue, PartWarning, CreatePartReviewRequest, ProcessReviewRequest, CreateIssueRequest, UpdateIssueStatusRequest, AcknowledgeWarningRequest } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest, ReceptionSelection, CreateReceptionSelectionRequest, CreateScheduleFromQuoteRequest, QuoteItem, PartReview, ReviewStats, PartIssue, PartWarning, CreatePartReviewRequest, ProcessReviewRequest, CreateIssueRequest, UpdateIssueStatusRequest, AcknowledgeWarningRequest, VehicleModelProfile, VehicleModelProfileSummary, CreateVehicleModelProfileRequest, UpdateVehicleModelProfileRequest, AssemblyZone, ModificationRestriction, RegulationNote } from '@/types'
 
 const BASE = ''
 
@@ -1000,4 +1000,48 @@ export const api = {
     const data = await res.json()
     return data.urls as string[]
   },
+
+  getVehicleProfiles: (params?: {
+    modelId?: string
+    keyword?: string
+    isActive?: boolean
+    streetLegalStatus?: string
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.modelId) searchParams.set('modelId', params.modelId)
+    if (params?.keyword) searchParams.set('keyword', params.keyword)
+    if (params?.isActive !== undefined) searchParams.set('isActive', params.isActive.toString())
+    if (params?.streetLegalStatus) searchParams.set('streetLegalStatus', params.streetLegalStatus)
+    const qs = searchParams.toString()
+    return fetchJSON<VehicleModelProfileSummary[]>(`/api/vehicle-model-profiles${qs ? `?${qs}` : ''}`)
+  },
+
+  getVehicleProfile: (id: string) =>
+    fetchJSON<VehicleModelProfile>(`/api/vehicle-model-profiles/${id}`),
+
+  getVehicleProfileByModel: (modelId: string) =>
+    fetchJSON<VehicleModelProfile>(`/api/vehicle-model-profiles/by-model/${modelId}`),
+
+  adminCreateVehicleProfile: (data: CreateVehicleModelProfileRequest) =>
+    fetchJSON<VehicleModelProfile>('/api/admin/vehicle-model-profiles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  adminUpdateVehicleProfile: (id: string, data: UpdateVehicleModelProfileRequest) =>
+    fetchJSON<VehicleModelProfile>(`/api/admin/vehicle-model-profiles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  adminDeleteVehicleProfile: (id: string) =>
+    fetchJSON<{ success: boolean; removed: VehicleModelProfile }>(
+      `/api/admin/vehicle-model-profiles/${id}`,
+      { method: 'DELETE' }
+    ),
+
+  adminToggleVehicleProfileActive: (id: string) =>
+    fetchJSON<VehicleModelProfile>(`/api/admin/vehicle-model-profiles/${id}/toggle`, {
+      method: 'PUT',
+    }),
 }
