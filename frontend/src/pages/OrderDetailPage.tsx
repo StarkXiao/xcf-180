@@ -4,9 +4,12 @@ import { useStore } from '@/store/useStore'
 import {
   ArrowLeft, Clock, User, Phone, Wrench, Package, CalendarDays, Truck, CheckCircle2,
   XCircle, AlertCircle, Factory, ChevronRight, MessageSquare, Send, Trash2,
-  Percent, FileText, ChevronDown, Plus,
+  Percent, FileText, ChevronDown, Plus, Shield,
 } from 'lucide-react'
 import type { OrderStatus, AfterSaleNote } from '@/types'
+import { AFTER_SALES_STATUS_LABELS, AFTER_SALES_STATUS_COLORS } from '@/types'
+import AfterSalesFormModal from '@/components/AfterSalesFormModal'
+import { Link } from 'react-router-dom'
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bgColor: string; borderColor: string; icon: React.ReactNode }> = {
   pending: { label: '待报价', color: 'text-yellow-500', bgColor: 'bg-yellow-500', borderColor: 'border-yellow-500', icon: <Clock size={14} /> },
@@ -40,7 +43,11 @@ const NOTE_TYPE_CONFIG: Record<AfterSaleNote['type'], { label: string; color: st
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { orders, fetchOrders, updateOrderStatus, updateOrderDiscount, addAfterSaleNote, deleteAfterSaleNote, deleteOrder } = useStore()
+  const {
+    orders, fetchOrders, updateOrderStatus, updateOrderDiscount,
+    addAfterSaleNote, deleteAfterSaleNote, deleteOrder,
+    fetchAfterSalesByOrder, afterSalesRecords,
+  } = useStore()
 
   const [noteContent, setNoteContent] = useState('')
   const [noteType, setNoteType] = useState<AfterSaleNote['type']>('comment')
@@ -52,10 +59,17 @@ export default function OrderDetailPage() {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
   const [showNoteForm, setShowNoteForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [showAfterSalesModal, setShowAfterSalesModal] = useState(false)
 
   useEffect(() => {
     if (orders.length === 0) fetchOrders()
   }, [])
+
+  useEffect(() => {
+    if (id) {
+      fetchAfterSalesByOrder(id)
+    }
+  }, [id])
 
   const order = orders.find((o) => o.id === id)
 
@@ -167,6 +181,13 @@ export default function OrderDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAfterSalesModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-carbon-700 text-moto-silver rounded-xl font-orbitron text-sm hover:bg-carbon-600 transition-colors border border-carbon-500/30"
+            >
+              <Shield size={14} />
+              发起售后
+            </button>
             {nextOptions.length > 0 && (
               <div className="relative">
                 <button
@@ -315,6 +336,43 @@ export default function OrderDetailPage() {
                 })}
               </div>
             </div>
+
+            {afterSalesRecords.length > 0 && (
+              <div className="bg-carbon-800 rounded-xl border border-carbon-500/20 p-5">
+                <h3 className="font-orbitron text-sm text-moto-silver mb-4 flex items-center gap-2">
+                  <Shield size={14} />
+                  售后工单记录
+                  <span className="text-[10px] px-2 py-0.5 bg-carbon-700 rounded-full text-moto-steel">{afterSalesRecords.length}</span>
+                </h3>
+                <div className="space-y-2">
+                  {afterSalesRecords.map((record) => {
+                    const statusColor = AFTER_SALES_STATUS_COLORS[record.status]
+                    const statusLabel = AFTER_SALES_STATUS_LABELS[record.status]
+                    return (
+                      <Link
+                        key={record.id}
+                        to={`/after-sales/${record.id}`}
+                        className="block p-3 bg-carbon-700/50 rounded-lg hover:bg-carbon-700 transition-colors border border-transparent hover:border-carbon-500/30"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-orbitron text-moto-silver text-sm">{record.afterSalesNo}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusColor}`}>
+                              {statusLabel}
+                            </span>
+                          </div>
+                          <ChevronRight size={14} className="text-moto-steel" />
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-moto-steel">{new Date(record.createdAt).toLocaleString('zh-CN')}</span>
+                          <span className="font-orbitron text-moto-orange">¥{record.totalCost.toLocaleString()}</span>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -508,6 +566,14 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {showAfterSalesModal && (
+        <AfterSalesFormModal
+          isOpen={showAfterSalesModal}
+          onClose={() => setShowAfterSalesModal(false)}
+          orderId={order.id}
+        />
+      )}
     </div>
   )
 }

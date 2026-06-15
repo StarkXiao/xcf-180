@@ -23,6 +23,8 @@ import AdminVehicleProfileDetailPage from "@/pages/AdminVehicleProfileDetailPage
 import AuthPage from "@/pages/AuthPage";
 import ProfilePage from "@/pages/ProfilePage";
 import StoreReceptionPage from "@/pages/StoreReceptionPage";
+import AfterSalesListPage from "@/pages/AfterSalesListPage";
+import AfterSalesDetailPage from "@/pages/AfterSalesDetailPage";
 import Layout from "@/components/Layout";
 
 export default function App() {
@@ -45,6 +47,8 @@ export default function App() {
                 <Route path="/reception" element={<StoreReceptionPage />} />
                 <Route path="/orders" element={<OrderListPage />} />
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
+                <Route path="/after-sales" element={<AfterSalesListPage />} />
+                <Route path="/after-sales/:id" element={<AfterSalesDetailPage />} />
                 <Route path="/quotes" element={<QuoteListPage />} />
                 <Route path="/quotes/:id" element={<QuoteDetailPage />} />
                 <Route path="/profile" element={<ProfilePage />} />

@@ -15,7 +15,7 @@ import {
   ISSUE_PRIORITY_COLORS,
   WARNING_LEVEL_LABELS,
   WARNING_LEVEL_COLORS,
-  ISSUE_CATEGORY_LABELS,
+  PART_ISSUE_CATEGORY_LABELS,
 } from '@/types'
 import PartWarningPanel from '@/components/PartWarningPanel'
 
@@ -336,7 +336,7 @@ const AdminReviewPage: React.FC = () => {
                               {ISSUE_STATUS_LABELS[issue.status]}
                             </span>
                             <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs">
-                              {ISSUE_CATEGORY_LABELS[issue.category] || issue.category}
+                              {PART_ISSUE_CATEGORY_LABELS[issue.category] || issue.category}
                             </span>
                           </div>
                           <h4 className="font-semibold text-zinc-900 dark:text-white">{issue.title}</h4>

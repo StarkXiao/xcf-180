@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest, ReceptionSelection, CreateReceptionSelectionRequest, CreateScheduleFromQuoteRequest, QuoteItem, PartReview, ReviewStats, PartIssue, PartWarning, CreatePartReviewRequest, ProcessReviewRequest, CreateIssueRequest, UpdateIssueStatusRequest, AcknowledgeWarningRequest, VehicleModelProfile, VehicleModelProfileSummary, CreateVehicleModelProfileRequest, UpdateVehicleModelProfileRequest, AssemblyZone, ModificationRestriction, RegulationNote } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest, ReceptionSelection, CreateReceptionSelectionRequest, CreateScheduleFromQuoteRequest, QuoteItem, PartReview, ReviewStats, PartIssue, PartWarning, CreatePartReviewRequest, ProcessReviewRequest, CreateIssueRequest, UpdateIssueStatusRequest, AcknowledgeWarningRequest, VehicleModelProfile, VehicleModelProfileSummary, CreateVehicleModelProfileRequest, UpdateVehicleModelProfileRequest, ModificationRestriction, RegulationNote, AssemblyZone, AfterSalesRecord, CreateAfterSalesRequest, UpdateAfterSalesRequest, UpdateAfterSalesStatusRequest, PartWarranty, AfterSalesStatus, AfterSalesPriority, AfterSalesType, IssueCategory, } from '@/types'
 
 const BASE = ''
 
@@ -1044,4 +1044,95 @@ export const api = {
     fetchJSON<VehicleModelProfile>(`/api/admin/vehicle-model-profiles/${id}/toggle`, {
       method: 'PUT',
     }),
+
+  getAfterSalesRecords: (params?: {
+    status?: AfterSalesStatus
+    priority?: AfterSalesPriority
+    type?: AfterSalesType
+    orderId?: string
+    customerName?: string
+    issueCategory?: IssueCategory
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.priority) searchParams.set('priority', params.priority)
+    if (params?.type) searchParams.set('type', params.type)
+    if (params?.orderId) searchParams.set('orderId', params.orderId)
+    if (params?.customerName) searchParams.set('customerName', params.customerName)
+    if (params?.issueCategory) searchParams.set('issueCategory', params.issueCategory)
+    const qs = searchParams.toString()
+    return fetchJSON<AfterSalesRecord[]>(`/api/after-sales${qs ? `?${qs}` : ''}`)
+  },
+
+  getAfterSalesRecord: (id: string) =>
+    fetchJSON<AfterSalesRecord>(`/api/after-sales/${id}`),
+
+  getAfterSalesByOrder: (orderId: string) =>
+    fetchJSON<AfterSalesRecord[]>(`/api/after-sales/order/${orderId}`),
+
+  createAfterSales: (data: CreateAfterSalesRequest) =>
+    fetchJSON<AfterSalesRecord>('/api/after-sales', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateAfterSales: (id: string, data: UpdateAfterSalesRequest) =>
+    fetchJSON<AfterSalesRecord>(`/api/after-sales/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  updateAfterSalesStatus: (id: string, data: UpdateAfterSalesStatusRequest) =>
+    fetchJSON<AfterSalesRecord>(`/api/after-sales/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteAfterSales: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/after-sales/${id}`, {
+      method: 'DELETE',
+    }),
+
+  getWarranties: (params?: { orderId?: string; partId?: string; status?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.orderId) searchParams.set('orderId', params.orderId)
+    if (params?.partId) searchParams.set('partId', params.partId)
+    if (params?.status) searchParams.set('status', params.status)
+    const qs = searchParams.toString()
+    return fetchJSON<PartWarranty[]>(`/api/after-sales/warranties${qs ? `?${qs}` : ''}`)
+  },
+
+  getWarranty: (id: string) =>
+    fetchJSON<PartWarranty>(`/api/after-sales/warranties/${id}`),
+
+  getWarrantiesByOrder: (orderId: string) =>
+    fetchJSON<PartWarranty[]>(`/api/after-sales/warranties/order/${orderId}`),
+
+  createWarranty: (data: Partial<PartWarranty> & {
+    partId: string
+    partName: string
+    orderId: string
+    orderNo: string
+    warrantyPeriodMonths: number
+    purchaseDate: string
+  }) =>
+    fetchJSON<PartWarranty>('/api/after-sales/warranties', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getAfterSalesStats: () =>
+    fetchJSON<{
+      total: number
+      byStatus: Record<string, number>
+      byPriority: Record<string, number>
+      byType: Record<string, number>
+      byIssueCategory: Record<string, number>
+      pendingCount: number
+      inProgressCount: number
+      completedCount: number
+      totalCost: number
+      totalCustomerCharge: number
+      totalWarrantyCoverage: number
+    }>('/api/after-sales/stats/summary'),
 }

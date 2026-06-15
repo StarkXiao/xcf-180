@@ -107,6 +107,19 @@ import type {
   ModificationRestriction,
   RegulationNote,
   AssemblyZone,
+  AfterSalesRecord,
+  AfterSalesPartItem,
+  AfterSalesProgress,
+  PartWarranty,
+  AfterSalesStats,
+  AfterSalesStatus,
+  AfterSalesPriority,
+  AfterSalesType,
+  IssueCategory,
+  WarrantyStatus,
+  CreateAfterSalesRequest,
+  UpdateAfterSalesRequest,
+  UpdateAfterSalesStatusRequest,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -568,6 +581,52 @@ interface AppState {
   setVehicleProfileFilterStatus: (status: string) => void
   setVehicleProfileSearchKeyword: (keyword: string) => void
   getFilteredVehicleProfiles: () => VehicleModelProfileSummary[]
+
+  afterSalesRecords: AfterSalesRecord[]
+  afterSalesLoading: boolean
+  currentAfterSales: AfterSalesRecord | null
+  afterSalesFilterStatus: AfterSalesStatus | 'all'
+  afterSalesFilterPriority: AfterSalesPriority | 'all'
+  afterSalesFilterType: AfterSalesType | 'all'
+  afterSalesFilterIssueCategory: IssueCategory | 'all'
+  afterSalesSearchKeyword: string
+  afterSalesStats: AfterSalesStats | null
+
+  fetchAfterSalesRecords: (params?: {
+    status?: AfterSalesStatus
+    priority?: AfterSalesPriority
+    type?: AfterSalesType
+    orderId?: string
+    customerName?: string
+    issueCategory?: IssueCategory
+  }) => Promise<void>
+  fetchAfterSalesDetail: (id: string) => Promise<AfterSalesRecord | undefined>
+  fetchAfterSalesByOrder: (orderId: string) => Promise<void>
+  createAfterSales: (data: CreateAfterSalesRequest) => Promise<AfterSalesRecord | undefined>
+  updateAfterSales: (id: string, data: UpdateAfterSalesRequest) => Promise<AfterSalesRecord | undefined>
+  updateAfterSalesStatus: (id: string, data: UpdateAfterSalesStatusRequest) => Promise<AfterSalesRecord | undefined>
+  deleteAfterSales: (id: string) => Promise<boolean>
+  fetchAfterSalesStats: () => Promise<void>
+  setAfterSalesFilterStatus: (status: AfterSalesStatus | 'all') => void
+  setAfterSalesFilterPriority: (priority: AfterSalesPriority | 'all') => void
+  setAfterSalesFilterType: (type: AfterSalesType | 'all') => void
+  setAfterSalesFilterIssueCategory: (category: IssueCategory | 'all') => void
+  setAfterSalesSearchKeyword: (keyword: string) => void
+  getFilteredAfterSales: () => AfterSalesRecord[]
+
+  warranties: PartWarranty[]
+  warrantiesLoading: boolean
+  fetchWarranties: (params?: { orderId?: string; partId?: string; status?: string }) => Promise<void>
+  fetchWarrantyDetail: (id: string) => Promise<PartWarranty | undefined>
+  fetchWarrantiesByOrder: (orderId: string) => Promise<void>
+  createWarranty: (data: Partial<PartWarranty> & {
+    partId: string
+    partName: string
+    orderId: string
+    orderNo: string
+    warrantyPeriodMonths: number
+    purchaseDate: string
+  }) => Promise<PartWarranty | undefined>
 }
 
 const useStore = create<AppState>((set, get) => ({
@@ -697,6 +756,19 @@ const useStore = create<AppState>((set, get) => ({
   vehicleProfileFilterModelId: '',
   vehicleProfileFilterStatus: 'all',
   vehicleProfileSearchKeyword: '',
+
+  afterSalesRecords: [],
+  afterSalesLoading: false,
+  currentAfterSales: null,
+  afterSalesFilterStatus: 'all',
+  afterSalesFilterPriority: 'all',
+  afterSalesFilterType: 'all',
+  afterSalesFilterIssueCategory: 'all',
+  afterSalesSearchKeyword: '',
+  afterSalesStats: null,
+
+  warranties: [],
+  warrantiesLoading: false,
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -3942,6 +4014,208 @@ const useStore = create<AppState>((set, get) => ({
       )
     }
     return result
+  },
+
+  fetchAfterSalesRecords: async (params) => {
+    set({ afterSalesLoading: true })
+    try {
+      const records = await api.getAfterSalesRecords(params)
+      set({ afterSalesRecords: records, afterSalesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch after sales records:', e)
+      set({ afterSalesLoading: false })
+    }
+  },
+
+  fetchAfterSalesDetail: async (id) => {
+    set({ afterSalesLoading: true })
+    try {
+      const record = await api.getAfterSalesRecord(id)
+      set({ currentAfterSales: record, afterSalesLoading: false })
+      return record
+    } catch (e) {
+      console.error('Failed to fetch after sales detail:', e)
+      set({ afterSalesLoading: false })
+    }
+  },
+
+  fetchAfterSalesByOrder: async (orderId) => {
+    set({ afterSalesLoading: true })
+    try {
+      const records = await api.getAfterSalesByOrder(orderId)
+      set({ afterSalesRecords: records, afterSalesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch after sales by order:', e)
+      set({ afterSalesLoading: false })
+    }
+  },
+
+  createAfterSales: async (data) => {
+    try {
+      const record = await api.createAfterSales(data)
+      set((state) => ({
+        afterSalesRecords: [record, ...state.afterSalesRecords],
+      }))
+      return record
+    } catch (e) {
+      console.error('Failed to create after sales record:', e)
+    }
+  },
+
+  updateAfterSales: async (id, data) => {
+    try {
+      const record = await api.updateAfterSales(id, data)
+      set((state) => ({
+        afterSalesRecords: state.afterSalesRecords.map((r) =>
+          r.id === id ? record : r
+        ),
+        currentAfterSales:
+          state.currentAfterSales?.id === id ? record : state.currentAfterSales,
+      }))
+      return record
+    } catch (e) {
+      console.error('Failed to update after sales record:', e)
+    }
+  },
+
+  updateAfterSalesStatus: async (id, data) => {
+    try {
+      const record = await api.updateAfterSalesStatus(id, data)
+      set((state) => ({
+        afterSalesRecords: state.afterSalesRecords.map((r) =>
+          r.id === id ? record : r
+        ),
+        currentAfterSales:
+          state.currentAfterSales?.id === id ? record : state.currentAfterSales,
+      }))
+      return record
+    } catch (e) {
+      console.error('Failed to update after sales status:', e)
+    }
+  },
+
+  deleteAfterSales: async (id) => {
+    try {
+      await api.deleteAfterSales(id)
+      set((state) => ({
+        afterSalesRecords: state.afterSalesRecords.filter((r) => r.id !== id),
+        currentAfterSales:
+          state.currentAfterSales?.id === id
+            ? null
+            : state.currentAfterSales,
+      }))
+      return true
+    } catch (e) {
+      console.error('Failed to delete after sales record:', e)
+      return false
+    }
+  },
+
+  fetchAfterSalesStats: async () => {
+    try {
+      const stats = await api.getAfterSalesStats()
+      set({ afterSalesStats: stats })
+    } catch (e) {
+      console.error('Failed to fetch after sales stats:', e)
+    }
+  },
+
+  setAfterSalesFilterStatus: (status) =>
+    set({ afterSalesFilterStatus: status }),
+
+  setAfterSalesFilterPriority: (priority) =>
+    set({ afterSalesFilterPriority: priority }),
+
+  setAfterSalesFilterType: (type) =>
+    set({ afterSalesFilterType: type }),
+
+  setAfterSalesFilterIssueCategory: (category) =>
+    set({ afterSalesFilterIssueCategory: category }),
+
+  setAfterSalesSearchKeyword: (keyword) =>
+    set({ afterSalesSearchKeyword: keyword }),
+
+  getFilteredAfterSales: () => {
+    const {
+      afterSalesRecords,
+      afterSalesFilterStatus,
+      afterSalesFilterPriority,
+      afterSalesFilterType,
+      afterSalesFilterIssueCategory,
+      afterSalesSearchKeyword,
+    } = get()
+    let result = [...afterSalesRecords]
+    if (afterSalesFilterStatus !== 'all') {
+      result = result.filter((r) => r.status === afterSalesFilterStatus)
+    }
+    if (afterSalesFilterPriority !== 'all') {
+      result = result.filter((r) => r.priority === afterSalesFilterPriority)
+    }
+    if (afterSalesFilterType !== 'all') {
+      result = result.filter((r) => r.type === afterSalesFilterType)
+    }
+    if (afterSalesFilterIssueCategory !== 'all') {
+      result = result.filter(
+        (r) => r.issueCategory === afterSalesFilterIssueCategory
+      )
+    }
+    if (afterSalesSearchKeyword) {
+      const q = afterSalesSearchKeyword.toLowerCase()
+      result = result.filter(
+        (r) =>
+          r.afterSalesNo.toLowerCase().includes(q) ||
+          r.orderNo.toLowerCase().includes(q) ||
+          r.customerName.toLowerCase().includes(q) ||
+          r.issueDescription.toLowerCase().includes(q)
+      )
+    }
+    return result
+  },
+
+  fetchWarranties: async (params) => {
+    set({ warrantiesLoading: true })
+    try {
+      const warranties = await api.getWarranties(params)
+      set({ warranties, warrantiesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch warranties:', e)
+      set({ warrantiesLoading: false })
+    }
+  },
+
+  fetchWarrantyDetail: async (id) => {
+    set({ warrantiesLoading: true })
+    try {
+      const warranty = await api.getWarranty(id)
+      set({ warrantiesLoading: false })
+      return warranty
+    } catch (e) {
+      console.error('Failed to fetch warranty detail:', e)
+      set({ warrantiesLoading: false })
+    }
+  },
+
+  fetchWarrantiesByOrder: async (orderId) => {
+    set({ warrantiesLoading: true })
+    try {
+      const warranties = await api.getWarrantiesByOrder(orderId)
+      set({ warranties, warrantiesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch warranties by order:', e)
+      set({ warrantiesLoading: false })
+    }
+  },
+
+  createWarranty: async (data) => {
+    try {
+      const warranty = await api.createWarranty(data)
+      set((state) => ({
+        warranties: [warranty, ...state.warranties],
+      }))
+      return warranty
+    } catch (e) {
+      console.error('Failed to create warranty:', e)
+    }
   },
 }))
 

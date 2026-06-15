@@ -1748,7 +1748,7 @@ export const WARNING_LEVEL_COLORS: Record<WarningLevel, string> = {
   danger: 'bg-red-500',
 }
 
-export const ISSUE_CATEGORY_LABELS: Record<PartIssue['category'], string> = {
+export const PART_ISSUE_CATEGORY_LABELS: Record<PartIssue['category'], string> = {
   quality: '质量问题',
   compatibility: '适配问题',
   installation: '安装问题',
@@ -1993,6 +1993,247 @@ export const STREET_LEGAL_STATUS_COLORS: Record<VehicleModelProfile['streetLegal
   legal: 'text-green-400 bg-green-500/10 border-green-500/30',
   conditional: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
   off_road_only: 'text-red-400 bg-red-500/10 border-red-500/30',
+}
+
+export type WarrantyStatus = 'valid' | 'expired' | 'void'
+
+export interface PartWarranty {
+  id: string
+  partId: string
+  partName: string
+  orderId: string
+  orderNo: string
+  warrantyPeriodMonths: number
+  purchaseDate: string
+  expiryDate: string
+  status: WarrantyStatus
+  terms: string
+  coverage: string[]
+  exclusions: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AfterSalesStats {
+  total: number
+  byStatus: Record<string, number>
+  byPriority: Record<string, number>
+  byType: Record<string, number>
+  byIssueCategory: Record<string, number>
+  pendingCount: number
+  inProgressCount: number
+  completedCount: number
+  totalCost: number
+  totalCustomerCharge: number
+  totalWarrantyCoverage: number
+}
+
+export type AfterSalesStatus =
+  | 'pending'
+  | 'inspecting'
+  | 'parts_ordered'
+  | 'repairing'
+  | 'testing'
+  | 'completed'
+  | 'customer_pickup'
+  | 'closed'
+  | 'cancelled'
+
+export type AfterSalesPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+export type AfterSalesType = 'repair' | 'warranty_claim' | 'exchange' | 'refund' | 'consultation'
+
+export type IssueCategory =
+  | 'quality_defect'
+  | 'compatibility_issue'
+  | 'installation_error'
+  | 'damage_during_shipping'
+  | 'wear_and_tear'
+  | 'user_misuse'
+  | 'design_flaw'
+  | 'other'
+
+export interface AfterSalesProgress {
+  id: string
+  status: AfterSalesStatus
+  changedAt: string
+  changedBy: string
+  comment?: string
+  attachments?: string[]
+}
+
+export interface AfterSalesPartItem {
+  partId: string
+  partName: string
+  partBrand: string
+  partImage: string
+  quantity: number
+  unitPrice: number
+  warrantyStatus: WarrantyStatus
+  isUnderWarranty: boolean
+  needReplacement: boolean
+  remark?: string
+}
+
+export interface AfterSalesRecord {
+  id: string
+  afterSalesNo: string
+  type: AfterSalesType
+  orderId: string
+  orderNo: string
+  customerId?: string
+  customerName: string
+  customerContact: string
+  customerPhone: string
+  vehicleInfo?: string
+  modelId?: string
+  modelName: string
+  items: AfterSalesPartItem[]
+  issueCategory: IssueCategory
+  issueDescription: string
+  images: string[]
+  priority: AfterSalesPriority
+  status: AfterSalesStatus
+  progress: AfterSalesProgress[]
+  rootCause?: string
+  solution?: string
+  laborFee: number
+  partsCost: number
+  totalCost: number
+  customerCharge: number
+  warrantyCoverage: number
+  assignedTo?: string
+  assigneeName?: string
+  expectedCompletionDate?: string
+  actualCompletionDate?: string
+  createdAt: string
+  updatedAt: string
+  createdBy: string
+  closedBy?: string
+  closedAt?: string
+  remark?: string
+}
+
+export interface CreateAfterSalesRequest {
+  type: AfterSalesType
+  orderId: string
+  customerId?: string
+  customerName: string
+  customerContact: string
+  customerPhone: string
+  vehicleInfo?: string
+  modelId?: string
+  items: Omit<AfterSalesPartItem, 'id'>[]
+  issueCategory: IssueCategory
+  issueDescription: string
+  images?: string[]
+  priority: AfterSalesPriority
+  laborFee?: number
+  partsCost?: number
+  customerCharge?: number
+  warrantyCoverage?: number
+  assignedTo?: string
+  expectedCompletionDate?: string
+  createdBy: string
+  remark?: string
+}
+
+export interface UpdateAfterSalesRequest {
+  type?: AfterSalesType
+  status?: AfterSalesStatus
+  priority?: AfterSalesPriority
+  issueCategory?: IssueCategory
+  issueDescription?: string
+  images?: string[]
+  items?: AfterSalesPartItem[]
+  rootCause?: string
+  solution?: string
+  laborFee?: number
+  partsCost?: number
+  totalCost?: number
+  customerCharge?: number
+  warrantyCoverage?: number
+  assignedTo?: string
+  assigneeName?: string
+  expectedCompletionDate?: string
+  actualCompletionDate?: string
+  remark?: string
+}
+
+export interface UpdateAfterSalesStatusRequest {
+  status: AfterSalesStatus
+  changedBy: string
+  comment?: string
+  attachments?: string[]
+}
+
+export const WARRANTY_STATUS_LABELS: Record<WarrantyStatus, string> = {
+  valid: '在保',
+  expired: '已过期',
+  void: '已失效',
+}
+
+export const WARRANTY_STATUS_COLORS: Record<WarrantyStatus, string> = {
+  valid: 'text-green-400 bg-green-500/10 border-green-500/30',
+  expired: 'text-gray-400 bg-gray-500/10 border-gray-500/30',
+  void: 'text-red-400 bg-red-500/10 border-red-500/30',
+}
+
+export const AFTER_SALES_STATUS_LABELS: Record<AfterSalesStatus, string> = {
+  pending: '待受理',
+  inspecting: '检测中',
+  parts_ordered: '配件订购中',
+  repairing: '维修中',
+  testing: '测试验收',
+  completed: '处理完成',
+  customer_pickup: '待客户取车',
+  closed: '已结案',
+  cancelled: '已取消',
+}
+
+export const AFTER_SALES_STATUS_COLORS: Record<AfterSalesStatus, string> = {
+  pending: 'text-gray-400 bg-gray-500/10 border-gray-500/30',
+  inspecting: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+  parts_ordered: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+  repairing: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+  testing: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
+  completed: 'text-green-400 bg-green-500/10 border-green-500/30',
+  customer_pickup: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
+  closed: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+  cancelled: 'text-red-400 bg-red-500/10 border-red-500/30',
+}
+
+export const AFTER_SALES_PRIORITY_LABELS: Record<AfterSalesPriority, string> = {
+  low: '低',
+  medium: '中',
+  high: '高',
+  urgent: '紧急',
+}
+
+export const AFTER_SALES_PRIORITY_COLORS: Record<AfterSalesPriority, string> = {
+  low: 'text-gray-400 bg-gray-500/10 border-gray-500/30',
+  medium: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+  high: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
+  urgent: 'text-red-400 bg-red-500/10 border-red-500/30',
+}
+
+export const AFTER_SALES_TYPE_LABELS: Record<AfterSalesType, string> = {
+  repair: '维修服务',
+  warranty_claim: '质保索赔',
+  exchange: '换货服务',
+  refund: '退款处理',
+  consultation: '技术咨询',
+}
+
+export const ISSUE_CATEGORY_LABELS: Record<IssueCategory, string> = {
+  quality_defect: '质量缺陷',
+  compatibility_issue: '适配问题',
+  installation_error: '安装失误',
+  damage_during_shipping: '运输损坏',
+  wear_and_tear: '正常损耗',
+  user_misuse: '使用不当',
+  design_flaw: '设计缺陷',
+  other: '其他问题',
 }
 
 
