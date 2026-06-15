@@ -618,7 +618,7 @@ interface AppState {
   warrantiesLoading: boolean
   fetchWarranties: (params?: { orderId?: string; partId?: string; status?: string }) => Promise<void>
   fetchWarrantyDetail: (id: string) => Promise<PartWarranty | undefined>
-  fetchWarrantiesByOrder: (orderId: string) => Promise<void>
+  fetchWarrantiesByOrder: (orderId: string) => Promise<PartWarranty[]>
   createWarranty: (data: Partial<PartWarranty> & {
     partId: string
     partName: string
@@ -4200,9 +4200,11 @@ const useStore = create<AppState>((set, get) => ({
     try {
       const warranties = await api.getWarrantiesByOrder(orderId)
       set({ warranties, warrantiesLoading: false })
+      return warranties
     } catch (e) {
       console.error('Failed to fetch warranties by order:', e)
       set({ warrantiesLoading: false })
+      return []
     }
   },
 

@@ -24,7 +24,7 @@ const ISSUE_CATEGORY_OPTIONS: IssueCategory[] = [
 ]
 
 export default function AfterSalesFormModal({ isOpen, onClose, orderId }: Props) {
-  const { fetchOrders, orders, createAfterSales, currentUser, fetchWarrantiesByOrder, warranties, warrantiesLoading } = useStore()
+  const { fetchOrders, orders, createAfterSales, currentUser, fetchWarrantiesByOrder, warrantiesLoading } = useStore()
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [orderSearch, setOrderSearch] = useState('')
@@ -84,10 +84,10 @@ export default function AfterSalesFormModal({ isOpen, onClose, orderId }: Props)
       customerPhone: order.dealerPhone,
     }))
 
-    await fetchWarrantiesByOrder(order.id)
+    const fetchedWarranties = await fetchWarrantiesByOrder(order.id)
 
     const warrantyMap: Record<string, PartWarranty> = {}
-    warranties.forEach((w) => {
+    fetchedWarranties.forEach((w) => {
       warrantyMap[w.partId] = w
     })
 
