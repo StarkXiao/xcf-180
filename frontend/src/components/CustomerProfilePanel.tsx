@@ -18,7 +18,11 @@ import {
   Star,
   User,
   ArrowRight,
+  Clock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
+import type { ConstructionTask } from '@/types'
 import {
   CUSTOMER_LEVEL_LABELS,
   CUSTOMER_LEVEL_COLORS,
@@ -83,6 +87,7 @@ export default function CustomerProfilePanel() {
     mileage: 0,
     color: '',
   })
+  const [scheduleTasksExpanded, setScheduleTasksExpanded] = useState(true)
 
   const handleSearch = () => {
     fetchCustomers({
@@ -577,22 +582,28 @@ export default function CustomerProfilePanel() {
                   <h4 className="text-sm font-medium text-green-400 flex items-center gap-2">
                     <CalendarClock size={16} />
                     当前施工排期
+                    <span className="text-[10px] text-moto-steel font-normal">
+                      ({(currentSchedule as any).scheduleNo || `#${currentSchedule.id.slice(-6)}`})
+                    </span>
                   </h4>
-                  <button
-                    onClick={() => setReceptionActiveTab('schedule')}
-                    className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors"
-                  >
-                    查看详情
-                    <ArrowRight size={12} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-moto-steel mb-1">排期编号</p>
-                    <p className="font-orbitron text-sm text-moto-silver">
-                      {(currentSchedule as any).scheduleNo || `#${currentSchedule.id.slice(-6)}`}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setScheduleTasksExpanded((v) => !v)}
+                      className="p-1 text-moto-steel hover:text-moto-silver transition-colors"
+                      title={scheduleTasksExpanded ? '收起任务明细' : '展开任务明细'}
+                    >
+                      {scheduleTasksExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                    </button>
+                    <button
+                      onClick={() => setReceptionActiveTab('schedule')}
+                      className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors"
+                    >
+                      查看详情
+                      <ArrowRight size={12} />
+                    </button>
                   </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4 mb-4">
                   <div>
                     <p className="text-xs text-moto-steel mb-1">施工状态</p>
                     <span
@@ -635,10 +646,57 @@ export default function CustomerProfilePanel() {
                       {currentSchedule.tasks?.length || 0} 项
                     </p>
                   </div>
+                  <div>
+                    <p className="text-xs text-moto-steel mb-1 flex items-center gap-1">
+                      <Clock size={10} />
+                      预计总工时
+                    </p>
+                    <p className="font-orbitron text-sm text-moto-silver">
+                      {(currentSchedule as any).totalEstimatedHours ||
+                        (currentSchedule.tasks?.reduce(
+                          (s: number, t: ConstructionTask) => s + (t.estimatedHours || 0),
+                          0
+                        ) || 0)}
+                      {' '}h
+                    </p>
+                  </div>
                 </div>
+
+                {currentSchedule.plannedStartDate && (
+                  <div className="pt-4 border-t border-green-500/10 mb-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-moto-steel mb-1">计划工期</p>
+                      <p className="text-xs text-moto-silver">
+                        {new Date(currentSchedule.plannedStartDate).toLocaleDateString('zh-CN')}
+                        {' → '}
+                        {currentSchedule.plannedEndDate
+                          ? new Date(currentSchedule.plannedEndDate).toLocaleDateString('zh-CN')
+                          : '-'}
+                        {currentSchedule.plannedStartDate && currentSchedule.plannedEndDate && (
+                          <span className="text-moto-steel ml-2">
+                            (
+                            {Math.max(
+                              1,
+                              Math.ceil(
+                                (new Date(currentSchedule.plannedEndDate).getTime() -
+                                  new Date(currentSchedule.plannedStartDate).getTime()) /
+                                  (1000 * 60 * 60 * 24)
+                              )
+                            )}{' '}
+                            天)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {currentSchedule.tasks && currentSchedule.tasks.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-green-500/10">
-                    <p className="text-xs text-moto-steel mb-2">施工人员分配</p>
+                  <div className="pt-4 border-t border-green-500/10 mb-4">
+                    <p className="text-xs text-moto-steel mb-2 flex items-center gap-1">
+                      <User size={10} />
+                      施工人员分配
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {Array.from(
                         new Set(
@@ -667,29 +725,145 @@ export default function CustomerProfilePanel() {
                     </div>
                   </div>
                 )}
-                {currentSchedule.plannedStartDate && (
-                  <div className="mt-4 pt-4 border-t border-green-500/10">
-                    <p className="text-xs text-moto-steel mb-2">计划工期</p>
-                    <p className="text-sm text-moto-silver">
-                      {new Date(currentSchedule.plannedStartDate).toLocaleDateString('zh-CN')}
-                      {' → '}
-                      {currentSchedule.plannedEndDate
-                        ? new Date(currentSchedule.plannedEndDate).toLocaleDateString('zh-CN')
-                        : '-'}
-                      {currentSchedule.plannedStartDate && currentSchedule.plannedEndDate && (
-                        <span className="text-moto-steel ml-2">
-                          (
-                          {Math.ceil(
-                            (new Date(currentSchedule.plannedEndDate).getTime() -
-                              new Date(currentSchedule.plannedStartDate).getTime()) /
-                              (1000 * 60 * 60 * 24)
-                          )}{' '}
-                          天)
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                )}
+
+                {!scheduleTasksExpanded &&
+                  currentSchedule.tasks &&
+                  currentSchedule.tasks.length > 0 && (
+                    <button
+                      onClick={() => setScheduleTasksExpanded(true)}
+                      className="w-full flex items-center justify-center gap-1 py-2 mt-2 text-xs text-green-400 hover:text-green-300 transition-colors bg-green-500/5 rounded border border-green-500/10"
+                    >
+                      展开任务明细 ({currentSchedule.tasks.length} 项)
+                      <ChevronUp size={12} />
+                    </button>
+                  )}
+
+                {scheduleTasksExpanded &&
+                  currentSchedule.tasks &&
+                  currentSchedule.tasks.length > 0 && (
+                    <div className="pt-4 border-t border-green-500/10">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[11px] text-moto-steel font-medium">施工任务明细</p>
+                      </div>
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {currentSchedule.tasks.map((task: ConstructionTask) => (
+                          <div
+                            key={task.id}
+                            className="bg-carbon-800/60 rounded-lg border border-carbon-500/20 p-3"
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`inline-block w-1.5 h-1.5 rounded-full ${
+                                      task.status === 'completed'
+                                        ? 'bg-green-400'
+                                        : task.status === 'in_progress'
+                                        ? 'bg-moto-orange'
+                                        : task.status === 'blocked' || task.status === 'paused'
+                                        ? 'bg-red-400'
+                                        : 'bg-moto-steel'
+                                    }`}
+                                  />
+                                  <span className="text-xs text-moto-silver font-medium">
+                                    {task.name}
+                                  </span>
+                                  {task.priority && task.priority !== 'low' && (
+                                    <span
+                                      className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                        task.priority === 'high'
+                                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                          : 'bg-moto-orange/10 text-moto-orange border border-moto-orange/20'
+                                      }`}
+                                    >
+                                      {task.priority === 'high' ? '高优' : '中优'}
+                                    </span>
+                                  )}
+                                  <span
+                                    className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                      task.status === 'completed'
+                                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                        : task.status === 'in_progress'
+                                        ? 'bg-moto-orange/10 text-moto-orange border border-moto-orange/20'
+                                        : task.status === 'blocked' || task.status === 'paused'
+                                        ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                        : 'bg-carbon-700 text-moto-steel border border-carbon-500/20'
+                                    }`}
+                                  >
+                                    {task.status === 'completed'
+                                      ? '已完成'
+                                      : task.status === 'in_progress'
+                                      ? '进行中'
+                                      : task.status === 'blocked' || task.status === 'paused'
+                                      ? '已暂停'
+                                      : '待开始'}
+                                  </span>
+                                </div>
+                                {task.description && (
+                                  <p className="text-[11px] text-moto-steel mt-1 line-clamp-2">
+                                    {task.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+                              <div className="flex items-center gap-1.5">
+                                <Clock size={10} className="text-moto-steel shrink-0" />
+                                <span className="text-moto-steel">工时：</span>
+                                <span className="text-moto-silver font-medium">
+                                  预估 {task.estimatedHours || 0}h
+                                  {task.actualHours != null && task.actualHours > 0 && (
+                                    <span className="text-green-400 ml-1">
+                                      · 实际 {task.actualHours}h
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <User size={10} className="text-moto-steel shrink-0" />
+                                <span className="text-moto-steel">技师：</span>
+                                <span className="text-moto-silver truncate">
+                                  {task.assignedWorkerNames &&
+                                  task.assignedWorkerNames.length > 0
+                                    ? task.assignedWorkerNames.join('、')
+                                    : '未分配'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 col-span-2">
+                                <CalendarClock size={10} className="text-moto-steel shrink-0" />
+                                <span className="text-moto-steel">计划：</span>
+                                <span className="text-moto-silver">
+                                  {task.startDate
+                                    ? new Date(task.startDate).toLocaleDateString('zh-CN')
+                                    : '-'}
+                                  {' → '}
+                                  {task.endDate
+                                    ? new Date(task.endDate).toLocaleDateString('zh-CN')
+                                    : '-'}
+                                </span>
+                              </div>
+                              {(task.actualStartAt || task.actualEndAt) && (
+                                <div className="flex items-center gap-1.5 col-span-2">
+                                  <CheckCircle2 size={10} className="text-green-400 shrink-0" />
+                                  <span className="text-green-400/80">实际：</span>
+                                  <span className="text-green-400">
+                                    {task.actualStartAt
+                                      ? new Date(task.actualStartAt).toLocaleDateString('zh-CN')
+                                      : '-'}
+                                    {' → '}
+                                    {task.actualEndAt
+                                      ? new Date(task.actualEndAt).toLocaleDateString('zh-CN')
+                                      : '-'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
               </div>
             )}
 

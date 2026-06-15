@@ -18,8 +18,12 @@ import {
   ArrowRight,
   AlertCircle,
   RefreshCw,
+  User,
+  Clock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
-import type { QuoteItem, QuotePlan, Part } from '@/types'
+import type { QuoteItem, QuotePlan, Part, ConstructionTask } from '@/types'
 
 const DEFAULT_LABOR_RATES: Record<string, number> = {
   exhaust: 0.15,
@@ -90,6 +94,7 @@ export default function BudgetEstimatePanel() {
   const [taxRate, setTaxRate] = useState(currentQuote?.taxRate ?? 13)
   const [saving, setSaving] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [scheduleExpanded, setScheduleExpanded] = useState(true)
 
   const categoryOptions = [
     { value: 'exhaust', label: '排气系统', rate: `${((combinedRates.exhaust || 0.15) * 100).toFixed(0)}%` },
@@ -650,68 +655,91 @@ export default function BudgetEstimatePanel() {
           </div>
 
           {currentSchedule && (
-            <div className="p-5 border-b border-carbon-500/30 bg-green-500/5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h5 className="text-sm font-medium text-green-400 flex items-center gap-1.5">
-                  <CalendarClock size={14} />
-                  施工排期
-                </h5>
-                <button
-                  onClick={() => setReceptionActiveTab('schedule')}
-                  className="text-[10px] text-green-400 hover:text-green-300 transition-colors"
-                >
-                  查看 →
-                </button>
-              </div>
-              <div className="space-y-2 text-xs">
+            <div className="border-b border-carbon-500/30 bg-green-500/5 space-y-3 overflow-hidden">
+              <div className="p-5 pb-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-moto-steel">排期编号</span>
-                  <span className="text-moto-silver font-medium">
-                    {(currentSchedule as any).scheduleNo || `#${currentSchedule.id.slice(-6)}`}
-                  </span>
+                  <h5 className="text-sm font-medium text-green-400 flex items-center gap-1.5">
+                    <CalendarClock size={14} />
+                    施工排期
+                    <span className="ml-1 text-[10px] text-moto-steel font-normal">
+                      ({(currentSchedule as any).scheduleNo || `#${currentSchedule.id.slice(-6)}`})
+                    </span>
+                  </h5>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setScheduleExpanded((v) => !v)}
+                      className="p-1 text-moto-steel hover:text-moto-silver transition-colors"
+                      title={scheduleExpanded ? '收起详情' : '展开详情'}
+                    >
+                      {scheduleExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <button
+                      onClick={() => setReceptionActiveTab('schedule')}
+                      className="text-[10px] text-green-400 hover:text-green-300 transition-colors"
+                    >
+                      查看 →
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-moto-steel">施工状态</span>
-                  <span
-                    className={`font-medium ${
-                      currentSchedule.status === 'completed'
-                        ? 'text-green-400'
+
+                <div className="grid grid-cols-2 gap-3 mt-4 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-moto-steel">施工状态</span>
+                    <span
+                      className={`font-medium ${
+                        currentSchedule.status === 'completed'
+                          ? 'text-green-400'
+                          : currentSchedule.status === 'in_progress'
+                          ? 'text-moto-orange'
+                          : currentSchedule.status === 'delayed'
+                          ? 'text-red-400'
+                          : 'text-moto-steel'
+                      }`}
+                    >
+                      {currentSchedule.status === 'completed'
+                        ? '已完成'
                         : currentSchedule.status === 'in_progress'
-                        ? 'text-moto-orange'
+                        ? '进行中'
                         : currentSchedule.status === 'delayed'
-                        ? 'text-red-400'
-                        : 'text-moto-steel'
-                    }`}
-                  >
-                    {currentSchedule.status === 'completed'
-                      ? '已完成'
-                      : currentSchedule.status === 'in_progress'
-                      ? '进行中'
-                      : currentSchedule.status === 'delayed'
-                      ? '已延期'
-                      : '已排期'}
-                  </span>
+                        ? '已延期'
+                        : '已排期'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-moto-steel">完成进度</span>
+                    <span className="font-orbitron text-moto-orange">
+                      {currentSchedule.progress || 0}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-moto-steel">任务总数</span>
+                    <span className="text-moto-silver">
+                      {currentSchedule.tasks?.length || 0} 项
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-moto-steel flex items-center gap-1">
+                      <Clock size={10} />
+                      预计总工时
+                    </span>
+                    <span className="text-moto-silver font-medium">
+                      {(currentSchedule as any).totalEstimatedHours ||
+                        (currentSchedule.tasks?.reduce(
+                          (s: number, t: ConstructionTask) => s + (t.estimatedHours || 0),
+                          0
+                        ) || 0)}
+                      {' '}h
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-moto-steel">完成进度</span>
-                  <span className="font-orbitron text-moto-orange">
-                    {currentSchedule.progress || 0}%
-                  </span>
-                </div>
-                <div className="h-1.5 bg-carbon-700 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-carbon-700 rounded-full overflow-hidden mt-3">
                   <div
                     className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-500"
                     style={{ width: `${currentSchedule.progress || 0}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-moto-steel">任务总数</span>
-                  <span className="text-moto-silver">
-                    {currentSchedule.tasks?.length || 0} 项
-                  </span>
-                </div>
                 {currentSchedule.plannedStartDate && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mt-3 text-xs">
                     <span className="text-moto-steel">计划工期</span>
                     <span className="text-moto-silver">
                       {new Date(currentSchedule.plannedStartDate).toLocaleDateString('zh-CN')}
@@ -719,10 +747,147 @@ export default function BudgetEstimatePanel() {
                       {currentSchedule.plannedEndDate
                         ? new Date(currentSchedule.plannedEndDate).toLocaleDateString('zh-CN')
                         : '-'}
+                      {currentSchedule.plannedStartDate && currentSchedule.plannedEndDate && (
+                        <span className="text-moto-steel ml-1.5">
+                          (
+                          {Math.max(
+                            1,
+                            Math.ceil(
+                              (new Date(currentSchedule.plannedEndDate).getTime() -
+                                new Date(currentSchedule.plannedStartDate).getTime()) /
+                                (1000 * 60 * 60 * 24)
+                            )
+                          )}
+                          天)
+                        </span>
+                      )}
                     </span>
                   </div>
                 )}
+
+                {currentSchedule.tasks && currentSchedule.tasks.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-green-500/10">
+                    <p className="text-xs text-moto-steel mb-2 flex items-center gap-1">
+                      <User size={10} />
+                      施工人员分配
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.from(
+                        new Set(
+                          currentSchedule.tasks
+                            .flatMap((t) => t.assignedWorkerNames || [])
+                            .filter(Boolean)
+                        )
+                      ).map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-carbon-700 text-moto-silver rounded text-[11px]"
+                        >
+                          <User size={9} />
+                          {name}
+                        </span>
+                      ))}
+                      {Array.from(
+                        new Set(
+                          currentSchedule.tasks
+                            .flatMap((t) => t.assignedWorkerNames || [])
+                            .filter(Boolean)
+                        )
+                      ).length === 0 && (
+                        <span className="text-[11px] text-moto-steel">暂未分配</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {scheduleExpanded && currentSchedule.tasks && currentSchedule.tasks.length > 0 && (
+                <div className="px-5 pb-5">
+                  <p className="text-[11px] text-moto-steel mb-2 font-medium">任务明细</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {currentSchedule.tasks.map((task: ConstructionTask) => (
+                      <div
+                        key={task.id}
+                        className="bg-carbon-800/60 rounded-lg border border-carbon-500/20 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-block w-1.5 h-1.5 rounded-full ${
+                                  task.status === 'completed'
+                                    ? 'bg-green-400'
+                                    : task.status === 'in_progress'
+                                    ? 'bg-moto-orange'
+                                    : task.status === 'blocked' || task.status === 'paused'
+                                    ? 'bg-red-400'
+                                    : 'bg-moto-steel'
+                                }`}
+                              />
+                              <span className="text-xs text-moto-silver font-medium">
+                                {task.name}
+                              </span>
+                              {task.priority && task.priority !== 'low' && (
+                                <span
+                                  className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                    task.priority === 'high'
+                                      ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                      : 'bg-moto-orange/10 text-moto-orange border border-moto-orange/20'
+                                  }`}
+                                >
+                                  {task.priority === 'high' ? '高优' : '中优'}
+                                </span>
+                              )}
+                            </div>
+                            {task.description && (
+                              <p className="text-[11px] text-moto-steel mt-1 line-clamp-1">
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+                          <div className="flex items-center gap-1.5">
+                            <Clock size={10} className="text-moto-steel shrink-0" />
+                            <span className="text-moto-steel">工时：</span>
+                            <span className="text-moto-silver font-medium">
+                              {task.estimatedHours || 0}h
+                              {task.actualHours != null && task.actualHours > 0 && (
+                                <span className="text-green-400 ml-1">
+                                  / {task.actualHours}h 实际
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <User size={10} className="text-moto-steel shrink-0" />
+                            <span className="text-moto-steel">技师：</span>
+                            <span className="text-moto-silver truncate">
+                              {task.assignedWorkerNames && task.assignedWorkerNames.length > 0
+                                ? task.assignedWorkerNames.join('、')
+                                : '未分配'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 col-span-2">
+                            <CalendarClock size={10} className="text-moto-steel shrink-0" />
+                            <span className="text-moto-steel">计划：</span>
+                            <span className="text-moto-silver">
+                              {task.startDate
+                                ? new Date(task.startDate).toLocaleDateString('zh-CN')
+                                : '-'}
+                              {' → '}
+                              {task.endDate
+                                ? new Date(task.endDate).toLocaleDateString('zh-CN')
+                                : '-'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

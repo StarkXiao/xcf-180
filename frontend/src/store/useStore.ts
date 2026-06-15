@@ -3040,7 +3040,27 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  setCurrentCustomer: (customer) => set({ currentCustomer: customer }),
+  setCurrentCustomer: (customer) =>
+    set((state) => {
+      let nextSchedule = state.currentSchedule
+      if (customer) {
+        if (!nextSchedule || nextSchedule.customerId !== customer.id) {
+          const matched = state.schedules.find(
+            (s) =>
+              s.customerId === customer.id &&
+              (!state.currentQuote ||
+                s.quoteId === state.currentQuote.id ||
+                s.id === (state.currentQuote as any)?.convertedScheduleId)
+          )
+          if (matched) {
+            nextSchedule = matched
+          }
+        }
+      } else {
+        nextSchedule = null
+      }
+      return { currentCustomer: customer, currentSchedule: nextSchedule }
+    }),
   setCustomerSearchKeyword: (keyword) => set({ customerSearchKeyword: keyword }),
   setCustomerFilterLevel: (level) => set({ customerFilterLevel: level }),
   setCustomerFilterSource: (source) => set({ customerFilterSource: source }),
@@ -3331,7 +3351,24 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  setCurrentQuote: (quote) => set({ currentQuote: quote }),
+  setCurrentQuote: (quote) =>
+    set((state) => {
+      let nextSchedule = state.currentSchedule
+      if (quote) {
+        const convertedId = (quote as any)?.convertedScheduleId
+        const matched =
+          (convertedId && state.schedules.find((s) => s.id === convertedId)) ||
+          state.schedules.find(
+            (s) =>
+              s.quoteId === quote.id &&
+              (!state.currentCustomer || s.customerId === state.currentCustomer.id)
+          )
+        if (matched) {
+          nextSchedule = matched
+        }
+      }
+      return { currentQuote: quote, currentSchedule: nextSchedule }
+    }),
 
   getQuotesByCustomer: (customerId) => {
     return get().receptionQuotes.filter((q) => q.customerId === customerId)

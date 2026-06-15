@@ -75,6 +75,8 @@ export default function StoreReceptionPage() {
     requirements,
     schedules,
     fetchQuoteWithDetails,
+    setCurrentSchedule,
+    getScheduleById,
   } = useStore()
 
   useEffect(() => {
@@ -90,6 +92,22 @@ export default function StoreReceptionPage() {
       fetchQuoteWithDetails(currentQuote.id)
     }
   }, [currentQuote?.id, fetchQuoteWithDetails])
+
+  useEffect(() => {
+    if (schedules.length === 0) return
+    if (currentSchedule?.id && getScheduleById(currentSchedule.id)) return
+    const convertedId = currentQuote && (currentQuote as any)?.convertedScheduleId
+    const matched =
+      (convertedId && getScheduleById(convertedId)) ||
+      schedules.find(
+        (s) =>
+          (currentQuote && s.quoteId === currentQuote.id) ||
+          (currentCustomer && s.customerId === currentCustomer.id)
+      )
+    if (matched) {
+      setCurrentSchedule(matched)
+    }
+  }, [schedules, currentQuote, currentCustomer, currentSchedule, getScheduleById, setCurrentSchedule])
 
   const activeTab = TABS.find((t) => t.key === receptionActiveTab) || TABS[0]
   const Icon = activeTab.icon
