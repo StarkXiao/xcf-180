@@ -27,7 +27,14 @@ const app = new Koa();
 const PORT = 3001;
 
 app.use(cors());
-app.use(bodyParser());
+app.use(bodyParser({
+  enableTypes: ['json', 'form'],
+  detectJSON: (ctx) => {
+    const ct = ctx.header['content-type'] || '';
+    if (ct.startsWith('multipart/')) return false;
+    return /json/i.test(ct);
+  },
+}));
 app.use(serve(path.resolve(__dirname, '../public')));
 
 app.use(partsRoutes.routes());

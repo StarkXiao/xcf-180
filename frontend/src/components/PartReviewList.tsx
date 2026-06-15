@@ -25,6 +25,7 @@ const PartReviewList: React.FC<PartReviewListProps> = ({
 }) => {
   const { markReviewHelpful } = useStore()
   const [expandedReview, setExpandedReview] = useState<string | null>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const renderStars = (rating: number, max: number = 5) => {
     return (
@@ -160,10 +161,14 @@ const PartReviewList: React.FC<PartReviewListProps> = ({
                     <div
                       key={idx}
                       className="w-20 h-20 rounded-lg bg-zinc-200 dark:bg-zinc-700 overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setPreviewImage(img)}
                     >
-                      <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs">
-                        图片 {idx + 1}
-                      </div>
+                      <img
+                        src={img}
+                        alt={`评价图片 ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
                     </div>
                   ))}
                 </div>
@@ -303,6 +308,27 @@ const PartReviewList: React.FC<PartReviewListProps> = ({
             </div>
           )}
         </>
+      )}
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 shadow-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 z-10"
+            >
+              ×
+            </button>
+            <img
+              src={previewImage}
+              alt="图片预览"
+              className="max-w-full max-h-[85vh] rounded-lg object-contain"
+            />
+          </div>
+        </div>
       )}
     </div>
   )

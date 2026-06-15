@@ -22,6 +22,7 @@ import PartWarningPanel from '@/components/PartWarningPanel'
 type TabType = 'reviews' | 'issues' | 'warnings'
 
 const AdminReviewPage: React.FC = () => {
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const {
     adminReviews,
     adminReviewsLoading,
@@ -190,6 +191,7 @@ const AdminReviewPage: React.FC = () => {
                         <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">配件</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">评分</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">内容</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">晒图</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">状态</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">时间</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">操作</th>
@@ -211,6 +213,26 @@ const AdminReviewPage: React.FC = () => {
                           <td className="py-4 px-4 max-w-xs">
                             <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{review.title}</div>
                             <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">{review.content}</div>
+                          </td>
+                          <td className="py-4 px-4">
+                            {review.images.length > 0 ? (
+                              <div className="flex gap-1">
+                                {review.images.slice(0, 3).map((img, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="w-10 h-10 rounded overflow-hidden cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                                    onClick={() => setPreviewImage(img)}
+                                  >
+                                    <img src={img} alt={`晒图${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                                  </div>
+                                ))}
+                                {review.images.length > 3 && (
+                                  <span className="text-xs text-zinc-400 self-center">+{review.images.length - 3}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-zinc-400">无</span>
+                            )}
                           </td>
                           <td className="py-4 px-4">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${REVIEW_STATUS_COLORS[review.status]}`}>
@@ -325,6 +347,20 @@ const AdminReviewPage: React.FC = () => {
                       </div>
 
                       <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-3">{issue.description}</p>
+
+                      {issue.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {issue.images.map((img, idx) => (
+                            <div
+                              key={idx}
+                              className="w-14 h-14 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                              onClick={() => setPreviewImage(img)}
+                            >
+                              <img src={img} alt={`问题图片${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-4">
                         <div>
@@ -475,6 +511,19 @@ const AdminReviewPage: React.FC = () => {
               </div>
               <div className="font-medium text-zinc-900 dark:text-white mb-1">{selectedReview.title}</div>
               <p className="text-sm text-zinc-700 dark:text-zinc-300">{selectedReview.content}</p>
+              {selectedReview.images.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {selectedReview.images.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className="w-16 h-16 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                      onClick={() => setPreviewImage(img)}
+                    >
+                      <img src={img} alt={`晒图${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mb-4">
@@ -523,6 +572,27 @@ const AdminReviewPage: React.FC = () => {
                 确认{processStatus === 'approved' ? '通过' : '拒绝'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 shadow-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 z-10"
+            >
+              ×
+            </button>
+            <img
+              src={previewImage}
+              alt="图片预览"
+              className="max-w-full max-h-[85vh] rounded-lg object-contain"
+            />
           </div>
         </div>
       )}

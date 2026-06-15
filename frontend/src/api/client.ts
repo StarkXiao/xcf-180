@@ -984,4 +984,20 @@ export const api = {
     fetchJSON<{ success: boolean; removed: PartWarning }>(`/api/reviews/warnings/${warningId}`, {
       method: 'DELETE',
     }),
+
+  uploadReviewImages: async (files: File[]): Promise<string[]> => {
+    const formData = new FormData()
+    files.forEach((f) => formData.append('images', f))
+    const token = getAuthToken()
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    const res = await fetch(BASE + '/api/reviews/upload', {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+    if (!res.ok) throw new Error(`Upload Error: ${res.status}`)
+    const data = await res.json()
+    return data.urls as string[]
+  },
 }

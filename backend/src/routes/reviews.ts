@@ -1,10 +1,34 @@
 import Router from 'koa-router';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import multer from '@koa/multer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const uploadDir = path.resolve(__dirname, '../../public/images/reviews');
+if (!existsSync(uploadDir)) {
+  mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, allowed.includes(ext));
+  },
+});
 
 const router = new Router({ prefix: '/api/reviews' });
 
@@ -768,6 +792,17 @@ router.delete('/warnings/:warningId', (ctx) => {
   saveData(data);
 
   ctx.body = { success: true, removed };
+});
+
+router.post('/upload', upload.array('images', 9), async (ctx: any) => {
+  const files = ctx.files as Express.Multer.File[];
+  if (!files || files.length === 0) {
+    ctx.status = 400;
+    ctx.body = { error: '请选择要上传的图片' };
+    return;
+  }
+  const urls = files.map((f) => `/images/reviews/${f.filename}`);
+  ctx.body = { urls };
 });
 
 export const reviewsRoutes = router;

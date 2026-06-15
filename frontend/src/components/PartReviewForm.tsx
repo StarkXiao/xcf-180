@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { CreatePartReviewRequest, ReviewRating, FitRating, InstallationFeedback, DIFFICULTY_LABELS } from '@/types'
+import { api } from '@/api/client'
 
 interface PartReviewFormProps {
   partId: string
@@ -33,6 +34,10 @@ const PartReviewForm: React.FC<PartReviewFormProps> = ({ partId, partName, onSub
   const [bikeModel, setBikeModel] = useState('')
   const [mileage, setMileage] = useState('')
   const [usageMonths, setUsageMonths] = useState('')
+  const [imageUrls, setImageUrls] = useState<string[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const renderStarInput = (value: ReviewRating, onChange: (v: ReviewRating) => void, label: string) => (
     <div className="flex items-center gap-2">
@@ -68,6 +73,41 @@ const PartReviewForm: React.FC<PartReviewFormProps> = ({ partId, partName, onSub
     setTags(tags.filter((t) => t !== tag))
   }
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const remaining = 9 - imageUrls.length
+    if (remaining <= 0) return
+
+    const selectedFiles = Array.from(files).slice(0, remaining)
+    const previews = selectedFiles.map((f) => URL.createObjectURL(f))
+    setImagePreviews((prev) => [...prev, ...previews])
+
+    setUploading(true)
+    try {
+      const urls = await api.uploadReviewImages(selectedFiles)
+      setImageUrls((prev) => [...prev, ...urls])
+    } catch {
+      setImagePreviews((prev) => {
+        const next = prev.slice(0, prev.length - selectedFiles.length)
+        previews.forEach((p) => URL.revokeObjectURL(p))
+        return next
+      })
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleRemoveImage = (index: number) => {
+    if (imagePreviews[index] && !imageUrls[index]) {
+      URL.revokeObjectURL(imagePreviews[index])
+    }
+    setImageUrls((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -82,6 +122,7 @@ const PartReviewForm: React.FC<PartReviewFormProps> = ({ partId, partName, onSub
       overallRating,
       fitRating,
       tags,
+      images: imageUrls.length > 0 ? imageUrls : undefined,
       bikeModel: bikeModel || undefined,
       mileage: mileage ? parseInt(mileage) : undefined,
       usageMonths: usageMonths ? parseInt(usageMonths) : undefined,
@@ -142,6 +183,59 @@ const PartReviewForm: React.FC<PartReviewFormProps> = ({ partId, partName, onSub
             maxLength={1000}
           />
           <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 text-right">{content.length}/1000</div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            晒图（最多9张，单张不超过5MB）
+          </label>
+          <div className="flex flex-wrap gap-3">
+            {imagePreviews.map((src, idx) => (
+              <div key={idx} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700">
+                <img
+                  src={src}
+                  alt={`晒图 ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(idx)}
+                  className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+                {uploading && idx >= imageUrls.length && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <svg className="animate-spin w-6 h-6 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            ))}
+            {imageUrls.length < 9 && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-24 h-24 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600 flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-zinc-600 hover:border-zinc-400 dark:hover:text-zinc-300 dark:hover:border-zinc-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="text-xs">上传图片</span>
+              </button>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            multiple
+            onChange={handleImageSelect}
+            className="hidden"
+          />
         </div>
 
         <div>
@@ -310,16 +404,16 @@ const PartReviewForm: React.FC<PartReviewFormProps> = ({ partId, partName, onSub
           )}
           <button
             type="submit"
-            disabled={loading || !title.trim() || !content.trim()}
+            disabled={loading || uploading || !title.trim() || !content.trim()}
             className="px-6 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {loading ? (
+            {loading || uploading ? (
               <>
                 <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                提交中...
+                {uploading ? '上传图片中...' : '提交中...'}
               </>
             ) : (
               '提交评价'
