@@ -91,6 +91,15 @@ import type {
   ReceptionSelection,
   CreateReceptionSelectionRequest,
   CreateScheduleFromQuoteRequest,
+  PartReview,
+  ReviewStats,
+  PartIssue,
+  PartWarning,
+  CreatePartReviewRequest,
+  ProcessReviewRequest,
+  CreateIssueRequest,
+  UpdateIssueStatusRequest,
+  AcknowledgeWarningRequest,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -501,9 +510,36 @@ interface AppState {
   getQuotesByCustomer: (customerId: string) => Quote[]
 
   restoreReceptionContext: () => Promise<void>
+
+  partReviews: Record<string, PartReview[]>
+  partReviewsLoading: Record<string, boolean>
+  partReviewStats: Record<string, ReviewStats>
+  adminReviews: PartReview[]
+  adminReviewsLoading: boolean
+  adminReviewsTotal: number
+  issues: PartIssue[]
+  issuesLoading: boolean
+  issuesTotal: number
+  warnings: PartWarning[]
+  warningsLoading: boolean
+  warningsTotal: number
+  warningsSummary: { total: number; active: number; danger: number; warning: number; unacknowledged: number } | null
+
+  fetchPartReviews: (partId: string, params?: { status?: string; page?: number; pageSize?: number; sortBy?: string }) => Promise<void>
+  fetchReviewStats: (partId: string) => Promise<ReviewStats | null>
+  createReview: (data: CreatePartReviewRequest) => Promise<PartReview | null>
+  markReviewHelpful: (reviewId: string, userId?: string) => Promise<void>
+  fetchAdminReviews: (params?: { status?: string; partId?: string; page?: number; pageSize?: number }) => Promise<void>
+  processReview: (reviewId: string, data: ProcessReviewRequest) => Promise<PartReview | null>
+  fetchIssues: (params?: { status?: string; priority?: string; partId?: string; category?: string; page?: number; pageSize?: number }) => Promise<void>
+  createIssue: (data: CreateIssueRequest) => Promise<PartIssue | null>
+  updateIssueStatus: (issueId: string, data: UpdateIssueStatusRequest) => Promise<PartIssue | null>
+  fetchWarnings: (params?: { isActive?: boolean; warningLevel?: string; partId?: string; page?: number; pageSize?: number }) => Promise<void>
+  acknowledgeWarning: (warningId: string, data: AcknowledgeWarningRequest) => Promise<PartWarning | null>
+  deleteWarning: (warningId: string) => Promise<boolean>
 }
 
-export const useStore = create<AppState>((set, get) => ({
+const useStore = create<AppState>((set, get) => ({
   categories: [],
   parts: [],
   allParts: [],
@@ -609,6 +645,20 @@ export const useStore = create<AppState>((set, get) => ({
   currentReceptionSelection: null,
   receptionSelections: [],
   receptionQuotes: [],
+
+  partReviews: {},
+  partReviewsLoading: {},
+  partReviewStats: {},
+  adminReviews: [],
+  adminReviewsLoading: false,
+  adminReviewsTotal: 0,
+  issues: [],
+  issuesLoading: false,
+  issuesTotal: 0,
+  warnings: [],
+  warningsLoading: false,
+  warningsTotal: 0,
+  warningsSummary: null,
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -3510,4 +3560,176 @@ export const useStore = create<AppState>((set, get) => ({
       set(updates)
     }
   },
+
+  fetchPartReviews: async (partId, params) => {
+    set((state) => ({
+      partReviewsLoading: { ...state.partReviewsLoading, [partId]: true },
+    }))
+    try {
+      const result = await api.getPartReviews(partId, params)
+      set((state) => ({
+        partReviews: { ...state.partReviews, [partId]: result.reviews },
+        partReviewStats: { ...state.partReviewStats, [partId]: result.stats },
+        partReviewsLoading: { ...state.partReviewsLoading, [partId]: false },
+      }))
+    } catch (e) {
+      console.error('Failed to fetch part reviews:', e)
+      set((state) => ({
+        partReviewsLoading: { ...state.partReviewsLoading, [partId]: false },
+      }))
+    }
+  },
+
+  fetchReviewStats: async (partId) => {
+    try {
+      const stats = await api.getReviewStats(partId)
+      set((state) => ({
+        partReviewStats: { ...state.partReviewStats, [partId]: stats },
+      }))
+      return stats
+    } catch (e) {
+      console.error('Failed to fetch review stats:', e)
+      return null
+    }
+  },
+
+  createReview: async (data) => {
+    try {
+      const review = await api.createReview(data)
+      return review
+    } catch (e) {
+      console.error('Failed to create review:', e)
+      return null
+    }
+  },
+
+  markReviewHelpful: async (reviewId, userId) => {
+    try {
+      const result = await api.markReviewHelpful(reviewId, userId)
+      set((state) => {
+        const newPartReviews: Record<string, PartReview[]> = {}
+        Object.entries(state.partReviews).forEach(([partId, reviews]) => {
+          newPartReviews[partId] = reviews.map((r) =>
+            r.id === reviewId ? { ...r, helpfulCount: result.helpfulCount } : r
+          )
+        })
+        return { partReviews: newPartReviews }
+      })
+    } catch (e) {
+      console.error('Failed to mark review helpful:', e)
+    }
+  },
+
+  fetchAdminReviews: async (params) => {
+    set({ adminReviewsLoading: true })
+    try {
+      const result = await api.getAdminReviews(params)
+      set({
+        adminReviews: result.reviews,
+        adminReviewsTotal: result.total,
+        adminReviewsLoading: false,
+      })
+    } catch (e) {
+      console.error('Failed to fetch admin reviews:', e)
+      set({ adminReviewsLoading: false })
+    }
+  },
+
+  processReview: async (reviewId, data) => {
+    try {
+      const review = await api.processReview(reviewId, data)
+      set((state) => ({
+        adminReviews: state.adminReviews.map((r) => (r.id === reviewId ? review : r)),
+      }))
+      return review
+    } catch (e) {
+      console.error('Failed to process review:', e)
+      return null
+    }
+  },
+
+  fetchIssues: async (params) => {
+    set({ issuesLoading: true })
+    try {
+      const result = await api.getIssues(params)
+      set({
+        issues: result.issues,
+        issuesTotal: result.total,
+        issuesLoading: false,
+      })
+    } catch (e) {
+      console.error('Failed to fetch issues:', e)
+      set({ issuesLoading: false })
+    }
+  },
+
+  createIssue: async (data) => {
+    try {
+      const issue = await api.createIssue(data)
+      set((state) => ({
+        issues: [issue, ...state.issues],
+      }))
+      return issue
+    } catch (e) {
+      console.error('Failed to create issue:', e)
+      return null
+    }
+  },
+
+  updateIssueStatus: async (issueId, data) => {
+    try {
+      const issue = await api.updateIssueStatus(issueId, data)
+      set((state) => ({
+        issues: state.issues.map((i) => (i.id === issueId ? issue : i)),
+      }))
+      return issue
+    } catch (e) {
+      console.error('Failed to update issue status:', e)
+      return null
+    }
+  },
+
+  fetchWarnings: async (params) => {
+    set({ warningsLoading: true })
+    try {
+      const result = await api.getWarnings(params)
+      set({
+        warnings: result.warnings,
+        warningsTotal: result.total,
+        warningsSummary: result.summary,
+        warningsLoading: false,
+      })
+    } catch (e) {
+      console.error('Failed to fetch warnings:', e)
+      set({ warningsLoading: false })
+    }
+  },
+
+  acknowledgeWarning: async (warningId, data) => {
+    try {
+      const warning = await api.acknowledgeWarning(warningId, data)
+      set((state) => ({
+        warnings: state.warnings.map((w) => (w.id === warningId ? warning : w)),
+      }))
+      return warning
+    } catch (e) {
+      console.error('Failed to acknowledge warning:', e)
+      return null
+    }
+  },
+
+  deleteWarning: async (warningId) => {
+    try {
+      await api.deleteWarning(warningId)
+      set((state) => ({
+        warnings: state.warnings.filter((w) => w.id !== warningId),
+      }))
+      return true
+    } catch (e) {
+      console.error('Failed to delete warning:', e)
+      return false
+    }
+  },
 }))
+
+export { useStore }

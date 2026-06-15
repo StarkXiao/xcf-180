@@ -1532,4 +1532,234 @@ export interface QuoteWithDetails extends Quote {
   schedule?: ConstructionSchedule
 }
 
+export type ReviewRating = 1 | 2 | 3 | 4 | 5
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected'
+
+export type IssueStatus = 'open' | 'investigating' | 'resolved' | 'closed'
+
+export type IssuePriority = 'low' | 'medium' | 'high' | 'urgent'
+
+export type WarningLevel = 'warning' | 'danger'
+
+export interface InstallationFeedback {
+  difficulty: 'easy' | 'moderate' | 'hard'
+  installTime: string
+  toolsRequired: string[]
+  tips?: string
+  issuesEncountered?: string
+}
+
+export interface FitRating {
+  overall: ReviewRating
+  dimensions: ReviewRating
+  quality: ReviewRating
+  compatibility: ReviewRating
+  durability: ReviewRating
+}
+
+export interface PartReview {
+  id: string
+  partId: string
+  partName: string
+  orderId?: string
+  userId: string
+  username: string
+  avatar?: string
+  title: string
+  content: string
+  overallRating: ReviewRating
+  fitRating: FitRating
+  installationFeedback?: InstallationFeedback
+  images: string[]
+  tags: string[]
+  bikeModel?: string
+  mileage?: number
+  usageMonths?: number
+  status: ReviewStatus
+  helpfulCount: number
+  helpfulUsers: string[]
+  createdAt: string
+  updatedAt: string
+  isVerified: boolean
+  response?: string
+  respondedBy?: string
+  respondedAt?: string
+}
+
+export interface CreatePartReviewRequest {
+  partId: string
+  orderId?: string
+  title: string
+  content: string
+  overallRating: ReviewRating
+  fitRating: FitRating
+  installationFeedback?: InstallationFeedback
+  images?: string[]
+  tags?: string[]
+  bikeModel?: string
+  mileage?: number
+  usageMonths?: number
+}
+
+export interface ReviewStats {
+  partId: string
+  totalReviews: number
+  averageRating: number
+  ratingDistribution: Record<number, number>
+  averageFitRating: {
+    overall: number
+    dimensions: number
+    quality: number
+    compatibility: number
+    durability: number
+  }
+  installationStats: {
+    difficultyDistribution: Record<string, number>
+    averageInstallTime: string
+  }
+  commonTags: { tag: string; count: number }[]
+  verifiedReviewsCount: number
+  responseRate: number
+}
+
+export interface PartIssue {
+  id: string
+  reviewId: string
+  partId: string
+  partName: string
+  userId: string
+  username: string
+  title: string
+  description: string
+  category: 'quality' | 'compatibility' | 'installation' | 'durability' | 'other'
+  priority: IssuePriority
+  status: IssueStatus
+  rating?: number
+  assignedTo?: string
+  assigneeName?: string
+  images: string[]
+  processHistory: {
+    id: string
+    status: IssueStatus
+    comment: string
+    createdBy: string
+    createdAt: string
+  }[]
+  resolution?: string
+  resolvedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PartWarning {
+  id: string
+  partId: string
+  partName: string
+  warningLevel: WarningLevel
+  warningType: 'low_rating' | 'quality_complaints' | 'compatibility_issues' | 'installation'
+  title: string
+  description: string
+  affectedReviews: number
+  affectedIssues: number
+  threshold: number
+  currentValue: number
+  isActive: boolean
+  acknowledgedBy?: string
+  acknowledgedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProcessReviewRequest {
+  status: ReviewStatus
+  response?: string
+  processedBy: string
+}
+
+export interface CreateIssueRequest {
+  reviewId: string
+  title: string
+  description: string
+  category: PartIssue['category']
+  priority: IssuePriority
+  images?: string[]
+}
+
+export interface UpdateIssueStatusRequest {
+  status: IssueStatus
+  comment: string
+  updatedBy: string
+  resolution?: string
+}
+
+export interface AcknowledgeWarningRequest {
+  acknowledgedBy: string
+  resolution?: string
+}
+
+export const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
+  pending: '待审核',
+  approved: '已通过',
+  rejected: '已拒绝',
+}
+
+export const REVIEW_STATUS_COLORS: Record<ReviewStatus, string> = {
+  pending: 'bg-yellow-500',
+  approved: 'bg-green-500',
+  rejected: 'bg-red-500',
+}
+
+export const ISSUE_STATUS_LABELS: Record<IssueStatus, string> = {
+  open: '待处理',
+  investigating: '调查中',
+  resolved: '已解决',
+  closed: '已关闭',
+}
+
+export const ISSUE_STATUS_COLORS: Record<IssueStatus, string> = {
+  open: 'bg-red-500',
+  investigating: 'bg-yellow-500',
+  resolved: 'bg-green-500',
+  closed: 'bg-gray-500',
+}
+
+export const ISSUE_PRIORITY_LABELS: Record<IssuePriority, string> = {
+  low: '低',
+  medium: '中',
+  high: '高',
+  urgent: '紧急',
+}
+
+export const ISSUE_PRIORITY_COLORS: Record<IssuePriority, string> = {
+  low: 'bg-gray-500',
+  medium: 'bg-blue-500',
+  high: 'bg-orange-500',
+  urgent: 'bg-red-500',
+}
+
+export const WARNING_LEVEL_LABELS: Record<WarningLevel, string> = {
+  warning: '警告',
+  danger: '严重',
+}
+
+export const WARNING_LEVEL_COLORS: Record<WarningLevel, string> = {
+  warning: 'bg-orange-500',
+  danger: 'bg-red-500',
+}
+
+export const ISSUE_CATEGORY_LABELS: Record<PartIssue['category'], string> = {
+  quality: '质量问题',
+  compatibility: '适配问题',
+  installation: '安装问题',
+  durability: '耐用性问题',
+  other: '其他问题',
+}
+
+export const DIFFICULTY_LABELS: Record<string, string> = {
+  easy: '简单',
+  moderate: '中等',
+  hard: '困难',
+}
+
 

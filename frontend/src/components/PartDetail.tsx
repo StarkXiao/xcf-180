@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle, Sparkles, RefreshCw, ChevronRight, Heart, PackageX, ArrowRightLeft } from 'lucide-react'
+import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle, Sparkles, RefreshCw, ChevronRight, Heart, PackageX, ArrowRightLeft, MessageSquare, Star } from 'lucide-react'
 import { useStore } from '@/store/useStore'
-import type { Part, CompatibilityCheckResult, PartRecommendation, SubstitutePart } from '@/types'
+import type { Part, CompatibilityCheckResult, PartRecommendation, SubstitutePart, CreatePartReviewRequest, ReviewStats } from '@/types'
 import ConflictAlert from '@/components/ConflictAlert'
 import StockAlertBadge from '@/components/StockAlertBadge'
+import PartReviewStats from '@/components/PartReviewStats'
+import PartReviewList from '@/components/PartReviewList'
+import PartReviewForm from '@/components/PartReviewForm'
 
 interface Props {
   part: Part
@@ -26,6 +29,11 @@ export default function PartDetail({ part, onClose }: Props) {
     fetchSubstitutes,
     getSubstitutesForPart,
     isAuthenticated,
+    partReviews,
+    partReviewsLoading,
+    partReviewStats,
+    fetchPartReviews,
+    createReview,
   } = useStore()
   const isSelected = currentSelection?.items.some((i) => i.partId === part.id) ?? false
   const [partCompat, setPartCompat] = useState<CompatibilityCheckResult | null>(null)
@@ -33,8 +41,16 @@ export default function PartDetail({ part, onClose }: Props) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [substitutes, setSubstitutes] = useState<SubstitutePart[]>([])
   const browsingHistoryAdded = useRef(false)
+  const [activeTab, setActiveTab] = useState<'detail' | 'reviews'>('detail')
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewPage, setReviewPage] = useState(1)
+  const [reviewSort, setReviewSort] = useState('createdAt')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
 
   const stockLevel = getStockLevel(part.id)
+  const currentPartReviews = partReviews[part.id] || []
+  const currentPartReviewsLoading = partReviewsLoading[part.id] || false
+  const currentPartReviewStats = partReviewStats[part.id] || null
   const invInfo = getInventoryInfo(part.id)
   const isOutOfStock = stockLevel === 'out_of_stock'
 
@@ -59,6 +75,23 @@ export default function PartDetail({ part, onClose }: Props) {
       setSubstitutes(getSubstitutesForPart(part.id))
     }
   }, [part.id, isOutOfStock])
+
+  useEffect(() => {
+    if (activeTab === 'reviews') {
+      fetchPartReviews(part.id, { page: reviewPage, pageSize: 5, sortBy: reviewSort })
+    }
+  }, [part.id, activeTab, reviewPage, reviewSort, fetchPartReviews])
+
+  const handleReviewSubmit = async (data: CreatePartReviewRequest) => {
+    setReviewSubmitting(true)
+    try {
+      await createReview(data)
+      setShowReviewForm(false)
+      await fetchPartReviews(part.id, { page: 1, pageSize: 5, sortBy: reviewSort })
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
 
   const recommendations = getPartRecommendations(part.id)
   const { alternatives, pairings } = recommendations
@@ -142,177 +175,276 @@ export default function PartDetail({ part, onClose }: Props) {
             />
           </div>
 
-          <div className="lg:w-1/2 p-6 lg:p-8 flex flex-col overflow-y-auto max-h-[50vh] lg:max-h-[90vh]">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="text-[11px] font-orbitron px-2.5 py-1 rounded-md bg-moto-orange/15 border border-moto-orange/30 text-moto-orange">
-                {part.brand}
-              </span>
-              <span className="flex items-center gap-1 text-moto-steel text-xs font-orbitron">
-                <Tag size={12} />
-                {part.categoryId}
-              </span>
-            </div>
-            <h2 className="font-orbitron text-xl lg:text-2xl text-moto-silver font-bold">{part.name}</h2>
-            <p className="text-moto-steel text-sm mt-3 leading-relaxed">{part.description}</p>
-
-            <div className="mt-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Layers size={14} className="text-moto-orange" />
-                <span className="text-moto-silver text-sm font-orbitron">规格参数</span>
+          <div className="lg:w-1/2 flex flex-col overflow-hidden max-h-[50vh] lg:max-h-[90vh]">
+            <div className="p-6 lg:p-8 pb-4 border-b border-carbon-700">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-[11px] font-orbitron px-2.5 py-1 rounded-md bg-moto-orange/15 border border-moto-orange/30 text-moto-orange">
+                  {part.brand}
+                </span>
+                <span className="flex items-center gap-1 text-moto-steel text-xs font-orbitron">
+                  <Tag size={12} />
+                  {part.categoryId}
+                </span>
               </div>
-              <div className="space-y-2">
-                {Object.entries(part.specs).map(([key, value]) => (
-                  <div key={key} className="flex justify-between text-sm">
-                    <span className="text-moto-steel">{key}</span>
-                    <span className="text-moto-silver">{String(value)}</span>
+              <h2 className="font-orbitron text-xl lg:text-2xl text-moto-silver font-bold">{part.name}</h2>
+              <p className="text-moto-steel text-sm mt-3 leading-relaxed">{part.description}</p>
+
+              {currentPartReviewStats && (
+                <div className="mt-4 flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                    <span className="text-moto-silver font-semibold">{currentPartReviewStats.averageRating?.toFixed(1) || '5.0'}</span>
                   </div>
-                ))}
-              </div>
+                  <div className="text-moto-steel text-sm">
+                    {currentPartReviewStats.totalReviews || 0} 条评价
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="mt-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Info size={14} className="text-moto-orange" />
-                <span className="text-moto-silver text-sm font-orbitron">兼容车型</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {part.compatibleModels.map((model) => (
-                  <span key={model} className="px-3 py-1 bg-carbon-700 rounded-full text-xs text-moto-steel">
-                    {model}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {isOutOfStock && (
-              <div className="mt-6 rounded-xl border border-red-500/40 bg-red-500/5 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <PackageX size={16} className="text-red-400" />
-                  <span className="text-red-400 font-orbitron text-sm">该配件当前缺货</span>
+            <div className="flex border-b border-carbon-700">
+              <button
+                onClick={() => setActiveTab('detail')}
+                className={`px-6 py-3 text-sm font-medium transition-colors relative ${
+                  activeTab === 'detail'
+                    ? 'text-moto-orange'
+                    : 'text-moto-steel hover:text-moto-silver'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Info size={14} />
+                  详情
                 </div>
-                <p className="text-moto-steel text-xs leading-relaxed">
-                  此配件库存为零，暂时无法添加到方案中。您可以查看以下替代配件，或联系采购部门补货。
-                </p>
-              </div>
-            )}
-
-            {!isOutOfStock && stockLevel === 'low_stock' && (
-              <div className="mt-6 rounded-xl border border-yellow-500/40 bg-yellow-500/5 p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <AlertTriangle size={14} className="text-yellow-500" />
-                  <span className="text-yellow-500 font-orbitron text-xs">库存偏低</span>
-                  <StockAlertBadge stockLevel={stockLevel} availableStock={invInfo?.availableStock} size="sm" showCount />
-                </div>
-                <p className="text-moto-steel text-[11px]">
-                  当前可用库存仅剩 {invInfo?.availableStock ?? '?'} 件，建议尽快确认方案
-                </p>
-              </div>
-            )}
-
-            {isOutOfStock && substitutes.length > 0 && (
-              <div className="mt-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <ArrowRightLeft size={14} className="text-moto-orange" />
-                  <span className="text-moto-silver text-sm font-orbitron">替代件推荐</span>
-                  <span className="text-[10px] text-moto-steel font-orbitron">
-                    缺货时可替代的同分类配件
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {substitutes.slice(0, 4).map((sub) => (
-                    <SubstituteRow
-                      key={sub.partId}
-                      substitute={sub}
-                      isSelected={currentSelection?.items.some((i) => i.partId === sub.partId) ?? false}
-                      onAdd={() => addPartToSelection(sub.partId)}
-                      onRemove={() => removePartFromSelection(sub.partId)}
-                      categoryName={getCategoryName(sub.part.categoryId)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!isSelected && !isOutOfStock && (
-              <div className="mt-6">
-                <div className="flex items-center gap-2 mb-3">
-                  {hasError ? (
-                    <XCircle size={14} className="text-red-400" />
-                  ) : hasWarning ? (
-                    <AlertTriangle size={14} className="text-yellow-500" />
-                  ) : (
-                    <Check size={14} className="text-green-400" />
-                  )}
-                  <span className={`text-sm font-orbitron ${
-                    hasError ? 'text-red-400' : hasWarning ? 'text-yellow-500' : 'text-green-400'
-                  }`}>
-                    {checking
-                      ? '兼容性检查中...'
-                      : hasError
-                        ? '存在安装冲突'
-                        : hasWarning
-                          ? '搭配需专业调校'
-                          : '与当前选配兼容'}
-                  </span>
-                </div>
-                {partCompat && (
-                  <ConflictAlert
-                    conflicts={partCompat.conflicts}
-                    warnings={partCompat.warnings}
-                    compact
-                  />
+                {activeTab === 'detail' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-moto-orange"></div>
                 )}
-              </div>
-            )}
-
-            {pairings.length > 0 && (
-              <div className="mt-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles size={14} className="text-moto-orange" />
-                  <span className="text-moto-silver text-sm font-orbitron">搭配建议</span>
-                  <span className="text-[10px] text-moto-steel font-orbitron">
-                    基于当前分类与兼容车型智能推荐
-                  </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('reviews')}
+                className={`px-6 py-3 text-sm font-medium transition-colors relative ${
+                  activeTab === 'reviews'
+                    ? 'text-moto-orange'
+                    : 'text-moto-steel hover:text-moto-silver'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare size={14} />
+                  评价
+                  {currentPartReviewStats?.totalReviews > 0 && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-carbon-700 text-moto-steel">
+                      {currentPartReviewStats.totalReviews}
+                    </span>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {pairings.slice(0, 4).map((rec) => (
-                    <RecommendationCard
-                      key={rec.part.id}
-                      recommendation={rec}
-                      isSelected={currentSelection?.items.some((i) => i.partId === rec.part.id) ?? false}
-                      categoryName={getCategoryName(rec.part.categoryId)}
-                      onAdd={() => addPartToSelection(rec.part.id)}
-                      onRemove={() => removePartFromSelection(rec.part.id)}
+                {activeTab === 'reviews' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-moto-orange"></div>
+                )}
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {activeTab === 'detail' && (
+                <div className="p-6 lg:p-8 pt-4 space-y-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Layers size={14} className="text-moto-orange" />
+                      <span className="text-moto-silver text-sm font-orbitron">规格参数</span>
+                    </div>
+                    <div className="space-y-2">
+                      {Object.entries(part.specs).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span className="text-moto-steel">{key}</span>
+                          <span className="text-moto-silver">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Info size={14} className="text-moto-orange" />
+                      <span className="text-moto-silver text-sm font-orbitron">兼容车型</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {part.compatibleModels.map((model) => (
+                        <span key={model} className="px-3 py-1 bg-carbon-700 rounded-full text-xs text-moto-steel">
+                          {model}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {isOutOfStock && (
+                    <div className="rounded-xl border border-red-500/40 bg-red-500/5 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <PackageX size={16} className="text-red-400" />
+                        <span className="text-red-400 font-orbitron text-sm">该配件当前缺货</span>
+                      </div>
+                      <p className="text-moto-steel text-xs leading-relaxed">
+                        此配件库存为零，暂时无法添加到方案中。您可以查看以下替代配件，或联系采购部门补货。
+                      </p>
+                    </div>
+                  )}
+
+                  {!isOutOfStock && stockLevel === 'low_stock' && (
+                    <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/5 p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle size={14} className="text-yellow-500" />
+                        <span className="text-yellow-500 font-orbitron text-xs">库存偏低</span>
+                        <StockAlertBadge stockLevel={stockLevel} availableStock={invInfo?.availableStock} size="sm" showCount />
+                      </div>
+                      <p className="text-moto-steel text-[11px]">
+                        当前可用库存仅剩 {invInfo?.availableStock ?? '?'} 件，建议尽快确认方案
+                      </p>
+                    </div>
+                  )}
+
+                  {isOutOfStock && substitutes.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <ArrowRightLeft size={14} className="text-moto-orange" />
+                        <span className="text-moto-silver text-sm font-orbitron">替代件推荐</span>
+                        <span className="text-[10px] text-moto-steel font-orbitron">
+                          缺货时可替代的同分类配件
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {substitutes.slice(0, 4).map((sub) => (
+                          <SubstituteRow
+                            key={sub.partId}
+                            substitute={sub}
+                            isSelected={currentSelection?.items.some((i) => i.partId === sub.partId) ?? false}
+                            onAdd={() => addPartToSelection(sub.partId)}
+                            onRemove={() => removePartFromSelection(sub.partId)}
+                            categoryName={getCategoryName(sub.part.categoryId)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!isSelected && !isOutOfStock && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        {hasError ? (
+                          <XCircle size={14} className="text-red-400" />
+                        ) : hasWarning ? (
+                          <AlertTriangle size={14} className="text-yellow-500" />
+                        ) : (
+                          <Check size={14} className="text-green-400" />
+                        )}
+                        <span className={`text-sm font-orbitron ${
+                          hasError ? 'text-red-400' : hasWarning ? 'text-yellow-500' : 'text-green-400'
+                        }`}>
+                          {checking
+                            ? '兼容性检查中...'
+                            : hasError
+                              ? '存在安装冲突'
+                              : hasWarning
+                                ? '搭配需专业调校'
+                                : '与当前选配兼容'}
+                        </span>
+                      </div>
+                      {partCompat && (
+                        <ConflictAlert
+                          conflicts={partCompat.conflicts}
+                          warnings={partCompat.warnings}
+                          compact
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {pairings.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles size={14} className="text-moto-orange" />
+                        <span className="text-moto-silver text-sm font-orbitron">搭配建议</span>
+                        <span className="text-[10px] text-moto-steel font-orbitron">
+                          基于当前分类与兼容车型智能推荐
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {pairings.slice(0, 4).map((rec) => (
+                          <RecommendationCard
+                            key={rec.part.id}
+                            recommendation={rec}
+                            isSelected={currentSelection?.items.some((i) => i.partId === rec.part.id) ?? false}
+                            categoryName={getCategoryName(rec.part.categoryId)}
+                            onAdd={() => addPartToSelection(rec.part.id)}
+                            onRemove={() => removePartFromSelection(rec.part.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {alternatives.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <RefreshCw size={14} className="text-moto-orange" />
+                        <span className="text-moto-silver text-sm font-orbitron">替代配件</span>
+                        <span className="text-[10px] text-moto-steel font-orbitron">
+                          同分类其他可选方案
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {alternatives.slice(0, 3).map((rec) => (
+                          <AlternativeRow
+                            key={rec.part.id}
+                            recommendation={rec}
+                            isSelected={currentSelection?.items.some((i) => i.partId === rec.part.id) ?? false}
+                            onAdd={() => handleReplaceAlternative(rec.part.id)}
+                            onRemove={() => removePartFromSelection(rec.part.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'reviews' && (
+                <div className="p-6 lg:p-8 pt-4 space-y-6">
+                  {!showReviewForm && (
+                    <button
+                      onClick={() => setShowReviewForm(true)}
+                      className="w-full py-3 border-2 border-dashed border-carbon-600 rounded-xl text-moto-steel hover:border-moto-orange hover:text-moto-orange transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Plus size={18} />
+                      发表评价
+                    </button>
+                  )}
+
+                  {showReviewForm && (
+                    <PartReviewForm
+                      partId={part.id}
+                      partName={part.name}
+                      onSubmit={handleReviewSubmit}
+                      onCancel={() => setShowReviewForm(false)}
+                      loading={reviewSubmitting}
                     />
-                  ))}
-                </div>
-              </div>
-            )}
+                  )}
 
-            {alternatives.length > 0 && (
-              <div className="mt-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <RefreshCw size={14} className="text-moto-orange" />
-                  <span className="text-moto-silver text-sm font-orbitron">替代配件</span>
-                  <span className="text-[10px] text-moto-steel font-orbitron">
-                    同分类其他可选方案
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {alternatives.slice(0, 3).map((rec) => (
-                    <AlternativeRow
-                      key={rec.part.id}
-                      recommendation={rec}
-                      isSelected={currentSelection?.items.some((i) => i.partId === rec.part.id) ?? false}
-                      onAdd={() => handleReplaceAlternative(rec.part.id)}
-                      onRemove={() => removePartFromSelection(rec.part.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+                  {currentPartReviewStats && (
+                    <PartReviewStats stats={currentPartReviewStats} />
+                  )}
 
-            <div className="mt-auto pt-6 space-y-3">
+                  <PartReviewList
+                    reviews={currentPartReviews}
+                    loading={currentPartReviewsLoading}
+                    total={currentPartReviewStats?.totalReviews || 0}
+                    page={reviewPage}
+                    pageSize={5}
+                    onPageChange={setReviewPage}
+                    sortBy={reviewSort}
+                    onSortChange={setReviewSort}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 lg:p-8 pt-4 border-t border-carbon-700 space-y-3">
               {showConfirm && (
                 <div className={`rounded-xl border p-4 space-y-3 ${
                   hasError

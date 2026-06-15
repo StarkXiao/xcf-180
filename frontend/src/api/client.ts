@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest, ReceptionSelection, CreateReceptionSelectionRequest, CreateScheduleFromQuoteRequest, QuoteItem } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest, ReceptionSelection, CreateReceptionSelectionRequest, CreateScheduleFromQuoteRequest, QuoteItem, PartReview, ReviewStats, PartIssue, PartWarning, CreatePartReviewRequest, ProcessReviewRequest, CreateIssueRequest, UpdateIssueStatusRequest, AcknowledgeWarningRequest } from '@/types'
 
 const BASE = ''
 
@@ -889,4 +889,99 @@ export const api = {
 
   getQuotesByCustomer: (customerId: string) =>
     fetchJSON<Quote[]>(`/api/reception/quotes?customerId=${customerId}`),
+
+  getPartReviews: (partId: string, params?: { status?: string; page?: number; pageSize?: number; sortBy?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.page) searchParams.set('page', params.page.toString())
+    if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
+    if (params?.sortBy) searchParams.set('sortBy', params.sortBy)
+    const qs = searchParams.toString()
+    return fetchJSON<{ reviews: PartReview[]; total: number; page: number; pageSize: number; stats: ReviewStats }>(
+      `/api/reviews/parts/${partId}${qs ? `?${qs}` : ''}`
+    )
+  },
+
+  getReviewStats: (partId: string) =>
+    fetchJSON<ReviewStats>(`/api/reviews/stats/${partId}`),
+
+  createReview: (data: CreatePartReviewRequest) =>
+    fetchJSON<PartReview>('/api/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  markReviewHelpful: (reviewId: string, userId?: string) =>
+    fetchJSON<{ helpful: boolean; helpfulCount: number }>(`/api/reviews/${reviewId}/helpful`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+
+  getAdminReviews: (params?: { status?: string; partId?: string; page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.partId) searchParams.set('partId', params.partId)
+    if (params?.page) searchParams.set('page', params.page.toString())
+    if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
+    const qs = searchParams.toString()
+    return fetchJSON<{ reviews: PartReview[]; total: number; page: number; pageSize: number }>(
+      `/api/reviews/admin/list${qs ? `?${qs}` : ''}`
+    )
+  },
+
+  processReview: (reviewId: string, data: ProcessReviewRequest) =>
+    fetchJSON<PartReview>(`/api/reviews/admin/${reviewId}/process`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getIssues: (params?: { status?: string; priority?: string; partId?: string; category?: string; page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.priority) searchParams.set('priority', params.priority)
+    if (params?.partId) searchParams.set('partId', params.partId)
+    if (params?.category) searchParams.set('category', params.category)
+    if (params?.page) searchParams.set('page', params.page.toString())
+    if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
+    const qs = searchParams.toString()
+    return fetchJSON<{ issues: PartIssue[]; total: number; page: number; pageSize: number }>(
+      `/api/reviews/issues${qs ? `?${qs}` : ''}`
+    )
+  },
+
+  createIssue: (data: CreateIssueRequest) =>
+    fetchJSON<PartIssue>('/api/reviews/issues', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateIssueStatus: (issueId: string, data: UpdateIssueStatusRequest) =>
+    fetchJSON<PartIssue>(`/api/reviews/issues/${issueId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  getWarnings: (params?: { isActive?: boolean; warningLevel?: string; partId?: string; page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.isActive !== undefined) searchParams.set('isActive', params.isActive.toString())
+    if (params?.warningLevel) searchParams.set('warningLevel', params.warningLevel)
+    if (params?.partId) searchParams.set('partId', params.partId)
+    if (params?.page) searchParams.set('page', params.page.toString())
+    if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString())
+    const qs = searchParams.toString()
+    return fetchJSON<{ warnings: PartWarning[]; total: number; page: number; pageSize: number; summary: { total: number; active: number; danger: number; warning: number; unacknowledged: number } }>(
+      `/api/reviews/warnings${qs ? `?${qs}` : ''}`
+    )
+  },
+
+  acknowledgeWarning: (warningId: string, data: AcknowledgeWarningRequest) =>
+    fetchJSON<PartWarning>(`/api/reviews/warnings/${warningId}/acknowledge`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteWarning: (warningId: string) =>
+    fetchJSON<{ success: boolean; removed: PartWarning }>(`/api/reviews/warnings/${warningId}`, {
+      method: 'DELETE',
+    }),
 }

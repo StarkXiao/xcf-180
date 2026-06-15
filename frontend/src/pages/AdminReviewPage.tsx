@@ -1,998 +1,527 @@
-import { useEffect, useState, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useStore } from '@/store/useStore'
-import { api } from '@/api/client'
-import type { PartAdmin, PartStatus, StatusHistoryRecord, ReviewPartRequest } from '@/types'
 import {
-  Search,
-  Filter,
-  Tag,
-  Check,
-  X,
-  AlertTriangle,
-  Loader2,
-  Square,
-  CheckSquare2,
-  Eye,
-  Clock,
-  User,
-  FileText,
-  History,
-  CheckCircle2,
-  XCircle,
-  ArrowRight,
-  ListChecks,
-  MessageSquare,
-  Power,
-  Calculator,
-} from 'lucide-react'
+  PartReview,
+  PartIssue,
+  PartWarning,
+  ReviewStatus,
+  IssueStatus,
+  IssuePriority,
+  REVIEW_STATUS_LABELS,
+  REVIEW_STATUS_COLORS,
+  ISSUE_STATUS_LABELS,
+  ISSUE_STATUS_COLORS,
+  ISSUE_PRIORITY_LABELS,
+  ISSUE_PRIORITY_COLORS,
+  WARNING_LEVEL_LABELS,
+  WARNING_LEVEL_COLORS,
+  ISSUE_CATEGORY_LABELS,
+} from '@/types'
+import PartWarningPanel from '@/components/PartWarningPanel'
 
-const STATUS_OPTIONS: { value: PartStatus | 'all'; label: string }[] = [
-  { value: 'all', label: '全部状态' },
-  { value: 'pending_review', label: '待审核' },
-  { value: 'active', label: '已上架' },
-  { value: 'inactive', label: '已下架' },
-  { value: 'rejected', label: '已驳回' },
-  { value: 'draft', label: '草稿' },
-]
+type TabType = 'reviews' | 'issues' | 'warnings'
 
-const STATUS_BADGE: Record<PartStatus, { label: string; className: string }> = {
-  draft: { label: '草稿', className: 'bg-carbon-600 text-carbon-300 border-carbon-500/30' },
-  pending_review: { label: '待审核', className: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' },
-  active: { label: '已上架', className: 'bg-green-500/10 text-green-400 border-green-500/30' },
-  inactive: { label: '已下架', className: 'bg-gray-500/10 text-gray-400 border-gray-500/30' },
-  rejected: { label: '已驳回', className: 'bg-red-500/10 text-red-400 border-red-500/30' },
-}
+const AdminReviewPage: React.FC = () => {
+  const {
+    adminReviews,
+    adminReviewsLoading,
+    adminReviewsTotal,
+    issues,
+    issuesLoading,
+    issuesTotal,
+    warnings,
+    warningsLoading,
+    warningsSummary,
+    fetchAdminReviews,
+    processReview,
+    fetchIssues,
+    updateIssueStatus,
+    fetchWarnings,
+    acknowledgeWarning,
+    deleteWarning,
+  } = useStore()
 
-const STATUS_TRANSITIONS: { from: PartStatus[]; to: PartStatus; label: string; icon: React.ReactNode; className: string }[] = [
-  { from: ['pending_review'], to: 'active', label: '审核通过', icon: <CheckCircle2 size={14} />, className: 'bg-green-500 hover:bg-green-600' },
-  { from: ['pending_review', 'active'], to: 'rejected', label: '驳回', icon: <XCircle size={14} />, className: 'bg-red-500 hover:bg-red-600' },
-  { from: ['inactive', 'rejected'], to: 'active', label: '上架', icon: <Power size={14} />, className: 'bg-green-500 hover:bg-green-600' },
-  { from: ['active'], to: 'inactive', label: '下架', icon: <Power size={14} />, className: 'bg-gray-600 hover:bg-gray-700' },
-  { from: ['draft'], to: 'pending_review', label: '提交审核', icon: <ArrowRight size={14} />, className: 'bg-yellow-500 hover:bg-yellow-600' },
-]
-
-export default function AdminReviewPage() {
-  const { categories, fetchCategories, fetchParts } = useStore()
-  const [parts, setParts] = useState<PartAdmin[]>([])
-  const [statusHistory, setStatusHistory] = useState<StatusHistoryRecord[]>([])
-  const [brands, setBrands] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterStatus, setFilterStatus] = useState<PartStatus | 'all'>('pending_review')
-  const [filterCategory, setFilterCategory] = useState<string>('')
-  const [filterBrand, setFilterBrand] = useState<string>('')
-
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [selectAll, setSelectAll] = useState(false)
-
-  const [activeTab, setActiveTab] = useState<'review' | 'history'>('review')
-  const [historyFilterPartId, setHistoryFilterPartId] = useState<string>('')
-
-  const [reviewModalOpen, setReviewModalOpen] = useState(false)
-  const [reviewingPart, setReviewingPart] = useState<PartAdmin | null>(null)
-  const [reviewAction, setReviewAction] = useState<'approve' | 'reject'>('approve')
-  const [reviewRemark, setReviewRemark] = useState('')
-
-  const [batchModalOpen, setBatchModalOpen] = useState(false)
-  const [batchAction, setBatchAction] = useState<PartStatus | null>(null)
-  const [batchReason, setBatchReason] = useState('')
-
-  const [previewOpen, setPreviewOpen] = useState(false)
-  const [previewPart, setPreviewPart] = useState<PartAdmin | null>(null)
+  const [activeTab, setActiveTab] = useState<TabType>('reviews')
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(10)
+  const [statusFilter, setStatusFilter] = useState<ReviewStatus | 'all'>('all')
+  const [selectedReview, setSelectedReview] = useState<PartReview | null>(null)
+  const [processModalOpen, setProcessModalOpen] = useState(false)
+  const [processStatus, setProcessStatus] = useState<ReviewStatus>('approved')
+  const [processResponse, setProcessResponse] = useState('')
 
   useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    setLoading(true)
-    try {
-      await Promise.all([fetchCategories(), fetchParts()])
-      const [partsData, brandsData, historyData] = await Promise.all([
-        api.adminGetParts(),
-        api.adminGetBrands(),
-        api.adminGetStatusHistory(),
-      ])
-      setParts(partsData)
-      setBrands(brandsData)
-      setStatusHistory(historyData)
-    } catch (e) {
-      console.error('Failed to load data:', e)
-    } finally {
-      setLoading(false)
+    if (activeTab === 'reviews') {
+      fetchAdminReviews({ page, pageSize, status: statusFilter === 'all' ? undefined : statusFilter })
+    } else if (activeTab === 'issues') {
+      fetchIssues({ page, pageSize })
+    } else if (activeTab === 'warnings') {
+      fetchWarnings()
     }
-  }
+  }, [activeTab, page, statusFilter, pageSize, fetchAdminReviews, fetchIssues, fetchWarnings])
 
-  const filteredParts = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim()
-    return parts.filter((p) => {
-      if (filterStatus !== 'all' && p.status !== filterStatus) return false
-      if (filterCategory && p.categoryId !== filterCategory) return false
-      if (filterBrand && p.brand !== filterBrand) return false
-      if (q) {
-        return (
-          p.name.toLowerCase().includes(q) ||
-          p.brand.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q)
-        )
-      }
-      return true
+  const renderStars = (rating: number, max: number = 5) => (
+    <div className="flex items-center gap-0.5">
+      {[...Array(max)].map((_, i) => (
+        <svg
+          key={i}
+          className={`w-4 h-4 ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-zinc-300 dark:text-zinc-600'}`}
+          viewBox="0 0 20 20"
+        >
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      ))}
+    </div>
+  )
+
+  const handleProcessReview = async () => {
+    if (!selectedReview) return
+    await processReview(selectedReview.id, {
+      status: processStatus,
+      response: processResponse || undefined,
+      processedBy: '管理员',
     })
-  }, [parts, searchQuery, filterStatus, filterCategory, filterBrand])
-
-  const filteredHistory = useMemo(() => {
-    if (!historyFilterPartId) return statusHistory
-    return statusHistory.filter((h) => h.partId === historyFilterPartId)
-  }, [statusHistory, historyFilterPartId])
-
-  const selectedParts = useMemo(() => {
-    return parts.filter((p) => selectedIds.includes(p.id))
-  }, [parts, selectedIds])
-
-  const getCategoryName = (id: string) => {
-    const cat = categories.find((c) => c.id === id)
-    return cat ? cat.name : id
+    setProcessModalOpen(false)
+    setSelectedReview(null)
+    setProcessResponse('')
   }
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
+  const handleUpdateIssueStatus = async (issueId: string, newStatus: IssueStatus) => {
+    await updateIssueStatus(issueId, {
+      status: newStatus,
+      comment: `状态更新为${newStatus}`,
+      updatedBy: '管理员',
+    })
   }
 
-  const toggleSelectAll = () => {
-    if (selectAll) {
-      setSelectedIds([])
-      setSelectAll(false)
-    } else {
-      setSelectedIds(filteredParts.map((p) => p.id))
-      setSelectAll(true)
-    }
+  const handleAcknowledgeWarning = async (warningId: string) => {
+    await acknowledgeWarning(warningId, { acknowledgedBy: '管理员' })
   }
 
-  const availableBatchActions = useMemo(() => {
-    if (selectedParts.length === 0) return []
-    const statuses = Array.from(new Set(selectedParts.map((p) => p.status)))
-    return STATUS_TRANSITIONS.filter((t) => statuses.every((s) => t.from.includes(s as PartStatus)))
-  }, [selectedParts])
-
-  const openReviewModal = (part: PartAdmin, action: 'approve' | 'reject') => {
-    setReviewingPart(part)
-    setReviewAction(action)
-    setReviewRemark('')
-    setReviewModalOpen(true)
+  const handleDismissWarning = async (warningId: string) => {
+    await deleteWarning(warningId)
   }
 
-  const handleSingleReview = async () => {
-    if (!reviewingPart) return
-    setSubmitting(true)
-    try {
-      const data: ReviewPartRequest = {
-        status: reviewAction === 'approve' ? 'active' : 'rejected',
-        reviewRemark: reviewRemark.trim() || undefined,
-        reviewedBy: 'admin',
-      }
-      await api.adminReviewPart(reviewingPart.id, data)
-      await loadData()
-      setReviewModalOpen(false)
-      setReviewingPart(null)
-      setSelectedIds((prev) => prev.filter((id) => id !== reviewingPart.id))
-    } catch (e) {
-      console.error('Failed to review part:', e)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const openBatchModal = (action: PartStatus) => {
-    setBatchAction(action)
-    setBatchReason('')
-    setBatchModalOpen(true)
-  }
-
-  const handleBatchAction = async () => {
-    if (!batchAction || selectedIds.length === 0) return
-    setSubmitting(true)
-    try {
-      await api.adminBatchStatusChange({
-        partIds: selectedIds,
-        status: batchAction,
-        reason: batchReason.trim() || undefined,
-      })
-      await loadData()
-      setBatchModalOpen(false)
-      setBatchAction(null)
-      setSelectedIds([])
-      setSelectAll(false)
-    } catch (e) {
-      console.error('Failed to batch change status:', e)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const openPreview = (part: PartAdmin) => {
-    setPreviewPart(part)
-    setPreviewOpen(true)
-  }
-
-  const clearFilters = () => {
-    setSearchQuery('')
-    setFilterStatus('pending_review')
-    setFilterCategory('')
-    setFilterBrand('')
-  }
-
-  const hasTextFilters = filterCategory || filterBrand || searchQuery
-  const hasActiveFilters = hasTextFilters || filterStatus !== 'all'
-
-  const getStatusIcon = (status: PartStatus) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircle2 size={12} className="text-green-400" />
-      case 'rejected':
-        return <XCircle size={12} className="text-red-400" />
-      case 'pending_review':
-        return <AlertTriangle size={12} className="text-yellow-400" />
-      default:
-        return <Clock size={12} className="text-moto-steel" />
-    }
-  }
+  const totalPages = Math.ceil(adminReviewsTotal / pageSize)
+  const totalIssuePages = Math.ceil(issuesTotal / pageSize)
 
   return (
-    <div className="min-h-screen p-6 lg:p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-orbitron text-2xl lg:text-3xl text-moto-silver font-bold">
-            上下架审核
-          </h1>
-          <p className="text-moto-steel text-sm mt-1">
-            审核配件上架申请，管理配件上下架状态
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">评价管理</h1>
 
-      <div className="flex items-center gap-2 mb-6 bg-carbon-800 rounded-xl p-1 border border-carbon-500/20 w-fit">
-        <button
-          onClick={() => setActiveTab('review')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'review'
-              ? 'bg-moto-orange text-white shadow-lg shadow-moto-orange/20'
-              : 'text-moto-steel hover:text-moto-silver'
-          }`}
-        >
-          <CheckCircle2 size={16} />
-          审核管理
-        </button>
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'history'
-              ? 'bg-moto-orange text-white shadow-lg shadow-moto-orange/20'
-              : 'text-moto-steel hover:text-moto-silver'
-          }`}
-        >
-          <History size={16} />
-          状态历史
-        </button>
-      </div>
-
-      {activeTab === 'review' ? (
-        <>
-          {selectedIds.length > 0 && (
-            <div className="bg-carbon-800 rounded-xl border border-moto-orange/30 p-5 mb-6">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-moto-orange/15 flex items-center justify-center">
-                    <ListChecks size={20} className="text-moto-orange" />
-                  </div>
-                  <div>
-                    <h3 className="font-orbitron text-moto-silver">已选择 {selectedIds.length} 个配件</h3>
-                    <p className="text-xs text-moto-steel mt-0.5">
-                      当前状态: {Array.from(new Set(selectedParts.map((p) => STATUS_BADGE[p.status].label))).join('、')}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedIds([])
-                    setSelectAll(false)
-                  }}
-                  className="text-moto-steel hover:text-moto-silver text-sm"
-                >
-                  清除选择
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {availableBatchActions.map((action) => (
-                  <button
-                    key={action.to}
-                    onClick={() => openBatchModal(action.to)}
-                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors ${action.className}`}
-                  >
-                    {action.icon}
-                    {action.label}
-                  </button>
-                ))}
-                {availableBatchActions.length === 0 && (
-                  <p className="text-sm text-moto-steel">所选配件没有可用的批量操作</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="bg-carbon-800 rounded-xl border border-carbon-500/20 p-4 mb-6">
-            <div className="flex flex-wrap gap-3">
-              <div className="flex items-center gap-2 bg-carbon-900 rounded-lg px-3 py-2 border border-carbon-500/30 flex-1 min-w-[200px] max-w-md">
-                <Search size={14} className="text-moto-steel" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="搜索名称、品牌、SKU..."
-                  className="bg-transparent text-moto-silver text-sm focus:outline-none placeholder:text-carbon-500 w-full"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="text-moto-steel hover:text-moto-silver transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 bg-carbon-900 rounded-lg px-3 py-2 border border-carbon-500/30 min-w-[140px]">
-                <Filter size={14} className="text-moto-steel" />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as PartStatus | 'all')}
-                  className="bg-transparent text-moto-silver text-sm focus:outline-none cursor-pointer w-full"
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s.value} value={s.value} className="bg-carbon-800">
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 bg-carbon-900 rounded-lg px-3 py-2 border border-carbon-500/30 min-w-[140px]">
-                <Filter size={14} className="text-moto-steel" />
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="bg-transparent text-moto-silver text-sm focus:outline-none cursor-pointer w-full"
-                >
-                  <option value="" className="bg-carbon-800">全部分类</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-carbon-800">
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 bg-carbon-900 rounded-lg px-3 py-2 border border-carbon-500/30 min-w-[140px]">
-                <Tag size={14} className="text-moto-steel" />
-                <select
-                  value={filterBrand}
-                  onChange={(e) => setFilterBrand(e.target.value)}
-                  className="bg-transparent text-moto-silver text-sm focus:outline-none cursor-pointer w-full"
-                >
-                  <option value="" className="bg-carbon-800">全部品牌</option>
-                  {brands.map((b) => (
-                    <option key={b} value={b} className="bg-carbon-800">
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {hasActiveFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="flex items-center gap-1.5 px-3 py-2 text-moto-orange text-sm hover:text-moto-orange-light transition-colors"
-                >
-                  <X size={14} />
-                  清除筛选
-                </button>
-              )}
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="bg-carbon-800 rounded-xl border border-carbon-500/20 p-8 text-center">
-              <Loader2 size={32} className="text-moto-orange animate-spin mx-auto" />
-            </div>
-          ) : filteredParts.length === 0 ? (
-            <div className="bg-carbon-800 rounded-xl border border-carbon-500/20 p-12 text-center">
-              <CheckCircle2 size={64} className="text-carbon-500 mx-auto mb-4" />
-              <h2 className="font-orbitron text-moto-silver text-xl mb-2">
-                {hasTextFilters
-                  ? '未找到匹配的配件'
-                  : filterStatus === 'pending_review'
-                  ? '暂无待审核配件'
-                  : '暂无配件数据'}
-              </h2>
-              <p className="text-moto-steel text-sm">
-                {hasTextFilters
-                  ? '请调整筛选条件或清除筛选'
-                  : filterStatus === 'pending_review'
-                  ? '所有配件已审核完成'
-                  : '请先在配件管理中添加配件'}
-              </p>
-            </div>
-          ) : (
-            <div className="bg-carbon-800 rounded-xl border border-carbon-500/20 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-carbon-700/50 border-b border-carbon-500/30">
-                      <th className="w-12 px-4 py-3">
-                        <button
-                          onClick={toggleSelectAll}
-                          className="text-moto-steel hover:text-moto-silver transition-colors"
-                        >
-                          {selectAll ? (
-                            <CheckSquare2 size={16} className="text-moto-orange" />
-                          ) : (
-                            <Square size={16} />
-                          )}
-                        </button>
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                        配件信息
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                        分类
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                        价格
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                        状态
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                        审核备注
-                      </th>
-                      <th className="text-right px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredParts.map((part) => {
-                      const isSelected = selectedIds.includes(part.id)
-                      const availableActions = STATUS_TRANSITIONS.filter((t) =>
-                        t.from.includes(part.status as PartStatus)
-                      )
-                      return (
-                        <tr
-                          key={part.id}
-                          className={`border-b border-carbon-500/20 last:border-b-0 hover:bg-carbon-700/30 transition-colors ${
-                            isSelected ? 'bg-moto-orange/5' : ''
-                          }`}
-                        >
-                          <td className="px-4 py-3">
-                            <button
-                              onClick={() => toggleSelect(part.id)}
-                              className="text-moto-steel hover:text-moto-silver transition-colors"
-                            >
-                              {isSelected ? (
-                                <CheckSquare2 size={16} className="text-moto-orange" />
-                              ) : (
-                                <Square size={16} />
-                              )}
-                            </button>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={part.image}
-                                alt={part.name}
-                                className="w-10 h-10 rounded-lg object-cover bg-carbon-700 border border-carbon-500/20"
-                                onError={(e) => {
-                                  ;(e.target as HTMLImageElement).src =
-                                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="%236b7280"><rect width="100%" height="100%" fill="%231f2937"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="10">N/A</text></svg>'
-                                }}
-                              />
-                              <div className="min-w-0">
-                                <p className="text-sm text-moto-silver font-medium truncate">
-                                  {part.name}
-                                </p>
-                                <p className="text-xs text-moto-steel font-mono">
-                                  {part.sku} · {part.brand}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-moto-steel">{getCategoryName(part.categoryId)}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-moto-orange font-mono font-medium">
-                              ¥{part.price.toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border ${STATUS_BADGE[part.status].className}`}
-                            >
-                              {getStatusIcon(part.status)}
-                              {STATUS_BADGE[part.status].label}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="max-w-[200px]">
-                              {part.reviewRemark ? (
-                                <div className="flex items-start gap-1.5">
-                                  <MessageSquare size={12} className="text-moto-steel shrink-0 mt-0.5" />
-                                  <p className="text-xs text-moto-steel truncate">{part.reviewRemark}</p>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-carbon-500">-</span>
-                              )}
-                              {part.reviewedBy && (
-                                <p className="text-[10px] text-carbon-500 mt-1">
-                                  {part.reviewedBy} · {part.reviewedAt ? new Date(part.reviewedAt).toLocaleDateString('zh-CN') : ''}
-                                </p>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => openPreview(part)}
-                                className="p-1.5 rounded-lg text-moto-steel hover:text-moto-silver hover:bg-carbon-700/50 transition-colors"
-                                title="查看详情"
-                              >
-                                <Eye size={14} />
-                              </button>
-                              {availableActions.map((action) => (
-                                <button
-                                  key={action.to}
-                                  onClick={() => {
-                                    if (action.to === 'active' && part.status === 'pending_review') {
-                                      openReviewModal(part, 'approve')
-                                    } else if (action.to === 'rejected') {
-                                      openReviewModal(part, 'reject')
-                                    } else {
-                                      setSelectedIds([part.id])
-                                      openBatchModal(action.to)
-                                    }
-                                  }}
-                                  className={`p-1.5 rounded-lg transition-colors ${
-                                    action.to === 'active' || action.to === 'pending_review'
-                                      ? 'text-green-400 hover:bg-green-500/10'
-                                      : action.to === 'rejected'
-                                      ? 'text-red-400 hover:bg-red-500/10'
-                                      : 'text-moto-steel hover:text-moto-silver hover:bg-carbon-700/50'
-                                  }`}
-                                  title={action.label}
-                                >
-                                  {action.icon}
-                                </button>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-4 py-3 border-t border-carbon-500/20 flex items-center justify-between">
-                <p className="text-xs text-moto-steel">
-                  显示 <span className="font-orbitron text-moto-silver">{filteredParts.length}</span> 条
-                </p>
-              </div>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="bg-carbon-800 rounded-xl border border-carbon-500/20 overflow-hidden">
-          <div className="p-4 border-b border-carbon-500/20">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-carbon-900 rounded-lg px-3 py-2 border border-carbon-500/30 min-w-[200px]">
-                <Filter size={14} className="text-moto-steel" />
-                <select
-                  value={historyFilterPartId}
-                  onChange={(e) => setHistoryFilterPartId(e.target.value)}
-                  className="bg-transparent text-moto-silver text-sm focus:outline-none cursor-pointer w-full"
-                >
-                  <option value="" className="bg-carbon-800">全部配件</option>
-                  {parts.map((p) => (
-                    <option key={p.id} value={p.id} className="bg-carbon-800">
-                      {p.name} ({p.sku})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="p-12 text-center">
-              <Loader2 size={32} className="text-moto-orange animate-spin mx-auto" />
-            </div>
-          ) : filteredHistory.length === 0 ? (
-            <div className="p-12 text-center">
-              <History size={64} className="text-carbon-500 mx-auto mb-4" />
-              <h2 className="font-orbitron text-moto-silver text-xl mb-2">暂无状态变更记录</h2>
-              <p className="text-moto-steel text-sm">配件状态变更后将在此处显示历史记录</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-carbon-700/50 border-b border-carbon-500/30">
-                    <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                      配件名称
-                    </th>
-                    <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                      原状态
-                    </th>
-                    <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                      新状态
-                    </th>
-                    <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                      操作人
-                    </th>
-                    <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                      变更时间
-                    </th>
-                    <th className="text-left px-4 py-3 text-xs font-orbitron text-moto-steel uppercase tracking-wider">
-                      原因
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredHistory.map((record) => (
-                    <tr
-                      key={record.id}
-                      className="border-b border-carbon-500/20 last:border-b-0 hover:bg-carbon-700/30 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <FileText size={14} className="text-moto-steel" />
-                          <div>
-                            <p className="text-sm text-moto-silver font-medium">{record.partName}</p>
-                            <p className="text-xs text-moto-steel font-mono">{record.partId}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border ${STATUS_BADGE[record.oldStatus].className}`}
-                        >
-                          {STATUS_BADGE[record.oldStatus].label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border ${STATUS_BADGE[record.newStatus].className}`}
-                          >
-                            {STATUS_BADGE[record.newStatus].label}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5 text-sm text-moto-silver">
-                          <User size={14} className="text-moto-steel" />
-                          {record.changedBy}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5 text-sm text-moto-steel">
-                          <Clock size={14} className="text-moto-steel" />
-                          {new Date(record.changedAt).toLocaleString('zh-CN')}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-moto-steel">
-                          {record.reason || '-'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {reviewModalOpen && reviewingPart && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setReviewModalOpen(false)}
-          />
-          <div className="relative bg-carbon-800 rounded-2xl border border-carbon-500/30 w-full max-w-md p-6 shadow-2xl animate-scale-in">
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                  reviewAction === 'approve' ? 'bg-green-500/10' : 'bg-red-500/10'
+        <div className="bg-white dark:bg-zinc-900 rounded-xl mb-6">
+          <div className="flex border-b border-zinc-200 dark:border-zinc-700">
+            {[
+              { key: 'reviews', label: '评价审核', count: adminReviewsTotal },
+              { key: 'issues', label: '问题追踪', count: issuesTotal },
+              { key: 'warnings', label: '预警处理', count: warningsSummary?.unacknowledged || 0 },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setActiveTab(tab.key as TabType)
+                  setPage(1)
+                }}
+                className={`px-6 py-4 text-sm font-medium transition-colors relative ${
+                  activeTab === tab.key
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
                 }`}
               >
-                {reviewAction === 'approve' ? (
-                  <CheckCircle2 size={20} className="text-green-400" />
-                ) : (
-                  <XCircle size={20} className="text-red-400" />
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                    tab.key === 'warnings' && warningsSummary?.unacknowledged
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+                  }`}>
+                    {tab.count}
+                  </span>
                 )}
-              </div>
-              <div>
-                <h3 className="font-orbitron text-moto-silver text-lg">
-                  {reviewAction === 'approve' ? '审核通过' : '驳回申请'}
-                </h3>
-                <p className="text-xs text-moto-steel mt-0.5">
-                  配件: {reviewingPart.name}
-                </p>
-              </div>
-            </div>
+                {activeTab === tab.key && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"></div>
+                )}
+              </button>
+            ))}
+          </div>
 
-            <div className="bg-carbon-700/50 rounded-lg p-4 mb-5 border border-carbon-500/20">
-              <div className="flex items-center gap-3">
-                <img
-                  src={reviewingPart.image}
-                  alt={reviewingPart.name}
-                  className="w-12 h-12 rounded-lg object-cover bg-carbon-700 border border-carbon-500/20"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).src =
-                      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="%236b7280"><rect width="100%" height="100%" fill="%231f2937"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="10">N/A</text></svg>'
-                  }}
-                />
-                <div>
-                  <p className="text-sm text-moto-silver font-medium">{reviewingPart.name}</p>
-                  <p className="text-xs text-moto-steel font-mono">{reviewingPart.sku}</p>
-                  <p className="text-sm text-moto-orange font-mono mt-1">
-                    ¥{reviewingPart.price.toLocaleString()}
-                  </p>
+          {activeTab === 'reviews' && (
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">状态筛选：</span>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value as any)
+                      setPage(1)
+                    }}
+                    className="px-3 py-1.5 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">全部</option>
+                    <option value="pending">待审核</option>
+                    <option value="approved">已通过</option>
+                    <option value="rejected">已拒绝</option>
+                  </select>
                 </div>
               </div>
+
+              {adminReviewsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="p-4 animate-pulse">
+                      <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-1/3 mb-2"></div>
+                      <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-2/3"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : adminReviews.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-zinc-500 dark:text-zinc-400">暂无评价数据</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-zinc-700">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">用户</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">配件</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">评分</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">内容</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">状态</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">时间</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-zinc-500 dark:text-zinc-400">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminReviews.map((review) => (
+                        <tr key={review.id} className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-semibold">
+                                {review.username.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="text-sm text-zinc-900 dark:text-white">{review.username}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-zinc-900 dark:text-white">{review.partName}</td>
+                          <td className="py-4 px-4">{renderStars(review.overallRating)}</td>
+                          <td className="py-4 px-4 max-w-xs">
+                            <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{review.title}</div>
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">{review.content}</div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${REVIEW_STATUS_COLORS[review.status]}`}>
+                              {REVIEW_STATUS_LABELS[review.status]}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-xs text-zinc-500 dark:text-zinc-400">
+                            {new Date(review.createdAt).toLocaleDateString('zh-CN')}
+                          </td>
+                          <td className="py-4 px-4">
+                            {review.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    setSelectedReview(review)
+                                    setProcessStatus('approved')
+                                    setProcessModalOpen(true)
+                                  }}
+                                  className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                                >
+                                  通过
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedReview(review)
+                                    setProcessStatus('rejected')
+                                    setProcessModalOpen(true)
+                                  }}
+                                  className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                                >
+                                  拒绝
+                                </button>
+                              </div>
+                            )}
+                            {review.status === 'approved' && review.overallRating <= 2 && (
+                              <span className="text-xs text-orange-600 dark:text-orange-400">已生成工单</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-6">
+                  <button
+                    onClick={() => setPage(page - 1)}
+                    disabled={page <= 1}
+                    className="px-3 py-1.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    上一页
+                  </button>
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                    第 {page} / {totalPages} 页，共 {adminReviewsTotal} 条
+                  </span>
+                  <button
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= totalPages}
+                    className="px-3 py-1.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    下一页
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'issues' && (
+            <div className="p-6">
+              {issuesLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="p-4 animate-pulse">
+                      <div className="h-5 bg-zinc-200 dark:bg-zinc-700 rounded w-1/2 mb-2"></div>
+                      <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-zinc-200 dark:bg-zinc-700 rounded w-1/3"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : issues.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg className="w-16 h-16 mx-auto text-green-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-2">暂无问题工单</h3>
+                  <p className="text-zinc-500 dark:text-zinc-400">当前没有需要处理的问题</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {issues.map((issue) => (
+                    <div key={issue.id} className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium text-white ${ISSUE_PRIORITY_COLORS[issue.priority]}`}>
+                              {ISSUE_PRIORITY_LABELS[issue.priority]}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium text-white ${ISSUE_STATUS_COLORS[issue.status]}`}>
+                              {ISSUE_STATUS_LABELS[issue.status]}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs">
+                              {ISSUE_CATEGORY_LABELS[issue.category] || issue.category}
+                            </span>
+                          </div>
+                          <h4 className="font-semibold text-zinc-900 dark:text-white">{issue.title}</h4>
+                        </div>
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {new Date(issue.createdAt).toLocaleDateString('zh-CN')}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-zinc-700 dark:text-zinc-300 mb-3">{issue.description}</p>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-4">
+                        <div>
+                          <span className="text-zinc-500 dark:text-zinc-400">配件：</span>
+                          <span className="text-zinc-700 dark:text-zinc-300 font-medium">{issue.partName}</span>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500 dark:text-zinc-400">用户：</span>
+                          <span className="text-zinc-700 dark:text-zinc-300 font-medium">{issue.username}</span>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500 dark:text-zinc-400">评分：</span>
+                          {renderStars(issue.rating || 0)}
+                        </div>
+                        {issue.assignedTo && (
+                          <div>
+                            <span className="text-zinc-500 dark:text-zinc-400">处理人：</span>
+                            <span className="text-zinc-700 dark:text-zinc-300 font-medium">{issue.assignedTo}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {issue.processHistory && issue.processHistory.length > 0 && (
+                        <div className="mb-4 p-3 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                          <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2">处理记录</div>
+                          <div className="space-y-2">
+                            {issue.processHistory.map((record, idx) => (
+                              <div key={idx} className="text-xs">
+                                <span className="text-zinc-500 dark:text-zinc-400">
+                                  {new Date(record.createdAt).toLocaleString('zh-CN')} - {record.createdBy}：
+                                </span>
+                                <span className="text-zinc-700 dark:text-zinc-300 ml-1">{record.comment}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {issue.status !== 'closed' && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">更新状态：</span>
+                          {issue.status === 'open' && (
+                            <button
+                              onClick={() => handleUpdateIssueStatus(issue.id, 'investigating')}
+                              className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                            >
+                              开始调查
+                            </button>
+                          )}
+                          {issue.status === 'investigating' && (
+                            <button
+                              onClick={() => handleUpdateIssueStatus(issue.id, 'resolved')}
+                              className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                            >
+                              标记已解决
+                            </button>
+                          )}
+                          {issue.status === 'resolved' && (
+                            <button
+                              onClick={() => handleUpdateIssueStatus(issue.id, 'closed')}
+                              className="px-3 py-1 text-xs bg-zinc-500 text-white rounded hover:bg-zinc-600 transition-colors"
+                            >
+                              关闭工单
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleUpdateIssueStatus(issue.id, 'closed')}
+                            className="px-3 py-1 text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
+                          >
+                            直接关闭
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {totalIssuePages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-6">
+                  <button
+                    onClick={() => setPage(page - 1)}
+                    disabled={page <= 1}
+                    className="px-3 py-1.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    上一页
+                  </button>
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                    第 {page} / {totalIssuePages} 页，共 {issuesTotal} 条
+                  </span>
+                  <button
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= totalIssuePages}
+                    className="px-3 py-1.5 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    下一页
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'warnings' && (
+            <div className="p-6">
+              {warningsSummary && (
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div className="text-xs text-red-600 dark:text-red-400 mb-1">严重预警</div>
+                    <div className="text-2xl font-bold text-red-700 dark:text-red-400">{warningsSummary.danger}</div>
+                  </div>
+                  <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                    <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">警告</div>
+                    <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">{warningsSummary.warning}</div>
+                  </div>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <div className="text-xs text-yellow-600 dark:text-yellow-400 mb-1">活跃预警</div>
+                    <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{warningsSummary.active}</div>
+                  </div>
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">待确认</div>
+                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{warningsSummary.unacknowledged}</div>
+                  </div>
+                </div>
+              )}
+
+              <PartWarningPanel
+                warnings={warnings}
+                loading={warningsLoading}
+                onAcknowledge={handleAcknowledgeWarning}
+                onDismiss={handleDismissWarning}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {processModalOpen && selectedReview && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-lg w-full p-6">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
+              {processStatus === 'approved' ? '通过评价' : '拒绝评价'}
+            </h3>
+
+            <div className="mb-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-medium text-zinc-900 dark:text-white">{selectedReview.username}</span>
+                {renderStars(selectedReview.overallRating)}
+              </div>
+              <div className="font-medium text-zinc-900 dark:text-white mb-1">{selectedReview.title}</div>
+              <p className="text-sm text-zinc-700 dark:text-zinc-300">{selectedReview.content}</p>
             </div>
 
-            <div className="mb-5">
-              <label className="block text-xs text-moto-steel mb-1.5">
-                <MessageSquare size={10} className="inline mr-1" />
-                审核备注 {reviewAction === 'reject' && <span className="text-red-400">*</span>}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                {processStatus === 'approved' ? '回复内容（可选）' : '拒绝原因'}
               </label>
               <textarea
-                value={reviewRemark}
-                onChange={(e) => setReviewRemark(e.target.value)}
-                placeholder={reviewAction === 'approve' ? '请输入审核通过备注（可选）' : '请输入驳回原因'}
+                value={processResponse}
+                onChange={(e) => setProcessResponse(e.target.value)}
+                placeholder={processStatus === 'approved' ? '输入回复内容...' : '请输入拒绝原因...'}
                 rows={3}
-                className="w-full bg-carbon-900 border border-carbon-500/30 rounded-lg px-3 py-2 text-sm text-moto-silver placeholder:text-carbon-500 focus:outline-none focus:ring-1 focus:ring-moto-orange focus:border-moto-orange transition-colors resize-none"
+                className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3">
+            {processStatus === 'approved' && selectedReview.overallRating <= 2 && (
+              <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/30 rounded-lg">
+                <p className="text-sm text-orange-700 dark:text-orange-400">
+                  <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  这是一条差评（{selectedReview.overallRating}星），通过后将自动创建问题工单。
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
               <button
-                onClick={() => setReviewModalOpen(false)}
-                className="px-4 py-2 bg-carbon-700 text-moto-steel rounded-lg text-sm hover:bg-carbon-600 hover:text-moto-silver transition-colors"
+                onClick={() => {
+                  setProcessModalOpen(false)
+                  setSelectedReview(null)
+                  setProcessResponse('')
+                }}
+                className="px-4 py-2 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium transition-colors"
               >
                 取消
               </button>
               <button
-                onClick={handleSingleReview}
-                disabled={submitting || (reviewAction === 'reject' && !reviewRemark.trim())}
-                className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm transition-colors disabled:opacity-50 ${
-                  reviewAction === 'approve'
+                onClick={handleProcessReview}
+                className={`px-4 py-2 rounded-lg text-white font-medium transition-colors ${
+                  processStatus === 'approved'
                     ? 'bg-green-500 hover:bg-green-600'
                     : 'bg-red-500 hover:bg-red-600'
                 }`}
               >
-                {submitting ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : reviewAction === 'approve' ? (
-                  <CheckCircle2 size={14} />
-                ) : (
-                  <XCircle size={14} />
-                )}
-                确认{reviewAction === 'approve' ? '通过' : '驳回'}
+                确认{processStatus === 'approved' ? '通过' : '拒绝'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {batchModalOpen && batchAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setBatchModalOpen(false)}
-          />
-          <div className="relative bg-carbon-800 rounded-2xl border border-carbon-500/30 w-full max-w-md p-6 shadow-2xl animate-scale-in">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-moto-orange/10 flex items-center justify-center shrink-0">
-                <ListChecks size={20} className="text-moto-orange" />
-              </div>
-              <div>
-                <h3 className="font-orbitron text-moto-silver text-lg">批量操作确认</h3>
-                <p className="text-xs text-moto-steel mt-0.5">
-                  将对 {selectedIds.length} 个配件执行操作
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-carbon-700/50 rounded-lg p-4 mb-5 border border-carbon-500/20">
-              <p className="text-sm text-moto-silver mb-2">
-                即将将以下配件状态变更为：
-              </p>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border ${STATUS_BADGE[batchAction].className}`}
-              >
-                {STATUS_BADGE[batchAction].label}
-              </span>
-              <div className="mt-3 max-h-24 overflow-y-auto space-y-1">
-                {selectedParts.slice(0, 5).map((p) => (
-                  <p key={p.id} className="text-xs text-moto-steel truncate">
-                    • {p.name} ({p.sku})
-                  </p>
-                ))}
-                {selectedParts.length > 5 && (
-                  <p className="text-xs text-moto-steel">
-                    ...还有 {selectedParts.length - 5} 个配件
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="mb-5">
-              <label className="block text-xs text-moto-steel mb-1.5">
-                <MessageSquare size={10} className="inline mr-1" />
-                操作原因（可选）
-              </label>
-              <textarea
-                value={batchReason}
-                onChange={(e) => setBatchReason(e.target.value)}
-                placeholder="请输入操作原因..."
-                rows={3}
-                className="w-full bg-carbon-900 border border-carbon-500/30 rounded-lg px-3 py-2 text-sm text-moto-silver placeholder:text-carbon-500 focus:outline-none focus:ring-1 focus:ring-moto-orange focus:border-moto-orange transition-colors resize-none"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3">
-              <button
-                onClick={() => setBatchModalOpen(false)}
-                className="px-4 py-2 bg-carbon-700 text-moto-steel rounded-lg text-sm hover:bg-carbon-600 hover:text-moto-silver transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleBatchAction}
-                disabled={submitting}
-                className="flex items-center gap-2 px-4 py-2 bg-moto-orange text-white rounded-lg text-sm hover:bg-moto-orange-light transition-colors shadow-lg shadow-moto-orange/20 disabled:opacity-50"
-              >
-                {submitting ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Check size={14} />
-                )}
-                确认执行
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {previewOpen && previewPart && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setPreviewOpen(false)}
-          />
-          <div className="relative bg-carbon-800 rounded-2xl border border-carbon-500/30 w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl animate-scale-in">
-            <div className="px-6 py-4 border-b border-carbon-500/20 flex items-center justify-between">
-              <h2 className="font-orbitron text-lg text-moto-silver">配件详情</h2>
-              <button
-                onClick={() => setPreviewOpen(false)}
-                className="p-1.5 rounded-lg text-moto-steel hover:text-moto-silver hover:bg-carbon-700 transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(85vh-64px)]">
-              <div className="flex gap-6 mb-6">
-                <img
-                  src={previewPart.image}
-                  alt={previewPart.name}
-                  className="w-32 h-32 rounded-xl object-cover bg-carbon-700 border border-carbon-500/20 flex-shrink-0"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).src =
-                      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" fill="%236b7280"><rect width="100%" height="100%" fill="%231f2937"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="14">No Image</text></svg>'
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-orbitron text-xl text-moto-silver mb-2">{previewPart.name}</h3>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <span className="px-2 py-0.5 bg-carbon-700 text-moto-steel text-xs rounded">
-                      {previewPart.brand}
-                    </span>
-                    <span className="px-2 py-0.5 bg-carbon-700 text-moto-steel text-xs rounded font-mono">
-                      {previewPart.sku}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 text-xs rounded border ${STATUS_BADGE[previewPart.status].className}`}
-                    >
-                      {STATUS_BADGE[previewPart.status].label}
-                    </span>
-                  </div>
-                  <p className="text-2xl text-moto-orange font-bold">
-                    ¥{previewPart.price.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-carbon-700/50 rounded-lg p-4">
-                  <p className="text-xs text-moto-steel mb-1">库存</p>
-                  <p className="text-moto-silver font-mono">{previewPart.stock}</p>
-                </div>
-                <div className="bg-carbon-700/50 rounded-lg p-4">
-                  <p className="text-xs text-moto-steel mb-1">分类</p>
-                  <p className="text-moto-silver">{getCategoryName(previewPart.categoryId)}</p>
-                </div>
-                {previewPart.originalPrice && (
-                  <div className="bg-carbon-700/50 rounded-lg p-4">
-                    <p className="text-xs text-moto-steel mb-1">原价</p>
-                    <p className="text-moto-silver line-through">¥{previewPart.originalPrice.toLocaleString()}</p>
-                  </div>
-                )}
-                {previewPart.costPrice && (
-                  <div className="bg-carbon-700/50 rounded-lg p-4">
-                    <p className="text-xs text-moto-steel mb-1">成本</p>
-                    <p className="text-moto-silver">¥{previewPart.costPrice.toLocaleString()}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mb-6">
-                <p className="text-xs text-moto-steel mb-2">描述</p>
-                <p className="text-sm text-moto-silver">{previewPart.description}</p>
-              </div>
-
-              {Object.keys(previewPart.specs).length > 0 && (
-                <div className="mb-6">
-                  <p className="text-xs text-moto-steel mb-2">规格参数</p>
-                  <div className="bg-carbon-700/30 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <tbody>
-                        {Object.entries(previewPart.specs).map(([key, value], i) => (
-                          <tr key={key} className={i > 0 ? 'border-t border-carbon-500/20' : ''}>
-                            <td className="px-4 py-2 text-xs text-moto-steel w-32">{key}</td>
-                            <td className="px-4 py-2 text-sm text-moto-silver">{String(value)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {previewPart.reviewRemark && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                  <div className="flex items-start gap-2">
-                    <MessageSquare size={16} className="text-yellow-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-yellow-400 font-medium mb-1">审核备注</p>
-                      <p className="text-xs text-yellow-300/80">{previewPart.reviewRemark}</p>
-                      {previewPart.reviewedBy && (
-                        <p className="text-[10px] text-yellow-300/60 mt-2">
-                          由 {previewPart.reviewedBy} 于{' '}
-                          {previewPart.reviewedAt
-                            ? new Date(previewPart.reviewedAt).toLocaleString('zh-CN')
-                            : ''}{' '}
-                          审核
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -1000,3 +529,5 @@ export default function AdminReviewPage() {
     </div>
   )
 }
+
+export default AdminReviewPage
