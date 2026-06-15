@@ -189,8 +189,8 @@ interface AppState {
   favorites: FavoriteRecord[]
   recentViews: RecentViewRecord[]
   isFavorite: (partId: string) => boolean
-  toggleFavorite: (partId: string) => void
-  addRecentView: (partId: string) => void
+  toggleFavorite: (partId: string) => Promise<void>
+  addRecentView: (partId: string) => Promise<void>
   getFavoriteParts: () => Part[]
   getRecentViewParts: () => Part[]
 
@@ -1481,10 +1481,20 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   isFavorite: (partId) => {
-    return get().favorites.some((f) => f.partId === partId)
+    const { isAuthenticated, userFavorites, favorites } = get()
+    if (isAuthenticated) {
+      return userFavorites.some((f) => f.targetType === 'part' && f.targetId === partId)
+    }
+    return favorites.some((f) => f.partId === partId)
   },
 
-  toggleFavorite: (partId) => {
+  toggleFavorite: async (partId) => {
+    const { isAuthenticated, toggleUserFavorite, allParts } = get()
+    if (isAuthenticated) {
+      const part = allParts.find((p) => p.id === partId)
+      await toggleUserFavorite('part', partId, part?.name)
+      return
+    }
     set((state) => {
       const exists = state.favorites.some((f) => f.partId === partId)
       const next = exists
@@ -1495,7 +1505,16 @@ export const useStore = create<AppState>((set, get) => ({
     })
   },
 
-  addRecentView: (partId) => {
+  addRecentView: async (partId) => {
+    const { isAuthenticated, addUserBrowsingHistory, allParts } = get()
+    if (isAuthenticated) {
+      const part = allParts.find((p) => p.id === partId)
+      await addUserBrowsingHistory({
+        targetType: 'part',
+        targetId: partId,
+        targetName: part?.name,
+      })
+    }
     set((state) => {
       const filtered = state.recentViews.filter((r) => r.partId !== partId)
       const next = [{ partId, viewedAt: new Date().toISOString() }, ...filtered].slice(0, MAX_RECENT_VIEWS)
@@ -1505,14 +1524,26 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   getFavoriteParts: () => {
-    const { favorites, allParts } = get()
+    const { isAuthenticated, userFavorites, favorites, allParts } = get()
+    if (isAuthenticated) {
+      return userFavorites
+        .filter((f) => f.targetType === 'part')
+        .map((f) => allParts.find((p) => p.id === f.targetId))
+        .filter(Boolean) as Part[]
+    }
     return favorites
       .map((f) => allParts.find((p) => p.id === f.partId))
       .filter(Boolean) as Part[]
   },
 
   getRecentViewParts: () => {
-    const { recentViews, allParts } = get()
+    const { isAuthenticated, userBrowsingHistory, recentViews, allParts } = get()
+    if (isAuthenticated) {
+      return userBrowsingHistory
+        .filter((h) => h.targetType === 'part')
+        .map((h) => allParts.find((p) => p.id === h.targetId))
+        .filter(Boolean) as Part[]
+    }
     return recentViews
       .map((r) => allParts.find((p) => p.id === r.partId))
       .filter(Boolean) as Part[]
@@ -1754,6 +1785,21 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   toggleTemplateFavorite: async (templateId) => {
+    const { isAuthenticated, toggleUserFavorite, templates, currentTemplate } = get()
+    if (isAuthenticated) {
+      const template = templates.find((t) => t.id === templateId)
+      const favorited = await toggleUserFavorite('template', templateId, template?.name)
+      set((state) => ({
+        templates: state.templates.map((t) =>
+          t.id === templateId ? { ...t, favoriteCount: t.favoriteCount + (favorited ? 1 : -1) } : t
+        ),
+        currentTemplate:
+          state.currentTemplate?.id === templateId
+            ? { ...state.currentTemplate, favoriteCount: state.currentTemplate.favoriteCount + (favorited ? 1 : -1) }
+            : state.currentTemplate,
+      }))
+      return
+    }
     try {
       const result = await api.toggleTemplateFavorite(templateId)
       set((state) => {
@@ -1844,7 +1890,11 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   isTemplateFavorite: (templateId) => {
-    return get().templateFavorites.includes(templateId)
+    const { isAuthenticated, userFavorites, templateFavorites } = get()
+    if (isAuthenticated) {
+      return userFavorites.some((f) => f.targetType === 'template' && f.targetId === templateId)
+    }
+    return templateFavorites.includes(templateId)
   },
 
   setCurrentSelection: (selection) => {

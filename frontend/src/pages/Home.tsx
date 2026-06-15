@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '@/store/useStore'
 import CategoryNav from '@/components/CategoryNav'
 import PartCard from '@/components/PartCard'
@@ -21,7 +21,17 @@ export default function Home() {
     getFilteredParts,
     getFavoriteParts,
     getRecentViewParts,
+    isAuthenticated,
+    fetchUserFavorites,
+    fetchUserBrowsingHistory,
   } = useStore()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUserFavorites()
+      fetchUserBrowsingHistory()
+    }
+  }, [isAuthenticated])
   const [detailPart, setDetailPart] = useState<Part | null>(null)
 
   const filteredParts = getFilteredParts()

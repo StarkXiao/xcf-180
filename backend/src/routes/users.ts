@@ -940,9 +940,11 @@ router.get('/api/user/stats', (ctx) => {
   const archives = data.archives.filter((a: any) => a.userId === user.id);
   const archivesCount = archives.length;
   const publishedArchivesCount = archives.filter((a: any) => a.status === 'published').length;
-  const collaborations = data.sharedResources.filter(
-    (s: any) => s.collaborators.some((c: any) => c.userId === user.id)
+  const ownedResources = data.sharedResources.filter((s: any) => s.ownerId === user.id).length;
+  const collaboratedResources = data.sharedResources.filter(
+    (s: any) => s.ownerId !== user.id && s.collaborators.some((c: any) => c.userId === user.id)
   ).length;
+  const collaborationsCount = ownedResources + collaboratedResources;
   const totalSpent = archives.reduce((sum: number, a: any) => sum + (a.totalCost || 0), 0);
 
   ctx.body = {
@@ -951,7 +953,7 @@ router.get('/api/user/stats', (ctx) => {
     browsingHistoryCount,
     archivesCount,
     publishedArchivesCount,
-    collaborations,
+    collaborationsCount,
     totalSpent,
   };
 });

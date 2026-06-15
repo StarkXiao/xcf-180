@@ -63,6 +63,8 @@ export default function TemplateDetailPage() {
     currentSelection,
     clearSelection,
     addPartToSelection,
+    addUserBrowsingHistory,
+    isAuthenticated,
   } = useStore()
 
   const [loading, setLoading] = useState(true)
@@ -82,6 +84,13 @@ export default function TemplateDetailPage() {
       if (id) {
         await fetchTemplateDetail(id)
         await checkTemplateCompatibility(id)
+        if (isAuthenticated && currentTemplate) {
+          await addUserBrowsingHistory({
+            targetType: 'template',
+            targetId: id,
+            targetName: currentTemplate.name,
+          })
+        }
       }
       setLoading(false)
     }
