@@ -1363,10 +1363,20 @@ export interface UpdateConstructionScheduleRequest {
 export interface UpdateConstructionTaskRequest {
   status?: ConstructionTask['status']
   assignee?: string
+  assignedTo?: string[]
+  assignedWorkerNames?: string[]
   actualHours?: number
+  estimatedHours?: number
   actualStartAt?: string
   actualEndAt?: string
+  completedAt?: string
   remark?: string
+  name?: string
+  description?: string
+  priority?: RequirementPriority
+  order?: number
+  startDate?: string
+  endDate?: string
 }
 
 export type ReceptionStatus = 'in_progress' | 'completed' | 'cancelled'

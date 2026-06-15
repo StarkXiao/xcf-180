@@ -16,15 +16,25 @@ function saveSelections(selections: any[]) {
   fs.writeFileSync(SELECTIONS_FILE, JSON.stringify(selections, null, 2), 'utf8')
 }
 
-function loadJSON<T>(filename: string): T[] {
+function loadJSON<T>(filename: string, key: string): T[] {
   const file = path.join(DATA_DIR, filename)
   if (!fs.existsSync(file)) return []
-  return JSON.parse(fs.readFileSync(file, 'utf8'))
+  const data = JSON.parse(fs.readFileSync(file, 'utf8'))
+  if (Array.isArray(data)) return data
+  return data[key] || []
 }
 
-function saveJSON<T>(filename: string, data: T[]) {
+function saveJSON<T>(filename: string, key: string, data: T[]) {
   const file = path.join(DATA_DIR, filename)
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8')
+  let obj: any = {}
+  if (fs.existsSync(file)) {
+    const existing = JSON.parse(fs.readFileSync(file, 'utf8'))
+    if (existing && typeof existing === 'object' && !Array.isArray(existing)) {
+      obj = existing
+    }
+  }
+  obj[key] = data
+  fs.writeFileSync(file, JSON.stringify(obj, null, 2), 'utf8')
 }
 
 function generateId(prefix: string): string {
@@ -155,7 +165,7 @@ router.post('/selections/:id/create-quote', (ctx) => {
     return
   }
 
-  const quotes = loadJSON<any>('quotes.json')
+  const quotes = loadJSON<any>('quotes.json', 'quotes')
   const body = ctx.request.body as any
 
   const quoteItems = selection.items.map((item: any) => {
@@ -240,13 +250,13 @@ router.post('/selections/:id/create-quote', (ctx) => {
   }
 
   quotes.unshift(quote)
-  saveJSON('quotes.json', quotes)
+  saveJSON('quotes.json', 'quotes', quotes)
   ctx.body = quote
 })
 
 router.post('/create-quote', (ctx) => {
   const body = ctx.request.body as any
-  const quotes = loadJSON<any>('quotes.json')
+  const quotes = loadJSON<any>('quotes.json', 'quotes')
 
   const inputItems = body.items || []
   const quoteItems = inputItems.map((item: any) => {
@@ -340,13 +350,13 @@ router.post('/create-quote', (ctx) => {
   }
 
   quotes.unshift(quote)
-  saveJSON('quotes.json', quotes)
+  saveJSON('quotes.json', 'quotes', quotes)
   ctx.body = quote
 })
 
 router.get('/quotes', (ctx) => {
   const { customerId } = ctx.query
-  let quotes = loadJSON<any>('quotes.json')
+  let quotes = loadJSON<any>('quotes.json', 'quotes')
   if (customerId) {
     quotes = quotes.filter((q) => q.customerId === customerId)
   }
@@ -354,7 +364,7 @@ router.get('/quotes', (ctx) => {
 })
 
 router.put('/quotes/:id', (ctx) => {
-  const quotes = loadJSON<any>('quotes.json')
+  const quotes = loadJSON<any>('quotes.json', 'quotes')
   const idx = quotes.findIndex((q) => q.id === ctx.params.id)
   if (idx === -1) {
     ctx.status = 404
@@ -412,15 +422,15 @@ router.put('/quotes/:id', (ctx) => {
     plans: updatedPlans,
     updatedAt: new Date().toISOString(),
   }
-  saveJSON('quotes.json', quotes)
+  saveJSON('quotes.json', 'quotes', quotes)
   ctx.body = quotes[idx]
 })
 
 router.get('/quotes/:id/details', (ctx) => {
-  const quotes = loadJSON<any>('quotes.json')
-  const customers = loadJSON<any>('customers.json')
-  const requirements = loadJSON<any>('requirements.json')
-  const schedules = loadJSON<any>('schedules.json')
+  const quotes = loadJSON<any>('quotes.json', 'quotes')
+  const customers = loadJSON<any>('customers.json', 'customers')
+  const requirements = loadJSON<any>('requirements.json', 'requirements')
+  const schedules = loadJSON<any>('schedules.json', 'schedules')
 
   const quote = quotes.find((q) => q.id === ctx.params.id)
   if (!quote) {
@@ -440,8 +450,8 @@ router.get('/quotes/:id/details', (ctx) => {
 
 router.post('/quotes/create-schedule', (ctx) => {
   const body = ctx.request.body as any
-  const schedules = loadJSON<any>('schedules.json')
-  const quotes = loadJSON<any>('quotes.json')
+  const schedules = loadJSON<any>('schedules.json', 'schedules')
+  const quotes = loadJSON<any>('quotes.json', 'quotes')
 
   const quote = quotes.find((q) => q.id === body.quoteId)
   const plan = quote?.plans?.find((p: any) => p.id === quote.activePlanId) || quote?.plans?.[0]
@@ -574,14 +584,14 @@ router.post('/quotes/create-schedule', (ctx) => {
   }
 
   schedules.unshift(schedule)
-  saveJSON('schedules.json', schedules)
+  saveJSON('schedules.json', 'schedules', schedules)
 
   if (quote) {
     const quoteIdx = quotes.findIndex((q) => q.id === body.quoteId)
     if (quoteIdx !== -1) {
       quotes[quoteIdx].convertedScheduleId = schedule.id
       quotes[quoteIdx].updatedAt = new Date().toISOString()
-      saveJSON('quotes.json', quotes)
+      saveJSON('quotes.json', 'quotes', quotes)
     }
   }
 
