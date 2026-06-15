@@ -1,0 +1,51 @@
+{
+  "requirements": [
+    {
+      "id": "req_001",
+      "customerId": "cust_001",
+      "customerName": "张三",
+      "vehicleId": "veh_001",
+      "vehicleInfo": "京A·12345 / XCF-180",
+      "items": [
+        {
+          "id": "item_001",
+          "type": "performance",
+          "description": "希望提升车辆加速性能，需要更换高性能排气管",
+          "priority": "high",
+          "budgetRange": { "min": 8000, "max": 15000 },
+          "preferredBrands": ["Akrapovic", "Arrow"],
+          "remark": "要钛合金材质"
+        },
+        {
+          "id": "item_002",
+          "type": "safety",
+          "description": "制动系统升级，更换更好的刹车卡钳和刹车片",
+          "priority": "urgent",
+          "budgetRange": { "min": 12000, "max": 20000 },
+          "preferredBrands": ["Brembo"],
+          "remark": ""
+        },
+        {
+          "id": "item_003",
+          "type": "appearance",
+          "description": "外观装饰件，希望增加个性化元素",
+          "priority": "medium",
+          "budgetRange": { "min": 3000, "max": 8000 },
+          "preferredBrands": [],
+          "remark": "碳纤维材质优先"
+        }
+      ],
+      "overallBudget": { "min": 30000, "max": 50000 },
+      "expectedDeliveryDate": "2026-07-15",
+      "stylePreference": "赛道风格，黑色系为主",
+      "usageScenario": "日常通勤 + 周末赛道日",
+      "specialRequirements": "希望能够分阶段施工",
+      "recordedBy": "admin",
+      "recordedAt": "2026-06-10T10:00:00.000Z",
+      "remark": "客户对品质要求很高",
+      "status": "in_progress",
+      "createdAt": "2026-06-10T10:00:00.000Z",
+      "updatedAt": "2026-06-12T14:30:00.000Z"
+    }
+  ]
+}

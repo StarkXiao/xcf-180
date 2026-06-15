@@ -1,0 +1,80 @@
+{
+  "customers": [
+    {
+      "id": "cust_001",
+      "name": "张三",
+      "phone": "13800001111",
+      "contact": "张先生",
+      "email": "zhangsan@example.com",
+      "gender": "male",
+      "birthday": "1990-05-15",
+      "address": "北京市朝阳区建国路88号",
+      "level": "gold",
+      "source": "walk_in",
+      "sourceRemark": "",
+      "tags": ["性能发烧友", "老客户"],
+      "remark": "偏好进口品牌配件",
+      "vehicles": [
+        {
+          "id": "veh_001",
+          "customerId": "cust_001",
+          "licensePlate": "京A·12345",
+          "modelId": "xcf-180",
+          "modelName": "XCF-180",
+          "vin": "LGBH12E09NY123456",
+          "mileage": 12580,
+          "purchaseDate": "2025-03-20",
+          "lastServiceDate": "2026-04-10",
+          "color": "哑光黑",
+          "remark": "",
+          "createdAt": "2026-01-15T10:00:00.000Z",
+          "updatedAt": "2026-04-10T08:30:00.000Z"
+        }
+      ],
+      "totalSpent": 58600,
+      "totalVisits": 8,
+      "lastVisitAt": "2026-05-20T14:30:00.000Z",
+      "createdBy": "admin",
+      "createdAt": "2026-01-15T10:00:00.000Z",
+      "updatedAt": "2026-05-20T14:30:00.000Z"
+    },
+    {
+      "id": "cust_002",
+      "name": "李四",
+      "phone": "13900002222",
+      "contact": "李女士",
+      "email": "lisi@example.com",
+      "gender": "female",
+      "birthday": "1995-08-22",
+      "address": "上海市浦东新区陆家嘴环路1000号",
+      "level": "silver",
+      "source": "online",
+      "sourceRemark": "官网预约",
+      "tags": ["外观控", "新手"],
+      "remark": "注重外观和舒适性",
+      "vehicles": [
+        {
+          "id": "veh_002",
+          "customerId": "cust_002",
+          "licensePlate": "沪B·67890",
+          "modelId": "xcf-180",
+          "modelName": "XCF-180",
+          "vin": "LGBH12E09NY654321",
+          "mileage": 3200,
+          "purchaseDate": "2026-02-10",
+          "lastServiceDate": "",
+          "color": "珍珠白",
+          "remark": "",
+          "createdAt": "2026-03-01T09:00:00.000Z",
+          "updatedAt": "2026-03-01T09:00:00.000Z"
+        }
+      ],
+      "totalSpent": 18500,
+      "totalVisits": 3,
+      "lastVisitAt": "2026-05-15T11:00:00.000Z",
+      "createdBy": "admin",
+      "createdAt": "2026-03-01T09:00:00.000Z",
+      "updatedAt": "2026-05-15T11:00:00.000Z"
+    }
+  ]
+}

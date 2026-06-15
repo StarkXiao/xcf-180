@@ -70,6 +70,23 @@ import type {
   UpdateModificationArchiveRequest,
   SharedResource,
   UserStats,
+  Customer,
+  CustomerVehicle,
+  CreateCustomerRequest,
+  UpdateCustomerRequest,
+  CustomerLevel,
+  CustomerSource,
+  RequirementRecord,
+  CreateRequirementRequest,
+  UpdateRequirementRequest,
+  RequirementType,
+  RequirementPriority,
+  ConstructionSchedule,
+  CreateConstructionScheduleRequest,
+  UpdateConstructionScheduleRequest,
+  UpdateConstructionTaskRequest,
+  ConstructionTask,
+  ConstructionPhase,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -383,6 +400,58 @@ interface AppState {
   removeCollaborator: (sharedId: string, userId: string) => Promise<void>
 
   fetchUserStats: () => Promise<void>
+
+  customers: Customer[]
+  customersLoading: boolean
+  currentCustomer: Customer | null
+  customerSearchKeyword: string
+  customerFilterLevel: CustomerLevel | 'all'
+  customerFilterSource: CustomerSource | 'all'
+
+  fetchCustomers: (params?: { keyword?: string; level?: string; source?: string; phone?: string }) => Promise<void>
+  fetchCustomerDetail: (id: string) => Promise<void>
+  createCustomer: (data: CreateCustomerRequest) => Promise<Customer | undefined>
+  updateCustomer: (id: string, data: UpdateCustomerRequest) => Promise<Customer | undefined>
+  deleteCustomer: (id: string) => Promise<void>
+  addCustomerVehicle: (customerId: string, data: Omit<CustomerVehicle, 'id' | 'customerId' | 'createdAt' | 'updatedAt'>) => Promise<CustomerVehicle | undefined>
+  updateCustomerVehicle: (customerId: string, vehicleId: string, data: Partial<CustomerVehicle>) => Promise<CustomerVehicle | undefined>
+  deleteCustomerVehicle: (customerId: string, vehicleId: string) => Promise<void>
+  setCurrentCustomer: (customer: Customer | null) => void
+  setCustomerSearchKeyword: (keyword: string) => void
+  setCustomerFilterLevel: (level: CustomerLevel | 'all') => void
+  setCustomerFilterSource: (source: CustomerSource | 'all') => void
+  getFilteredCustomers: () => Customer[]
+  getCustomerById: (id: string) => Customer | undefined
+
+  requirements: RequirementRecord[]
+  requirementsLoading: boolean
+  currentRequirement: RequirementRecord | null
+
+  fetchRequirements: (params?: { customerId?: string; status?: string; vehicleId?: string }) => Promise<void>
+  fetchRequirementDetail: (id: string) => Promise<void>
+  createRequirement: (data: CreateRequirementRequest) => Promise<RequirementRecord | undefined>
+  updateRequirement: (id: string, data: UpdateRequirementRequest) => Promise<RequirementRecord | undefined>
+  deleteRequirement: (id: string) => Promise<void>
+  setCurrentRequirement: (requirement: RequirementRecord | null) => void
+  getRequirementsByCustomer: (customerId: string) => RequirementRecord[]
+  getRequirementById: (id: string) => RequirementRecord | undefined
+
+  schedules: ConstructionSchedule[]
+  schedulesLoading: boolean
+  currentSchedule: ConstructionSchedule | null
+
+  fetchSchedules: (params?: { customerId?: string; status?: string; date?: string }) => Promise<void>
+  fetchScheduleDetail: (id: string) => Promise<void>
+  createSchedule: (data: CreateConstructionScheduleRequest) => Promise<ConstructionSchedule | undefined>
+  updateSchedule: (id: string, data: UpdateConstructionScheduleRequest) => Promise<ConstructionSchedule | undefined>
+  deleteSchedule: (id: string) => Promise<void>
+  updateScheduleTask: (scheduleId: string, taskId: string, data: UpdateConstructionTaskRequest) => Promise<ConstructionSchedule | undefined>
+  setCurrentSchedule: (schedule: ConstructionSchedule | null) => void
+  getSchedulesByCustomer: (customerId: string) => ConstructionSchedule[]
+  getScheduleById: (id: string) => ConstructionSchedule | undefined
+
+  receptionActiveTab: 'customer' | 'requirement' | 'selection' | 'budget' | 'schedule'
+  setReceptionActiveTab: (tab: 'customer' | 'requirement' | 'selection' | 'budget' | 'schedule') => void
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -470,6 +539,23 @@ export const useStore = create<AppState>((set, get) => ({
   userSharedResources: { owned: [], collaborated: [] },
   userStats: null,
   userDataLoading: false,
+
+  customers: [],
+  customersLoading: false,
+  currentCustomer: null,
+  customerSearchKeyword: '',
+  customerFilterLevel: 'all',
+  customerFilterSource: 'all',
+
+  requirements: [],
+  requirementsLoading: false,
+  currentRequirement: null,
+
+  schedules: [],
+  schedulesLoading: false,
+  currentSchedule: null,
+
+  receptionActiveTab: 'customer',
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -2783,4 +2869,324 @@ export const useStore = create<AppState>((set, get) => ({
       console.error('Failed to fetch user stats:', e)
     }
   },
+
+  fetchCustomers: async (params) => {
+    set({ customersLoading: true })
+    try {
+      const customers = await api.getCustomers(params)
+      set({ customers, customersLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch customers:', e)
+      set({ customersLoading: false })
+    }
+  },
+
+  fetchCustomerDetail: async (id) => {
+    try {
+      const customer = await api.getCustomer(id)
+      set({ currentCustomer: customer })
+    } catch (e) {
+      console.error('Failed to fetch customer detail:', e)
+    }
+  },
+
+  createCustomer: async (data) => {
+    try {
+      const customer = await api.createCustomer(data)
+      set((state) => ({
+        customers: [customer, ...state.customers],
+        currentCustomer: customer,
+      }))
+      return customer
+    } catch (e) {
+      console.error('Failed to create customer:', e)
+    }
+  },
+
+  updateCustomer: async (id, data) => {
+    try {
+      const customer = await api.updateCustomer(id, data)
+      set((state) => ({
+        customers: state.customers.map((c) => (c.id === id ? customer : c)),
+        currentCustomer: state.currentCustomer?.id === id ? customer : state.currentCustomer,
+      }))
+      return customer
+    } catch (e) {
+      console.error('Failed to update customer:', e)
+    }
+  },
+
+  deleteCustomer: async (id) => {
+    try {
+      await api.deleteCustomer(id)
+      set((state) => ({
+        customers: state.customers.filter((c) => c.id !== id),
+        currentCustomer: state.currentCustomer?.id === id ? null : state.currentCustomer,
+      }))
+    } catch (e) {
+      console.error('Failed to delete customer:', e)
+    }
+  },
+
+  addCustomerVehicle: async (customerId, data) => {
+    try {
+      const vehicle = await api.addCustomerVehicle(customerId, data)
+      set((state) => ({
+        customers: state.customers.map((c) =>
+          c.id === customerId
+            ? { ...c, vehicles: [...c.vehicles, vehicle], updatedAt: new Date().toISOString() }
+            : c
+        ),
+        currentCustomer:
+          state.currentCustomer?.id === customerId
+            ? {
+                ...state.currentCustomer,
+                vehicles: [...state.currentCustomer.vehicles, vehicle],
+                updatedAt: new Date().toISOString(),
+              }
+            : state.currentCustomer,
+      }))
+      return vehicle
+    } catch (e) {
+      console.error('Failed to add customer vehicle:', e)
+    }
+  },
+
+  updateCustomerVehicle: async (customerId, vehicleId, data) => {
+    try {
+      const vehicle = await api.updateCustomerVehicle(customerId, vehicleId, data)
+      set((state) => ({
+        customers: state.customers.map((c) =>
+          c.id === customerId
+            ? {
+                ...c,
+                vehicles: c.vehicles.map((v) => (v.id === vehicleId ? vehicle : v)),
+                updatedAt: new Date().toISOString(),
+              }
+            : c
+        ),
+        currentCustomer:
+          state.currentCustomer?.id === customerId
+            ? {
+                ...state.currentCustomer,
+                vehicles: state.currentCustomer.vehicles.map((v) =>
+                  v.id === vehicleId ? vehicle : v
+                ),
+                updatedAt: new Date().toISOString(),
+              }
+            : state.currentCustomer,
+      }))
+      return vehicle
+    } catch (e) {
+      console.error('Failed to update customer vehicle:', e)
+    }
+  },
+
+  deleteCustomerVehicle: async (customerId, vehicleId) => {
+    try {
+      await api.deleteCustomerVehicle(customerId, vehicleId)
+      set((state) => ({
+        customers: state.customers.map((c) =>
+          c.id === customerId
+            ? {
+                ...c,
+                vehicles: c.vehicles.filter((v) => v.id !== vehicleId),
+                updatedAt: new Date().toISOString(),
+              }
+            : c
+        ),
+        currentCustomer:
+          state.currentCustomer?.id === customerId
+            ? {
+                ...state.currentCustomer,
+                vehicles: state.currentCustomer.vehicles.filter((v) => v.id !== vehicleId),
+                updatedAt: new Date().toISOString(),
+              }
+            : state.currentCustomer,
+      }))
+    } catch (e) {
+      console.error('Failed to delete customer vehicle:', e)
+    }
+  },
+
+  setCurrentCustomer: (customer) => set({ currentCustomer: customer }),
+  setCustomerSearchKeyword: (keyword) => set({ customerSearchKeyword: keyword }),
+  setCustomerFilterLevel: (level) => set({ customerFilterLevel: level }),
+  setCustomerFilterSource: (source) => set({ customerFilterSource: source }),
+
+  getFilteredCustomers: () => {
+    const { customers, customerSearchKeyword, customerFilterLevel, customerFilterSource } = get()
+    let result = [...customers]
+    if (customerSearchKeyword) {
+      const q = customerSearchKeyword.toLowerCase()
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.phone.includes(q) ||
+          (c.contact && c.contact.toLowerCase().includes(q))
+      )
+    }
+    if (customerFilterLevel !== 'all') {
+      result = result.filter((c) => c.level === customerFilterLevel)
+    }
+    if (customerFilterSource !== 'all') {
+      result = result.filter((c) => c.source === customerFilterSource)
+    }
+    return result
+  },
+
+  getCustomerById: (id) => {
+    return get().customers.find((c) => c.id === id)
+  },
+
+  fetchRequirements: async (params) => {
+    set({ requirementsLoading: true })
+    try {
+      const requirements = await api.getRequirements(params)
+      set({ requirements, requirementsLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch requirements:', e)
+      set({ requirementsLoading: false })
+    }
+  },
+
+  fetchRequirementDetail: async (id) => {
+    try {
+      const req = await api.getRequirement(id)
+      set({ currentRequirement: req })
+    } catch (e) {
+      console.error('Failed to fetch requirement detail:', e)
+    }
+  },
+
+  createRequirement: async (data) => {
+    try {
+      const req = await api.createRequirement(data)
+      set((state) => ({
+        requirements: [req, ...state.requirements],
+        currentRequirement: req,
+      }))
+      return req
+    } catch (e) {
+      console.error('Failed to create requirement:', e)
+    }
+  },
+
+  updateRequirement: async (id, data) => {
+    try {
+      const req = await api.updateRequirement(id, data)
+      set((state) => ({
+        requirements: state.requirements.map((r) => (r.id === id ? req : r)),
+        currentRequirement: state.currentRequirement?.id === id ? req : state.currentRequirement,
+      }))
+      return req
+    } catch (e) {
+      console.error('Failed to update requirement:', e)
+    }
+  },
+
+  deleteRequirement: async (id) => {
+    try {
+      await api.deleteRequirement(id)
+      set((state) => ({
+        requirements: state.requirements.filter((r) => r.id !== id),
+        currentRequirement: state.currentRequirement?.id === id ? null : state.currentRequirement,
+      }))
+    } catch (e) {
+      console.error('Failed to delete requirement:', e)
+    }
+  },
+
+  setCurrentRequirement: (requirement) => set({ currentRequirement: requirement }),
+
+  getRequirementsByCustomer: (customerId) => {
+    return get().requirements.filter((r) => r.customerId === customerId)
+  },
+
+  getRequirementById: (id) => {
+    return get().requirements.find((r) => r.id === id)
+  },
+
+  fetchSchedules: async (params) => {
+    set({ schedulesLoading: true })
+    try {
+      const schedules = await api.getSchedules(params)
+      set({ schedules, schedulesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch schedules:', e)
+      set({ schedulesLoading: false })
+    }
+  },
+
+  fetchScheduleDetail: async (id) => {
+    try {
+      const schedule = await api.getSchedule(id)
+      set({ currentSchedule: schedule })
+    } catch (e) {
+      console.error('Failed to fetch schedule detail:', e)
+    }
+  },
+
+  createSchedule: async (data) => {
+    try {
+      const schedule = await api.createSchedule(data)
+      set((state) => ({
+        schedules: [schedule, ...state.schedules],
+        currentSchedule: schedule,
+      }))
+      return schedule
+    } catch (e) {
+      console.error('Failed to create schedule:', e)
+    }
+  },
+
+  updateSchedule: async (id, data) => {
+    try {
+      const schedule = await api.updateSchedule(id, data)
+      set((state) => ({
+        schedules: state.schedules.map((s) => (s.id === id ? schedule : s)),
+        currentSchedule: state.currentSchedule?.id === id ? schedule : state.currentSchedule,
+      }))
+      return schedule
+    } catch (e) {
+      console.error('Failed to update schedule:', e)
+    }
+  },
+
+  deleteSchedule: async (id) => {
+    try {
+      await api.deleteSchedule(id)
+      set((state) => ({
+        schedules: state.schedules.filter((s) => s.id !== id),
+        currentSchedule: state.currentSchedule?.id === id ? null : state.currentSchedule,
+      }))
+    } catch (e) {
+      console.error('Failed to delete schedule:', e)
+    }
+  },
+
+  updateScheduleTask: async (scheduleId, taskId, data) => {
+    try {
+      const schedule = await api.updateScheduleTask(scheduleId, taskId, data)
+      set((state) => ({
+        schedules: state.schedules.map((s) => (s.id === scheduleId ? schedule : s)),
+        currentSchedule: state.currentSchedule?.id === scheduleId ? schedule : state.currentSchedule,
+      }))
+      return schedule
+    } catch (e) {
+      console.error('Failed to update schedule task:', e)
+    }
+  },
+
+  setCurrentSchedule: (schedule) => set({ currentSchedule: schedule }),
+
+  getSchedulesByCustomer: (customerId) => {
+    return get().schedules.filter((s) => s.customerId === customerId)
+  },
+
+  getScheduleById: (id) => {
+    return get().schedules.find((s) => s.id === id)
+  },
+
+  setReceptionActiveTab: (tab) => set({ receptionActiveTab: tab }),
 }))

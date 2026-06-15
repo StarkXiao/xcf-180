@@ -6,6 +6,8 @@ export interface Category {
   description?: string
   sortOrder?: number
   isActive?: boolean
+  status?: 'active' | 'inactive'
+  visible?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -145,10 +147,20 @@ export interface Part {
   categoryId: string
   price: number
   image: string
+  imageUrl?: string
   description: string
   specs: Record<string, string | boolean | number>
   compatibleModels: string[]
   position: PartPosition
+  model?: string
+  inStock?: boolean
+  status?: PartStatus
+  isFeatured?: boolean
+  discount?: number
+  rating?: number
+  tags?: string[]
+  originalPrice?: number
+  stock?: number
 }
 
 export type SortOption =
@@ -1099,5 +1111,348 @@ export interface UserStats {
   publishedArchivesCount: number
   collaborationsCount: number
   totalSpent: number
+}
+
+export type CustomerSource = 'walk_in' | 'phone' | 'online' | 'referral' | 'social_media' | 'other'
+
+export type CustomerLevel = 'normal' | 'silver' | 'gold' | 'platinum'
+
+export interface CustomerVehicle {
+  id: string
+  customerId: string
+  licensePlate: string
+  modelId: string
+  modelName: string
+  vin?: string
+  mileage?: number
+  purchaseDate?: string
+  lastServiceDate?: string
+  color?: string
+  remark?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Customer {
+  id: string
+  name: string
+  phone: string
+  contact?: string
+  email?: string
+  gender?: 'male' | 'female' | 'other'
+  birthday?: string
+  address?: string
+  level: CustomerLevel
+  source: CustomerSource
+  sourceRemark?: string
+  tags: string[]
+  remark?: string
+  vehicles: CustomerVehicle[]
+  totalSpent: number
+  totalVisits: number
+  lastVisitAt?: string
+  createdBy?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateCustomerRequest {
+  name: string
+  phone: string
+  contact?: string
+  email?: string
+  gender?: 'male' | 'female' | 'other'
+  birthday?: string
+  address?: string
+  level?: CustomerLevel
+  source?: CustomerSource
+  sourceRemark?: string
+  tags?: string[]
+  remark?: string
+  vehicle?: Omit<CustomerVehicle, 'id' | 'customerId' | 'createdAt' | 'updatedAt'>
+}
+
+export interface UpdateCustomerRequest {
+  name?: string
+  phone?: string
+  contact?: string
+  email?: string
+  gender?: 'male' | 'female' | 'other'
+  birthday?: string
+  address?: string
+  level?: CustomerLevel
+  source?: CustomerSource
+  sourceRemark?: string
+  tags?: string[]
+  remark?: string
+}
+
+export type RequirementPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+export type RequirementType = 'appearance' | 'performance' | 'comfort' | 'safety' | 'audio' | 'lighting' | 'other'
+
+export interface RequirementItem {
+  id: string
+  type: RequirementType
+  description: string
+  priority: RequirementPriority
+  budgetRange?: { min: number; max: number }
+  preferredBrands?: string[]
+  remark?: string
+}
+
+export interface RequirementRecord {
+  id: string
+  customerId: string
+  customerName: string
+  vehicleId?: string
+  vehicleInfo?: string
+  items: RequirementItem[]
+  overallBudget?: { min: number; max: number }
+  expectedDeliveryDate?: string
+  stylePreference?: string
+  usageScenario?: string
+  specialRequirements?: string
+  recordedBy: string
+  recordedAt: string
+  remark?: string
+  status: 'draft' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateRequirementRequest {
+  customerId: string
+  vehicleId?: string
+  items: Omit<RequirementItem, 'id'>[]
+  overallBudget?: { min: number; max: number }
+  expectedDeliveryDate?: string
+  stylePreference?: string
+  usageScenario?: string
+  specialRequirements?: string
+  remark?: string
+}
+
+export interface UpdateRequirementRequest {
+  items?: RequirementItem[]
+  overallBudget?: { min: number; max: number }
+  expectedDeliveryDate?: string
+  stylePreference?: string
+  usageScenario?: string
+  specialRequirements?: string
+  remark?: string
+  status?: RequirementRecord['status']
+}
+
+export type ConstructionPhase = 'inspection' | 'disassembly' | 'parts_prep' | 'installation' | 'testing' | 'reassembly' | 'final_check' | 'completed'
+
+export const CONSTRUCTION_PHASE_ORDER: ConstructionPhase[] = [
+  'inspection',
+  'disassembly',
+  'parts_prep',
+  'installation',
+  'testing',
+  'reassembly',
+  'final_check',
+  'completed',
+]
+
+export const CONSTRUCTION_PHASE_LABELS: Record<ConstructionPhase, string> = {
+  inspection: '车辆检查',
+  disassembly: '部件拆卸',
+  parts_prep: '配件准备',
+  installation: '安装施工',
+  testing: '调试测试',
+  reassembly: '复原装车',
+  final_check: '终检验收',
+  completed: '施工完成',
+}
+
+export type ConstructionTaskStatus = 'pending' | 'in_progress' | 'paused' | 'completed' | 'blocked'
+
+export const CONSTRUCTION_TASK_STATUS_COLORS: Record<ConstructionTaskStatus, string> = {
+  pending: 'text-gray-400 bg-gray-500/10',
+  in_progress: 'text-blue-400 bg-blue-500/10',
+  paused: 'text-yellow-400 bg-yellow-500/10',
+  completed: 'text-green-400 bg-green-500/10',
+  blocked: 'text-red-400 bg-red-500/10',
+}
+
+export interface ConstructionTask {
+  id: string
+  phase: ConstructionPhase
+  name: string
+  description?: string
+  assignee?: string
+  assignedTo?: string[]
+  assignedWorkerNames?: string[]
+  estimatedHours: number
+  actualHours?: number
+  status: ConstructionTaskStatus
+  startAt?: string
+  endAt?: string
+  actualStartAt?: string
+  actualEndAt?: string
+  completedAt?: string
+  remark?: string
+  dependencies?: string[]
+  priority?: RequirementPriority
+  order?: number
+  startDate?: string
+  endDate?: string
+}
+
+export interface ConstructionSchedule {
+  id: string
+  orderId?: string
+  quoteId?: string
+  customerId: string
+  customerName: string
+  vehicleId?: string
+  vehicleInfo?: string
+  tasks: ConstructionTask[]
+  plannedStartDate: string
+  plannedEndDate: string
+  actualStartDate?: string
+  actualEndDate?: string
+  totalEstimatedHours: number
+  totalActualHours?: number
+  progress: number
+  status: 'scheduled' | 'in_progress' | 'completed' | 'delayed' | 'cancelled'
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+  remark?: string
+}
+
+export interface CreateConstructionScheduleRequest {
+  orderId?: string
+  quoteId?: string
+  customerId: string
+  vehicleId?: string
+  tasks: Omit<ConstructionTask, 'id'>[]
+  plannedStartDate: string
+  plannedEndDate: string
+  remark?: string
+}
+
+export interface UpdateConstructionScheduleRequest {
+  tasks?: ConstructionTask[]
+  plannedStartDate?: string
+  plannedEndDate?: string
+  status?: ConstructionSchedule['status']
+  remark?: string
+}
+
+export interface UpdateConstructionTaskRequest {
+  status?: ConstructionTask['status']
+  assignee?: string
+  actualHours?: number
+  actualStartAt?: string
+  actualEndAt?: string
+  remark?: string
+}
+
+export type ReceptionStatus = 'in_progress' | 'completed' | 'cancelled'
+
+export interface ReceptionSession {
+  id: string
+  sessionNo: string
+  customerId?: string
+  customerName?: string
+  customerPhone?: string
+  vehicleId?: string
+  vehicleInfo?: string
+  requirementId?: string
+  selectionId?: string
+  quoteId?: string
+  orderId?: string
+  scheduleId?: string
+  status: ReceptionStatus
+  salesPerson: string
+  startedAt: string
+  completedAt?: string
+  remark?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export const CUSTOMER_LEVEL_LABELS: Record<CustomerLevel, string> = {
+  normal: '普通客户',
+  silver: '银卡会员',
+  gold: '金卡会员',
+  platinum: '铂金会员',
+}
+
+export const CUSTOMER_LEVEL_COLORS: Record<CustomerLevel, string> = {
+  normal: 'text-gray-400 bg-gray-500/10 border-gray-500/30',
+  silver: 'text-slate-300 bg-slate-400/10 border-slate-400/30',
+  gold: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+  platinum: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
+}
+
+export const CUSTOMER_SOURCE_LABELS: Record<CustomerSource, string> = {
+  walk_in: '到店咨询',
+  phone: '电话咨询',
+  online: '网络预约',
+  referral: '客户推荐',
+  social_media: '社交媒体',
+  other: '其他渠道',
+}
+
+export const REQUIREMENT_TYPE_LABELS: Record<RequirementType, string> = {
+  appearance: '外观改装',
+  performance: '性能提升',
+  comfort: '舒适升级',
+  safety: '安全强化',
+  audio: '音响系统',
+  lighting: '灯光升级',
+  other: '其他需求',
+}
+
+export const REQUIREMENT_PRIORITY_LABELS: Record<RequirementPriority, string> = {
+  low: '低',
+  medium: '中',
+  high: '高',
+  urgent: '紧急',
+}
+
+export const REQUIREMENT_PRIORITY_COLORS: Record<RequirementPriority, string> = {
+  low: 'text-gray-400 bg-gray-500/10',
+  medium: 'text-blue-400 bg-blue-500/10',
+  high: 'text-orange-400 bg-orange-500/10',
+  urgent: 'text-red-400 bg-red-500/10',
+}
+
+export const SCHEDULE_STATUS_LABELS: Record<ConstructionSchedule['status'], string> = {
+  scheduled: '已排期',
+  in_progress: '施工中',
+  completed: '已完成',
+  delayed: '已延期',
+  cancelled: '已取消',
+}
+
+export const SCHEDULE_STATUS_COLORS: Record<ConstructionSchedule['status'], string> = {
+  scheduled: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+  in_progress: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+  completed: 'text-green-400 bg-green-500/10 border-green-500/30',
+  delayed: 'text-red-400 bg-red-500/10 border-red-500/30',
+  cancelled: 'text-gray-400 bg-gray-500/10 border-gray-500/30',
+}
+
+export const TASK_STATUS_LABELS: Record<ConstructionTaskStatus, string> = {
+  pending: '待开始',
+  in_progress: '进行中',
+  paused: '已暂停',
+  completed: '已完成',
+  blocked: '已阻塞',
+}
+
+export const TASK_STATUS_COLORS: Record<ConstructionTaskStatus, string> = {
+  pending: 'text-gray-400 bg-gray-500/10',
+  in_progress: 'text-blue-400 bg-blue-500/10',
+  paused: 'text-yellow-400 bg-yellow-500/10',
+  completed: 'text-green-400 bg-green-500/10',
+  blocked: 'text-red-400 bg-red-500/10',
 }
 

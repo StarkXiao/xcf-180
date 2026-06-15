@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, FileCheck, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight, LayoutGrid, Layers, Warehouse, Percent, User, LogIn, LogOut, Heart, Clock, FileEdit } from 'lucide-react'
+import { Bike, Wrench, ClipboardList, AlertTriangle, XCircle, ArrowLeftRight, Settings2, FileText, FileCheck, Folder, Package, Link2, TrendingUp, CheckSquare, ChevronDown, ChevronRight, LayoutGrid, Layers, Warehouse, Percent, User, LogIn, LogOut, Heart, Clock, FileEdit, Users } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import ModelSelector from '@/components/ModelSelector'
 
@@ -10,6 +10,7 @@ const navItems = [
   { path: '/list', label: '选配清单', icon: ClipboardList },
   { path: '/compare', label: '方案对比', icon: ArrowLeftRight },
   { path: '/templates', label: '模板中心', icon: LayoutGrid },
+  { path: '/reception', label: '门店接待', icon: Users },
   { path: '/quotes', label: '报价审批', icon: FileCheck },
   { path: '/orders', label: '订单管理', icon: FileText },
 ]

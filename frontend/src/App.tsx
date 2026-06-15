@@ -20,6 +20,7 @@ import QuoteDetailPage from "@/pages/QuoteDetailPage";
 import AdminDiscountRulesPage from "@/pages/AdminDiscountRulesPage";
 import AuthPage from "@/pages/AuthPage";
 import ProfilePage from "@/pages/ProfilePage";
+import StoreReceptionPage from "@/pages/StoreReceptionPage";
 import Layout from "@/components/Layout";
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
                 <Route path="/compare" element={<ComparePage />} />
                 <Route path="/templates" element={<TemplateCenterPage />} />
                 <Route path="/templates/:id" element={<TemplateDetailPage />} />
+                <Route path="/reception" element={<StoreReceptionPage />} />
                 <Route path="/orders" element={<OrderListPage />} />
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
                 <Route path="/quotes" element={<QuoteListPage />} />

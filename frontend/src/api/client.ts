@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest } from '@/types'
 
 const BASE = ''
 
@@ -730,4 +730,107 @@ export const api = {
 
   getUserStats: () =>
     fetchJSON<UserStats>('/api/user/stats'),
+
+  getCustomers: (params?: { keyword?: string; level?: string; source?: string; phone?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.keyword) searchParams.set('keyword', params.keyword)
+    if (params?.level) searchParams.set('level', params.level)
+    if (params?.source) searchParams.set('source', params.source)
+    if (params?.phone) searchParams.set('phone', params.phone)
+    const qs = searchParams.toString()
+    return fetchJSON<Customer[]>(`/api/customers${qs ? `?${qs}` : ''}`)
+  },
+
+  getCustomer: (id: string) =>
+    fetchJSON<Customer>(`/api/customers/${id}`),
+
+  createCustomer: (data: CreateCustomerRequest) =>
+    fetchJSON<Customer>('/api/customers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateCustomer: (id: string, data: UpdateCustomerRequest) =>
+    fetchJSON<Customer>(`/api/customers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteCustomer: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/customers/${id}`, { method: 'DELETE' }),
+
+  addCustomerVehicle: (customerId: string, data: Omit<CustomerVehicle, 'id' | 'customerId' | 'createdAt' | 'updatedAt'>) =>
+    fetchJSON<CustomerVehicle>(`/api/customers/${customerId}/vehicles`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateCustomerVehicle: (customerId: string, vehicleId: string, data: Partial<CustomerVehicle>) =>
+    fetchJSON<CustomerVehicle>(`/api/customers/${customerId}/vehicles/${vehicleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteCustomerVehicle: (customerId: string, vehicleId: string) =>
+    fetchJSON<{ success: boolean }>(`/api/customers/${customerId}/vehicles/${vehicleId}`, { method: 'DELETE' }),
+
+  getRequirements: (params?: { customerId?: string; status?: string; vehicleId?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.customerId) searchParams.set('customerId', params.customerId)
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.vehicleId) searchParams.set('vehicleId', params.vehicleId)
+    const qs = searchParams.toString()
+    return fetchJSON<RequirementRecord[]>(`/api/requirements${qs ? `?${qs}` : ''}`)
+  },
+
+  getRequirement: (id: string) =>
+    fetchJSON<RequirementRecord>(`/api/requirements/${id}`),
+
+  createRequirement: (data: CreateRequirementRequest) =>
+    fetchJSON<RequirementRecord>('/api/requirements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateRequirement: (id: string, data: UpdateRequirementRequest) =>
+    fetchJSON<RequirementRecord>(`/api/requirements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteRequirement: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/requirements/${id}`, { method: 'DELETE' }),
+
+  getSchedules: (params?: { customerId?: string; status?: string; date?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.customerId) searchParams.set('customerId', params.customerId)
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.date) searchParams.set('date', params.date)
+    const qs = searchParams.toString()
+    return fetchJSON<ConstructionSchedule[]>(`/api/schedules${qs ? `?${qs}` : ''}`)
+  },
+
+  getSchedule: (id: string) =>
+    fetchJSON<ConstructionSchedule>(`/api/schedules/${id}`),
+
+  createSchedule: (data: CreateConstructionScheduleRequest) =>
+    fetchJSON<ConstructionSchedule>('/api/schedules', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateSchedule: (id: string, data: UpdateConstructionScheduleRequest) =>
+    fetchJSON<ConstructionSchedule>(`/api/schedules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteSchedule: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/schedules/${id}`, { method: 'DELETE' }),
+
+  updateScheduleTask: (scheduleId: string, taskId: string, data: UpdateConstructionTaskRequest) =>
+    fetchJSON<ConstructionSchedule>(`/api/schedules/${scheduleId}/tasks/${taskId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 }
