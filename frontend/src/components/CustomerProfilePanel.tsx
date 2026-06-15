@@ -7,6 +7,7 @@ import {
   Mail,
   MapPin,
   Calendar,
+  CalendarClock,
   Tag,
   Car,
   Edit,
@@ -16,6 +17,7 @@ import {
   CheckCircle2,
   Star,
   User,
+  ArrowRight,
 } from 'lucide-react'
 import {
   CUSTOMER_LEVEL_LABELS,
@@ -57,6 +59,8 @@ export default function CustomerProfilePanel() {
     setCustomerFilterLevel,
     setCustomerFilterSource,
     getFilteredCustomers,
+    currentSchedule,
+    setReceptionActiveTab,
   } = useStore()
 
   const [showForm, setShowForm] = useState(false)
@@ -566,6 +570,128 @@ export default function CustomerProfilePanel() {
                 </p>
               </div>
             </div>
+
+            {currentSchedule && currentSchedule.customerId === currentCustomer.id && (
+              <div className="bg-green-500/5 rounded-lg border border-green-500/20 p-4 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-medium text-green-400 flex items-center gap-2">
+                    <CalendarClock size={16} />
+                    当前施工排期
+                  </h4>
+                  <button
+                    onClick={() => setReceptionActiveTab('schedule')}
+                    className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors"
+                  >
+                    查看详情
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-xs text-moto-steel mb-1">排期编号</p>
+                    <p className="font-orbitron text-sm text-moto-silver">
+                      {(currentSchedule as any).scheduleNo || `#${currentSchedule.id.slice(-6)}`}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-moto-steel mb-1">施工状态</p>
+                    <span
+                      className={`text-sm font-medium ${
+                        currentSchedule.status === 'completed'
+                          ? 'text-green-400'
+                          : currentSchedule.status === 'in_progress'
+                          ? 'text-moto-orange'
+                          : currentSchedule.status === 'delayed'
+                          ? 'text-red-400'
+                          : 'text-moto-steel'
+                      }`}
+                    >
+                      {currentSchedule.status === 'completed'
+                        ? '已完成'
+                        : currentSchedule.status === 'in_progress'
+                        ? '进行中'
+                        : currentSchedule.status === 'delayed'
+                        ? '已延期'
+                        : '已排期'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-moto-steel mb-1">完成进度</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-carbon-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full"
+                          style={{ width: `${currentSchedule.progress || 0}%` }}
+                        />
+                      </div>
+                      <span className="font-orbitron text-sm text-moto-orange">
+                        {currentSchedule.progress || 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-moto-steel mb-1">任务总数</p>
+                    <p className="font-orbitron text-sm text-moto-silver">
+                      {currentSchedule.tasks?.length || 0} 项
+                    </p>
+                  </div>
+                </div>
+                {currentSchedule.tasks && currentSchedule.tasks.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-green-500/10">
+                    <p className="text-xs text-moto-steel mb-2">施工人员分配</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(
+                        new Set(
+                          currentSchedule.tasks
+                            .flatMap((t) => t.assignedWorkerNames || [])
+                            .filter(Boolean)
+                        )
+                      ).map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-carbon-700 text-moto-silver rounded text-xs"
+                        >
+                          <User size={10} />
+                          {name}
+                        </span>
+                      ))}
+                      {Array.from(
+                        new Set(
+                          currentSchedule.tasks
+                            .flatMap((t) => t.assignedWorkerNames || [])
+                            .filter(Boolean)
+                        )
+                      ).length === 0 && (
+                        <span className="text-xs text-moto-steel">暂未分配施工人员</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {currentSchedule.plannedStartDate && (
+                  <div className="mt-4 pt-4 border-t border-green-500/10">
+                    <p className="text-xs text-moto-steel mb-2">计划工期</p>
+                    <p className="text-sm text-moto-silver">
+                      {new Date(currentSchedule.plannedStartDate).toLocaleDateString('zh-CN')}
+                      {' → '}
+                      {currentSchedule.plannedEndDate
+                        ? new Date(currentSchedule.plannedEndDate).toLocaleDateString('zh-CN')
+                        : '-'}
+                      {currentSchedule.plannedStartDate && currentSchedule.plannedEndDate && (
+                        <span className="text-moto-steel ml-2">
+                          (
+                          {Math.ceil(
+                            (new Date(currentSchedule.plannedEndDate).getTime() -
+                              new Date(currentSchedule.plannedStartDate).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          )}{' '}
+                          天)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-6 mb-6">
               <div className="bg-carbon-800/50 rounded-lg border border-carbon-500/20 p-4">

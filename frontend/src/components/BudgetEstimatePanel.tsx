@@ -649,6 +649,83 @@ export default function BudgetEstimatePanel() {
             </div>
           </div>
 
+          {currentSchedule && (
+            <div className="p-5 border-b border-carbon-500/30 bg-green-500/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h5 className="text-sm font-medium text-green-400 flex items-center gap-1.5">
+                  <CalendarClock size={14} />
+                  施工排期
+                </h5>
+                <button
+                  onClick={() => setReceptionActiveTab('schedule')}
+                  className="text-[10px] text-green-400 hover:text-green-300 transition-colors"
+                >
+                  查看 →
+                </button>
+              </div>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-moto-steel">排期编号</span>
+                  <span className="text-moto-silver font-medium">
+                    {(currentSchedule as any).scheduleNo || `#${currentSchedule.id.slice(-6)}`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-moto-steel">施工状态</span>
+                  <span
+                    className={`font-medium ${
+                      currentSchedule.status === 'completed'
+                        ? 'text-green-400'
+                        : currentSchedule.status === 'in_progress'
+                        ? 'text-moto-orange'
+                        : currentSchedule.status === 'delayed'
+                        ? 'text-red-400'
+                        : 'text-moto-steel'
+                    }`}
+                  >
+                    {currentSchedule.status === 'completed'
+                      ? '已完成'
+                      : currentSchedule.status === 'in_progress'
+                      ? '进行中'
+                      : currentSchedule.status === 'delayed'
+                      ? '已延期'
+                      : '已排期'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-moto-steel">完成进度</span>
+                  <span className="font-orbitron text-moto-orange">
+                    {currentSchedule.progress || 0}%
+                  </span>
+                </div>
+                <div className="h-1.5 bg-carbon-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full transition-all duration-500"
+                    style={{ width: `${currentSchedule.progress || 0}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-moto-steel">任务总数</span>
+                  <span className="text-moto-silver">
+                    {currentSchedule.tasks?.length || 0} 项
+                  </span>
+                </div>
+                {currentSchedule.plannedStartDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-moto-steel">计划工期</span>
+                    <span className="text-moto-silver">
+                      {new Date(currentSchedule.plannedStartDate).toLocaleDateString('zh-CN')}
+                      {' → '}
+                      {currentSchedule.plannedEndDate
+                        ? new Date(currentSchedule.plannedEndDate).toLocaleDateString('zh-CN')
+                        : '-'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="p-5 space-y-3">
             <button
               onClick={handleSave}
