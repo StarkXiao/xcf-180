@@ -13,6 +13,8 @@ import {
   Tag,
   ChevronRight,
   Layers,
+  Save,
+  ArrowRight,
 } from 'lucide-react'
 import type { Part, Category } from '@/types'
 
@@ -22,11 +24,24 @@ interface SelectedPart {
 }
 
 export default function OnSiteSelectionPanel() {
-  const { allParts, categories, currentRequirement, currentCustomer } = useStore()
+  const {
+    allParts,
+    categories,
+    currentRequirement,
+    currentCustomer,
+    createReceptionSelection,
+    createQuoteFromSelection,
+    setReceptionActiveTab,
+    currentReceptionSelection,
+    currentQuote,
+    setCurrentQuote,
+    setCurrentReceptionSelection,
+  } = useStore()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [selectedParts, setSelectedParts] = useState<Record<string, SelectedPart>>({})
   const [showCart, setShowCart] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   const displayedCategories: { value: string; label: string }[] = [
     { value: 'all', label: '全部配件' },
@@ -93,12 +108,94 @@ export default function OnSiteSelectionPanel() {
     0
   )
 
-  const handleAddToQuote = () => {
+  const handleAddToQuote = async () => {
     if (selectedPartsArray.length === 0) {
       alert('请先选择配件')
       return
     }
-    alert(`已将 ${totalCount} 个配件加入预算，共计 ¥${totalPrice.toLocaleString()}`)
+    if (!currentCustomer) {
+      alert('请先在「客户建档」中选择客户')
+      setReceptionActiveTab('customer')
+      return
+    }
+    setSaving(true)
+    try {
+      const items = selectedPartsArray.map(({ part, quantity }) => ({
+        partId: part.id,
+        partName: part.name,
+        partBrand: part.brand,
+        partImage: part.imageUrl || part.image || '',
+        categoryId: part.categoryId,
+        unitPrice: part.price,
+        quantity,
+        laborHours: 0,
+      }))
+      const selection = await createReceptionSelection({
+        customerId: currentCustomer.id,
+        customerName: currentCustomer.name,
+        requirementId: currentRequirement?.id,
+        items,
+      })
+      if (!selection) {
+        throw new Error('保存选配失败')
+      }
+      const quote = await createQuoteFromSelection(selection.id, {
+        customerId: currentCustomer.id,
+        customerName: currentCustomer.name,
+        customerContact: currentCustomer.contact || currentCustomer.name,
+        customerPhone: currentCustomer.phone,
+        customerEmail: currentCustomer.email,
+        requirementId: currentRequirement?.id,
+      })
+      if (quote) {
+        alert(`报价单「${quote.quoteNo}」创建成功！`)
+        setCurrentQuote(quote)
+        setCurrentReceptionSelection(selection)
+        setReceptionActiveTab('budget')
+      }
+    } catch (e) {
+      console.error(e)
+      alert('创建报价失败，请重试')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveSelectionOnly = async () => {
+    if (selectedPartsArray.length === 0) {
+      alert('请先选择配件')
+      return
+    }
+    if (!currentCustomer) {
+      alert('请先在「客户建档」中选择客户')
+      setReceptionActiveTab('customer')
+      return
+    }
+    setSaving(true)
+    try {
+      const items = selectedPartsArray.map(({ part, quantity }) => ({
+        partId: part.id,
+        partName: part.name,
+        partBrand: part.brand,
+        partImage: part.imageUrl || part.image || '',
+        categoryId: part.categoryId,
+        unitPrice: part.price,
+        quantity,
+        laborHours: 0,
+      }))
+      await createReceptionSelection({
+        customerId: currentCustomer.id,
+        customerName: currentCustomer.name,
+        requirementId: currentRequirement?.id,
+        items,
+      })
+      alert('选配清单已保存！')
+    } catch (e) {
+      console.error(e)
+      alert('保存失败，请重试')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const getRatingStars = (rating: number) => {
@@ -386,16 +483,38 @@ export default function OnSiteSelectionPanel() {
                     清空
                   </button>
                   <button
+                    onClick={handleSaveSelectionOnly}
+                    disabled={saving}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-carbon-700 text-moto-silver rounded-lg text-xs hover:bg-carbon-600 transition-colors disabled:opacity-50"
+                  >
+                    <Save size={14} />
+                    {saving ? '保存中...' : '保存选配'}
+                  </button>
+                  <button
                     onClick={handleAddToQuote}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-moto-orange text-white rounded-lg text-xs hover:bg-moto-orange/90 transition-colors"
+                    disabled={saving}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-moto-orange text-white rounded-lg text-xs hover:bg-moto-orange/90 transition-colors disabled:opacity-50"
                   >
                     <CheckCircle2 size={14} />
-                    加入预算
+                    {saving ? '创建中...' : '生成报价'}
                   </button>
                 </div>
-                <button className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-moto-orange hover:text-moto-orange/80 transition-colors">
+                <button
+                  onClick={() => {
+                    if (currentQuote) {
+                      setReceptionActiveTab('budget')
+                    }
+                  }}
+                  className={`w-full flex items-center justify-center gap-1.5 py-2 text-xs transition-colors ${
+                    currentQuote
+                      ? 'text-moto-orange hover:text-moto-orange/80'
+                      : 'text-moto-steel cursor-not-allowed opacity-50'
+                  }`}
+                >
                   <ChevronRight size={14} />
-                  前往「预算测算」页面
+                  {currentQuote
+                    ? `查看当前报价「${currentQuote.quoteNo}」`
+                    : '先生成报价后再查看'}
                 </button>
               </div>
             )}

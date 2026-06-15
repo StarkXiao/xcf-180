@@ -8,6 +8,8 @@ import {
   CalendarClock,
   Bell,
   Search,
+  Sparkles,
+  CircleDot,
 } from 'lucide-react'
 import CustomerProfilePanel from '@/components/CustomerProfilePanel'
 import RequirementRecordPanel from '@/components/RequirementRecordPanel'
@@ -66,9 +68,13 @@ export default function StoreReceptionPage() {
     fetchCategories,
     currentCustomer,
     currentRequirement,
+    currentReceptionSelection,
+    currentQuote,
+    currentSchedule,
     customers,
     requirements,
     schedules,
+    fetchQuoteWithDetails,
   } = useStore()
 
   useEffect(() => {
@@ -79,8 +85,21 @@ export default function StoreReceptionPage() {
     fetchCategories()
   }, [fetchCustomers, fetchRequirements, fetchSchedules, fetchParts, fetchCategories])
 
+  useEffect(() => {
+    if (currentQuote?.id) {
+      fetchQuoteWithDetails(currentQuote.id)
+    }
+  }, [currentQuote?.id, fetchQuoteWithDetails])
+
   const activeTab = TABS.find((t) => t.key === receptionActiveTab) || TABS[0]
   const Icon = activeTab.icon
+
+  const scheduleProgress = (() => {
+    const tasks = currentSchedule?.tasks
+    if (!tasks || tasks.length === 0) return 0
+    const done = tasks.filter((t) => t.status === 'completed').length
+    return Math.round((done / tasks.length) * 100)
+  })()
 
   return (
     <div className="h-full flex flex-col bg-carbon-900">
@@ -169,28 +188,75 @@ export default function StoreReceptionPage() {
         </div>
       </header>
 
-      {(currentCustomer || receptionActiveTab === 'customer' || receptionActiveTab === 'selection') && (
+      {(currentCustomer ||
+        currentRequirement ||
+        currentReceptionSelection ||
+        currentQuote ||
+        currentSchedule ||
+        receptionActiveTab === 'customer' ||
+        receptionActiveTab === 'selection') && (
         <div className="px-6 py-3 border-b border-carbon-500/30 bg-carbon-800/20">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 flex-wrap">
             {currentCustomer && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-moto-orange/10 text-moto-orange border border-moto-orange/30 rounded-full">
-                  <Users size={14} />
-                  <span className="text-sm font-medium">{currentCustomer.name}</span>
-                  <span className="text-xs opacity-70">· {currentCustomer.phone}</span>
-                </div>
-              </div>
+              <button
+                onClick={() => setReceptionActiveTab('customer')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-moto-orange/10 text-moto-orange border border-moto-orange/30 rounded-full hover:bg-moto-orange/15 transition-colors"
+              >
+                <Users size={14} />
+                <span className="text-sm font-medium">{currentCustomer.name}</span>
+                <span className="text-xs opacity-70">· {currentCustomer.phone}</span>
+              </button>
             )}
             {currentRequirement && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-full">
+              <button
+                onClick={() => setReceptionActiveTab('requirement')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-full hover:bg-blue-500/15 transition-colors"
+              >
                 <FileText size={14} />
                 <span className="text-sm">需求 #{currentRequirement.id.slice(-4)}</span>
-                <span className="text-xs opacity-70">
-                  · {currentRequirement.items.length} 项
-                </span>
-              </div>
+                <span className="text-xs opacity-70">· {currentRequirement.items.length} 项</span>
+              </button>
             )}
-            <div className="flex-1" />
+            {currentReceptionSelection && (
+              <button
+                onClick={() => setReceptionActiveTab('selection')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-full hover:bg-purple-500/15 transition-colors"
+              >
+                <Package size={14} />
+                <span className="text-sm">选配</span>
+                <span className="text-xs opacity-70">
+                  · {currentReceptionSelection.items.length} 件 · ¥{currentReceptionSelection.totalAmount.toFixed(0).toLocaleString()}
+                </span>
+              </button>
+            )}
+            {currentQuote && (
+              <button
+                onClick={() => setReceptionActiveTab('budget')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full hover:bg-amber-500/15 transition-colors"
+              >
+                <Calculator size={14} />
+                <span className="text-sm">报价 {currentQuote.quoteNo}</span>
+                <span className="text-xs opacity-70">
+                  · ¥{(currentQuote.totalAmount || 0).toFixed(0).toLocaleString()}
+                </span>
+                {currentQuote.convertedScheduleId && (
+                  <Sparkles size={12} className="text-green-400 ml-1" />
+                )}
+              </button>
+            )}
+            {currentSchedule && (
+              <button
+                onClick={() => setReceptionActiveTab('schedule')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-400 border border-green-500/30 rounded-full hover:bg-green-500/15 transition-colors"
+              >
+                <CalendarClock size={14} />
+                <span className="text-sm">施工排期</span>
+                <span className="flex items-center gap-1 text-xs opacity-70">
+                  · <CircleDot size={10} /> {scheduleProgress}%
+                </span>
+              </button>
+            )}
+            <div className="flex-1 min-w-[200px]" />
             <div className="flex items-center gap-6 text-xs text-moto-steel">
               <span>
                 客户总数:{' '}

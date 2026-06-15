@@ -1,4 +1,4 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats, Customer, CustomerVehicle, CreateCustomerRequest, UpdateCustomerRequest, RequirementRecord, CreateRequirementRequest, UpdateRequirementRequest, ConstructionSchedule, CreateConstructionScheduleRequest, UpdateConstructionScheduleRequest, UpdateConstructionTaskRequest, ReceptionSelection, CreateReceptionSelectionRequest, CreateScheduleFromQuoteRequest, QuoteItem } from '@/types'
 
 const BASE = ''
 
@@ -833,4 +833,60 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+
+  createReceptionSelection: (data: CreateReceptionSelectionRequest) =>
+    fetchJSON<ReceptionSelection>('/api/reception/selections', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateReceptionSelection: (id: string, data: Partial<CreateReceptionSelectionRequest>) =>
+    fetchJSON<ReceptionSelection>(`/api/reception/selections/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  getReceptionSelection: (id: string) =>
+    fetchJSON<ReceptionSelection>(`/api/reception/selections/${id}`),
+
+  getReceptionSelectionsByCustomer: (customerId: string) =>
+    fetchJSON<ReceptionSelection[]>(`/api/reception/selections?customerId=${customerId}`),
+
+  createQuoteFromSelection: (selectionId: string, data?: Partial<CreateQuoteRequest>) =>
+    fetchJSON<Quote>(`/api/reception/selections/${selectionId}/create-quote`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  createQuoteFromRequirements: (data: CreateQuoteRequest) =>
+    fetchJSON<Quote>('/api/reception/create-quote', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateQuoteFull: (id: string, data: UpdateQuoteRequest & {
+    plans?: QuotePlan[]
+    discountRate?: number
+    taxRate?: number
+    depositRatio?: number
+    items?: QuoteItem[]
+  }) =>
+    fetchJSON<Quote>(`/api/reception/quotes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  createScheduleFromQuote: (data: CreateScheduleFromQuoteRequest) =>
+    fetchJSON<ConstructionSchedule>('/api/reception/quotes/create-schedule', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getQuoteWithDetails: (id: string) =>
+    fetchJSON<Quote & { customer?: Customer; requirement?: RequirementRecord; schedule?: ConstructionSchedule }>(
+      `/api/reception/quotes/${id}/details`
+    ),
+
+  getQuotesByCustomer: (customerId: string) =>
+    fetchJSON<Quote[]>(`/api/reception/quotes?customerId=${customerId}`),
 }

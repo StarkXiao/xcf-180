@@ -742,10 +742,13 @@ export interface QuoteVersion {
 export interface Quote {
   id: string
   quoteNo: string
+  customerId?: string
   customerName: string
   customerContact: string
   customerPhone: string
   customerEmail?: string
+  requirementId?: string
+  selectionId?: string
   modelId: string
   modelName: string
   packageType: 'basic' | 'sport' | 'street' | null
@@ -766,18 +769,31 @@ export interface Quote {
   updatedBy?: string
   updatedAt: string
   convertedOrderId?: string
+  convertedScheduleId?: string
+  discountRate?: number
+  taxRate?: number
+  depositRatio?: number
+  totalAmount?: number
+  items?: QuoteItem[]
 }
 
 export interface CreateQuoteRequest {
-  selectionId: string
+  selectionId?: string
+  customerId?: string
   customerName: string
   customerContact: string
   customerPhone: string
   customerEmail?: string
   modelId: string
   packageType: 'basic' | 'sport' | 'street' | null
+  requirementId?: string
   remark?: string
   validUntil?: string
+  plans?: Omit<QuotePlan, 'id' | 'createdAt' | 'updatedAt'>[]
+  items?: QuoteItem[]
+  discountRate?: number
+  taxRate?: number
+  depositRatio?: number
 }
 
 export interface UpdateQuoteRequest {
@@ -1455,4 +1471,55 @@ export const TASK_STATUS_COLORS: Record<ConstructionTaskStatus, string> = {
   completed: 'text-green-400 bg-green-500/10',
   blocked: 'text-red-400 bg-red-500/10',
 }
+
+export interface ReceptionSelectionItem {
+  partId: string
+  partName: string
+  partBrand: string
+  partImage: string
+  categoryId: string
+  unitPrice: number
+  quantity: number
+  laborHours: number
+}
+
+export interface ReceptionSelection {
+  id: string
+  customerId?: string
+  customerName?: string
+  requirementId?: string
+  items: ReceptionSelectionItem[]
+  totalPartsAmount: number
+  totalLaborAmount: number
+  totalAmount: number
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateReceptionSelectionRequest {
+  customerId?: string
+  customerName?: string
+  requirementId?: string
+  items: Omit<ReceptionSelectionItem, 'id'>[]
+}
+
+export interface CreateScheduleFromQuoteRequest {
+  quoteId: string
+  customerId: string
+  customerName: string
+  quoteNo: string
+  totalAmount: number
+  plannedStartDate?: string
+  plannedEndDate?: string
+  autoGenerateTasks?: boolean
+  remark?: string
+}
+
+export interface QuoteWithDetails extends Quote {
+  customer?: Customer
+  requirement?: RequirementRecord
+  schedule?: ConstructionSchedule
+}
+
 

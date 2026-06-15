@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useStore } from '@/store/useStore'
 import {
   Calendar,
@@ -20,6 +20,10 @@ import {
   TrendingUp,
   Gauge,
   MapPin,
+  FileText,
+  Sparkles,
+  RefreshCw,
+  ArrowLeft,
 } from 'lucide-react'
 import {
   CONSTRUCTION_PHASE_LABELS,
@@ -148,10 +152,23 @@ const MOCK_TASKS: ConstructionTask[] = [
 ]
 
 export default function ConstructionSchedulePanel() {
-  const { currentCustomer } = useStore()
-  const [tasks, setTasks] = useState<ConstructionTask[]>(MOCK_TASKS)
+  const {
+    currentCustomer,
+    currentQuote,
+    currentSchedule,
+    createScheduleFromQuote,
+    setCurrentSchedule,
+    setReceptionActiveTab,
+  } = useStore()
+  const [tasks, setTasks] = useState<ConstructionTask[]>(() => {
+    if (currentSchedule?.tasks && currentSchedule.tasks.length > 0) {
+      return currentSchedule.tasks
+    }
+    return MOCK_TASKS
+  })
   const [expandedPhase, setExpandedPhase] = useState<ConstructionPhase | 'all'>('all')
   const [showAddTask, setShowAddTask] = useState(false)
+  const [generating, setGenerating] = useState(false)
 
   const totalEstimated = tasks.reduce((sum, t) => sum + t.estimatedHours, 0)
   const totalActual = tasks.reduce((sum, t) => sum + t.actualHours, 0)
@@ -181,21 +198,88 @@ export default function ConstructionSchedulePanel() {
     return WORKERS.find((w) => w.id === workerId)
   }
 
+  const handleGenerateFromQuote = async () => {
+    if (!currentCustomer) {
+      alert('请先在「客户建档」中选择客户')
+      setReceptionActiveTab('customer')
+      return
+    }
+    if (!currentQuote) {
+      alert('请先生成报价单，再创建施工排期')
+      setReceptionActiveTab('budget')
+      return
+    }
+    setGenerating(true)
+    try {
+      const schedule = await createScheduleFromQuote({
+        quoteId: currentQuote.id,
+        customerId: currentCustomer.id,
+        customerName: currentCustomer.name,
+        quoteNo: currentQuote.quoteNo,
+        totalAmount: currentQuote.totalAmount || 0,
+        autoGenerateTasks: true,
+      })
+      if (schedule) {
+        setCurrentSchedule(schedule)
+        if (schedule.tasks && schedule.tasks.length > 0) {
+          setTasks(schedule.tasks)
+        }
+        alert(`施工排期「${(schedule as any).scheduleNo || schedule.id}」创建成功！`)
+      }
+    } catch (e) {
+      console.error(e)
+      alert('创建施工排期失败')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const hasRealSchedule = (currentSchedule?.tasks?.length || 0) > 0
+
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 border-b border-carbon-500/30 flex items-center justify-between">
         <div>
-          <h3 className="font-orbitron text-lg text-moto-silver font-bold flex items-center gap-2">
-            <Calendar size={20} className="text-moto-orange" />
-            施工排期
-          </h3>
-          {currentCustomer && (
-            <p className="text-xs text-moto-steel mt-0.5">
-              {currentCustomer.name} 的改装项目
-            </p>
-          )}
+          <div className="flex items-center gap-3">
+            <h3 className="font-orbitron text-lg text-moto-silver font-bold flex items-center gap-2">
+              <Calendar size={20} className="text-moto-orange" />
+              施工排期
+            </h3>
+            {currentSchedule && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-500/10 text-green-400 border border-green-500/30 rounded-full text-xs font-medium">
+                <ListTodo size={12} />
+                {(currentSchedule as any).scheduleNo || `排期#${currentSchedule.id.slice(-6)}`}
+              </span>
+            )}
+            {currentQuote && !currentSchedule && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full text-xs font-medium">
+                <FileText size={12} />
+                关联报价 {currentQuote.quoteNo}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-moto-steel mt-0.5">
+            {currentCustomer
+              ? `${currentCustomer.name} 的改装项目`
+              : '请先选择客户'}
+            {currentQuote && ` · 基于报价 ${currentQuote.quoteNo}`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
+          {!hasRealSchedule && currentQuote && (
+            <button
+              onClick={handleGenerateFromQuote}
+              disabled={generating}
+              className="flex items-center gap-1.5 px-4 py-2 bg-green-600/90 text-white rounded-lg text-sm hover:bg-green-600 transition-colors disabled:opacity-50"
+            >
+              {generating ? (
+                <RefreshCw size={16} className="animate-spin" />
+              ) : (
+                <Sparkles size={16} />
+              )}
+              {generating ? '生成中...' : '一键生成施工任务'}
+            </button>
+          )}
           <button className="flex items-center gap-1.5 px-3 py-2 text-moto-steel hover:text-moto-silver hover:bg-carbon-800 rounded-lg text-sm transition-colors">
             <Users size={16} />
             人员管理

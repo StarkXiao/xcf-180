@@ -42,6 +42,7 @@ import type {
   Quote,
   QuotePlan,
   QuoteStatus,
+  QuoteItem,
   DiscountRule,
   DiscountResult,
   PlanComparisonResult,
@@ -87,6 +88,9 @@ import type {
   UpdateConstructionTaskRequest,
   ConstructionTask,
   ConstructionPhase,
+  ReceptionSelection,
+  CreateReceptionSelectionRequest,
+  CreateScheduleFromQuoteRequest,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -452,6 +456,29 @@ interface AppState {
 
   receptionActiveTab: 'customer' | 'requirement' | 'selection' | 'budget' | 'schedule'
   setReceptionActiveTab: (tab: 'customer' | 'requirement' | 'selection' | 'budget' | 'schedule') => void
+
+  currentReceptionSelection: ReceptionSelection | null
+  receptionSelections: ReceptionSelection[]
+  createReceptionSelection: (data: CreateReceptionSelectionRequest) => Promise<ReceptionSelection | undefined>
+  updateReceptionSelection: (id: string, data: Partial<CreateReceptionSelectionRequest>) => Promise<ReceptionSelection | undefined>
+  setCurrentReceptionSelection: (selection: ReceptionSelection | null) => void
+  getReceptionSelectionsByCustomer: (customerId: string) => ReceptionSelection[]
+
+  receptionQuotes: Quote[]
+  createQuoteFromSelection: (selectionId: string, data?: Partial<CreateQuoteRequest>) => Promise<Quote | undefined>
+  createQuoteFromRequirements: (data: CreateQuoteRequest) => Promise<Quote | undefined>
+  updateQuoteFull: (id: string, data: UpdateQuoteRequest & {
+    plans?: QuotePlan[]
+    discountRate?: number
+    taxRate?: number
+    depositRatio?: number
+    items?: QuoteItem[]
+  }) => Promise<Quote | undefined>
+  createScheduleFromQuote: (data: CreateScheduleFromQuoteRequest) => Promise<ConstructionSchedule | undefined>
+  fetchQuoteWithDetails: (id: string) => Promise<(Quote & { customer?: any; requirement?: any; schedule?: any }) | undefined>
+  fetchReceptionQuotes: (params?: { customerId?: string }) => Promise<void>
+  setCurrentQuote: (quote: Quote | null) => void
+  getQuotesByCustomer: (customerId: string) => Quote[]
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -556,6 +583,10 @@ export const useStore = create<AppState>((set, get) => ({
   currentSchedule: null,
 
   receptionActiveTab: 'customer',
+
+  currentReceptionSelection: null,
+  receptionSelections: [],
+  receptionQuotes: [],
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -3189,4 +3220,120 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setReceptionActiveTab: (tab) => set({ receptionActiveTab: tab }),
+
+  createReceptionSelection: async (data) => {
+    try {
+      const selection = await api.createReceptionSelection(data)
+      set((state) => ({
+        receptionSelections: [selection, ...state.receptionSelections],
+        currentReceptionSelection: selection,
+      }))
+      return selection
+    } catch (e) {
+      console.error('Failed to create reception selection:', e)
+    }
+  },
+
+  updateReceptionSelection: async (id, data) => {
+    try {
+      const selection = await api.updateReceptionSelection(id, data)
+      set((state) => ({
+        receptionSelections: state.receptionSelections.map((s) => (s.id === id ? selection : s)),
+        currentReceptionSelection: state.currentReceptionSelection?.id === id ? selection : state.currentReceptionSelection,
+      }))
+      return selection
+    } catch (e) {
+      console.error('Failed to update reception selection:', e)
+    }
+  },
+
+  setCurrentReceptionSelection: (selection) => set({ currentReceptionSelection: selection }),
+
+  getReceptionSelectionsByCustomer: (customerId) => {
+    return get().receptionSelections.filter((s) => s.customerId === customerId)
+  },
+
+  createQuoteFromSelection: async (selectionId, data) => {
+    try {
+      const quote = await api.createQuoteFromSelection(selectionId, data)
+      set((state) => ({
+        receptionQuotes: [quote, ...state.receptionQuotes],
+        currentQuote: quote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to create quote from selection:', e)
+    }
+  },
+
+  createQuoteFromRequirements: async (data) => {
+    try {
+      const quote = await api.createQuoteFromRequirements(data)
+      set((state) => ({
+        receptionQuotes: [quote, ...state.receptionQuotes],
+        currentQuote: quote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to create quote from requirements:', e)
+    }
+  },
+
+  updateQuoteFull: async (id, data) => {
+    try {
+      const quote = await api.updateQuoteFull(id, data)
+      set((state) => ({
+        receptionQuotes: state.receptionQuotes.map((q) => (q.id === id ? quote : q)),
+        currentQuote: state.currentQuote?.id === id ? quote : state.currentQuote,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to update quote full:', e)
+    }
+  },
+
+  createScheduleFromQuote: async (data) => {
+    try {
+      const schedule = await api.createScheduleFromQuote(data)
+      set((state) => ({
+        schedules: [schedule, ...state.schedules],
+        currentSchedule: schedule,
+      }))
+      return schedule
+    } catch (e) {
+      console.error('Failed to create schedule from quote:', e)
+    }
+  },
+
+  fetchQuoteWithDetails: async (id) => {
+    try {
+      const quote = await api.getQuoteWithDetails(id)
+      set((state) => ({
+        currentQuote: quote,
+        currentCustomer: quote.customer || state.currentCustomer,
+        currentRequirement: quote.requirement || state.currentRequirement,
+        currentSchedule: quote.schedule || state.currentSchedule,
+      }))
+      return quote
+    } catch (e) {
+      console.error('Failed to fetch quote details:', e)
+    }
+  },
+
+  fetchReceptionQuotes: async (params) => {
+    set({ quotesLoading: true })
+    try {
+      const quotes = await api.getQuotesByCustomer(params?.customerId || '')
+      set({ receptionQuotes: quotes, quotesLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch reception quotes:', e)
+      set({ quotesLoading: false })
+    }
+  },
+
+  setCurrentQuote: (quote) => set({ currentQuote: quote }),
+
+  getQuotesByCustomer: (customerId) => {
+    return get().receptionQuotes.filter((q) => q.customerId === customerId)
+  },
 }))

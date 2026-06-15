@@ -17,6 +17,7 @@ import { usersRoutes } from './routes/users.js';
 import { customersRoutes } from './routes/customers.js';
 import { requirementsRoutes } from './routes/requirements.js';
 import { schedulesRoutes } from './routes/schedules.js';
+import receptionRoutes from './routes/reception.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,6 +64,9 @@ app.use(requirementsRoutes.allowedMethods());
 
 app.use(schedulesRoutes.routes());
 app.use(schedulesRoutes.allowedMethods());
+
+app.use(receptionRoutes.routes());
+app.use(receptionRoutes.allowedMethods());
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
