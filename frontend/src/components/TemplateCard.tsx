@@ -47,10 +47,10 @@ export default function TemplateCard({
   const isFav = isTemplateFavorite(template.id)
   const statusInfo = STATUS_MAP[template.status] || STATUS_MAP.draft
 
-  const handleFavorite = (e: React.MouseEvent) => {
+  const handleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    toggleTemplateFavorite(template.id)
+    await toggleTemplateFavorite(template.id)
   }
 
   const handleSelect = (e: React.MouseEvent) => {

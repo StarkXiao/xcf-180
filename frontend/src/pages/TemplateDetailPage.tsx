@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useStore } from '@/store/useStore'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import BikePreview from '@/components/BikePreview'
@@ -74,6 +74,11 @@ export default function TemplateDetailPage() {
   const [selectedCombineTemplates, setSelectedCombineTemplates] = useState<string[]>([])
   const [combining, setCombining] = useState(false)
   const [activeTab, setActiveTab] = useState<'preview' | 'parts' | 'compatibility'>('preview')
+  const browsingHistoryAdded = useRef(false)
+
+  useEffect(() => {
+    browsingHistoryAdded.current = false
+  }, [id])
 
   useEffect(() => {
     const init = async () => {
@@ -84,18 +89,25 @@ export default function TemplateDetailPage() {
       if (id) {
         await fetchTemplateDetail(id)
         await checkTemplateCompatibility(id)
-        if (isAuthenticated && currentTemplate) {
-          await addUserBrowsingHistory({
-            targetType: 'template',
-            targetId: id,
-            targetName: currentTemplate.name,
-          })
-        }
       }
       setLoading(false)
     }
     init()
   }, [id])
+
+  useEffect(() => {
+    const addHistory = async () => {
+      if (isAuthenticated && currentTemplate && id && !browsingHistoryAdded.current) {
+        browsingHistoryAdded.current = true
+        await addUserBrowsingHistory({
+          targetType: 'template',
+          targetId: id,
+          targetName: currentTemplate.name,
+        })
+      }
+    }
+    addHistory()
+  }, [isAuthenticated, currentTemplate, id, addUserBrowsingHistory])
 
   const template = currentTemplate
   const isFav = template ? isTemplateFavorite(template.id) : false
@@ -235,7 +247,7 @@ export default function TemplateDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => toggleTemplateFavorite(template.id)}
+              onClick={async () => await toggleTemplateFavorite(template.id)}
               className={`p-3 rounded-xl border transition-all ${
                 isFav
                   ? 'bg-red-500/20 border-red-500/30 text-red-400'

@@ -279,7 +279,7 @@ function SidePartList({
                   <p className="font-orbitron text-[10px] text-moto-orange">¥{part.price.toLocaleString()}</p>
                 </div>
                 <button
-                  onClick={() => toggleFavorite(part.id)}
+                  onClick={async () => await toggleFavorite(part.id)}
                   className={`p-1 rounded transition-colors ${
                     isFavorite(part.id)
                       ? 'text-red-400 hover:text-red-300'

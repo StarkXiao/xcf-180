@@ -39,13 +39,13 @@ export default function PartCard({ part, onViewDetail }: Props) {
     }
   }
 
-  const handleFavorite = (e: React.MouseEvent) => {
+  const handleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    toggleFavorite(part.id)
+    await toggleFavorite(part.id)
   }
 
-  const handleClick = () => {
-    addRecentView(part.id)
+  const handleClick = async () => {
+    await addRecentView(part.id)
     onViewDetail(part)
   }
 

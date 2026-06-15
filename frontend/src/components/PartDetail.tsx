@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Plus, Check, Tag, Layers, Info, AlertTriangle, XCircle, Sparkles, RefreshCw, ChevronRight, Heart, PackageX, ArrowRightLeft } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import type { Part, CompatibilityCheckResult, PartRecommendation, SubstitutePart } from '@/types'
@@ -25,20 +25,32 @@ export default function PartDetail({ part, onClose }: Props) {
     getInventoryInfo,
     fetchSubstitutes,
     getSubstitutesForPart,
+    isAuthenticated,
   } = useStore()
   const isSelected = currentSelection?.items.some((i) => i.partId === part.id) ?? false
   const [partCompat, setPartCompat] = useState<CompatibilityCheckResult | null>(null)
   const [checking, setChecking] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [substitutes, setSubstitutes] = useState<SubstitutePart[]>([])
+  const browsingHistoryAdded = useRef(false)
 
   const stockLevel = getStockLevel(part.id)
   const invInfo = getInventoryInfo(part.id)
   const isOutOfStock = stockLevel === 'out_of_stock'
 
   useEffect(() => {
-    addRecentView(part.id)
+    browsingHistoryAdded.current = false
   }, [part.id])
+
+  useEffect(() => {
+    const addHistory = async () => {
+      if (isAuthenticated && !browsingHistoryAdded.current) {
+        browsingHistoryAdded.current = true
+        await addRecentView(part.id)
+      }
+    }
+    addHistory()
+  }, [part.id, isAuthenticated, addRecentView])
 
   useEffect(() => {
     if (isOutOfStock) {
@@ -102,7 +114,7 @@ export default function PartDetail({ part, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={() => toggleFavorite(part.id)}
+          onClick={async () => await toggleFavorite(part.id)}
           className={`absolute top-4 right-14 z-10 p-2 rounded-full transition-colors ${
             isFavorite(part.id)
               ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'

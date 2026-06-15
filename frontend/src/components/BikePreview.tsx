@@ -487,7 +487,7 @@ export default function BikePreview({ previewItems, readOnly = false }: BikePrev
                 {!readOnly && (
                   <>
                     <button
-                      onClick={() => toggleFavorite(currentInstalledPart.id)}
+                      onClick={async () => await toggleFavorite(currentInstalledPart.id)}
                       className={`p-1.5 rounded-lg transition-colors ${
                         isFavorite(currentInstalledPart.id)
                           ? 'text-red-400 hover:text-red-300'
@@ -551,7 +551,7 @@ export default function BikePreview({ previewItems, readOnly = false }: BikePrev
                           </p>
                         </div>
                         <button
-                          onClick={() => toggleFavorite(part.id)}
+                          onClick={async () => await toggleFavorite(part.id)}
                           className={`shrink-0 p-1 rounded transition-colors ${
                             isFavorite(part.id)
                               ? 'text-red-400 hover:text-red-300'
