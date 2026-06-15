@@ -111,6 +111,26 @@ function saveToStorage(key: string, value: unknown): void {
   } catch {}
 }
 
+interface ReceptionContextIds {
+  customerId: string | null
+  quoteId: string | null
+  scheduleId: string | null
+}
+
+const RECEPTION_CTX_KEY = 'xcf-reception-context'
+
+function saveReceptionContext(ids: ReceptionContextIds): void {
+  saveToStorage(RECEPTION_CTX_KEY, ids)
+}
+
+function loadReceptionContext(): ReceptionContextIds {
+  return loadFromStorage<ReceptionContextIds>(RECEPTION_CTX_KEY, {
+    customerId: null,
+    quoteId: null,
+    scheduleId: null,
+  })
+}
+
 interface AppState {
   categories: Category[]
   parts: Part[]
@@ -479,6 +499,8 @@ interface AppState {
   fetchReceptionQuotes: (params?: { customerId?: string }) => Promise<void>
   setCurrentQuote: (quote: Quote | null) => void
   getQuotesByCustomer: (customerId: string) => Quote[]
+
+  restoreReceptionContext: () => Promise<void>
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -2915,7 +2937,14 @@ export const useStore = create<AppState>((set, get) => ({
   fetchCustomerDetail: async (id) => {
     try {
       const customer = await api.getCustomer(id)
-      set({ currentCustomer: customer })
+      set((state) => {
+        saveReceptionContext({
+          customerId: customer.id,
+          quoteId: state.currentQuote?.id ?? null,
+          scheduleId: state.currentSchedule?.id ?? null,
+        })
+        return { currentCustomer: customer }
+      })
     } catch (e) {
       console.error('Failed to fetch customer detail:', e)
     }
@@ -2924,10 +2953,17 @@ export const useStore = create<AppState>((set, get) => ({
   createCustomer: async (data) => {
     try {
       const customer = await api.createCustomer(data)
-      set((state) => ({
-        customers: [customer, ...state.customers],
-        currentCustomer: customer,
-      }))
+      set((state) => {
+        saveReceptionContext({
+          customerId: customer.id,
+          quoteId: state.currentQuote?.id ?? null,
+          scheduleId: state.currentSchedule?.id ?? null,
+        })
+        return {
+          customers: [customer, ...state.customers],
+          currentCustomer: customer,
+        }
+      })
       return customer
     } catch (e) {
       console.error('Failed to create customer:', e)
@@ -3059,6 +3095,11 @@ export const useStore = create<AppState>((set, get) => ({
       } else {
         nextSchedule = null
       }
+      saveReceptionContext({
+        customerId: customer?.id ?? null,
+        quoteId: state.currentQuote?.id ?? null,
+        scheduleId: nextSchedule?.id ?? null,
+      })
       return { currentCustomer: customer, currentSchedule: nextSchedule }
     }),
   setCustomerSearchKeyword: (keyword) => set({ customerSearchKeyword: keyword }),
@@ -3229,7 +3270,15 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  setCurrentSchedule: (schedule) => set({ currentSchedule: schedule }),
+  setCurrentSchedule: (schedule) => {
+    set({ currentSchedule: schedule })
+    const { currentCustomer, currentQuote } = get()
+    saveReceptionContext({
+      customerId: currentCustomer?.id ?? null,
+      quoteId: currentQuote?.id ?? null,
+      scheduleId: schedule?.id ?? null,
+    })
+  },
 
   getSchedulesByCustomer: (customerId) => {
     return get().schedules.filter((s) => s.customerId === customerId)
@@ -3276,10 +3325,17 @@ export const useStore = create<AppState>((set, get) => ({
   createQuoteFromSelection: async (selectionId, data) => {
     try {
       const quote = await api.createQuoteFromSelection(selectionId, data)
-      set((state) => ({
-        receptionQuotes: [quote, ...state.receptionQuotes],
-        currentQuote: quote,
-      }))
+      set((state) => {
+        saveReceptionContext({
+          customerId: state.currentCustomer?.id ?? null,
+          quoteId: quote.id,
+          scheduleId: state.currentSchedule?.id ?? null,
+        })
+        return {
+          receptionQuotes: [quote, ...state.receptionQuotes],
+          currentQuote: quote,
+        }
+      })
       return quote
     } catch (e) {
       console.error('Failed to create quote from selection:', e)
@@ -3289,10 +3345,17 @@ export const useStore = create<AppState>((set, get) => ({
   createQuoteFromRequirements: async (data) => {
     try {
       const quote = await api.createQuoteFromRequirements(data)
-      set((state) => ({
-        receptionQuotes: [quote, ...state.receptionQuotes],
-        currentQuote: quote,
-      }))
+      set((state) => {
+        saveReceptionContext({
+          customerId: state.currentCustomer?.id ?? null,
+          quoteId: quote.id,
+          scheduleId: state.currentSchedule?.id ?? null,
+        })
+        return {
+          receptionQuotes: [quote, ...state.receptionQuotes],
+          currentQuote: quote,
+        }
+      })
       return quote
     } catch (e) {
       console.error('Failed to create quote from requirements:', e)
@@ -3302,10 +3365,20 @@ export const useStore = create<AppState>((set, get) => ({
   updateQuoteFull: async (id, data) => {
     try {
       const quote = await api.updateQuoteFull(id, data)
-      set((state) => ({
-        receptionQuotes: state.receptionQuotes.map((q) => (q.id === id ? quote : q)),
-        currentQuote: state.currentQuote?.id === id ? quote : state.currentQuote,
-      }))
+      set((state) => {
+        const nextQuote = state.currentQuote?.id === id ? quote : state.currentQuote
+        if (nextQuote?.id === quote.id) {
+          saveReceptionContext({
+            customerId: state.currentCustomer?.id ?? null,
+            quoteId: quote.id,
+            scheduleId: state.currentSchedule?.id ?? null,
+          })
+        }
+        return {
+          receptionQuotes: state.receptionQuotes.map((q) => (q.id === id ? quote : q)),
+          currentQuote: nextQuote,
+        }
+      })
       return quote
     } catch (e) {
       console.error('Failed to update quote full:', e)
@@ -3315,10 +3388,17 @@ export const useStore = create<AppState>((set, get) => ({
   createScheduleFromQuote: async (data) => {
     try {
       const schedule = await api.createScheduleFromQuote(data)
-      set((state) => ({
-        schedules: [schedule, ...state.schedules],
-        currentSchedule: schedule,
-      }))
+      set((state) => {
+        saveReceptionContext({
+          customerId: state.currentCustomer?.id ?? null,
+          quoteId: state.currentQuote?.id ?? null,
+          scheduleId: schedule.id,
+        })
+        return {
+          schedules: [schedule, ...state.schedules],
+          currentSchedule: schedule,
+        }
+      })
       return schedule
     } catch (e) {
       console.error('Failed to create schedule from quote:', e)
@@ -3328,12 +3408,21 @@ export const useStore = create<AppState>((set, get) => ({
   fetchQuoteWithDetails: async (id) => {
     try {
       const quote = await api.getQuoteWithDetails(id)
-      set((state) => ({
-        currentQuote: quote,
-        currentCustomer: quote.customer || state.currentCustomer,
-        currentRequirement: quote.requirement || state.currentRequirement,
-        currentSchedule: quote.schedule || state.currentSchedule,
-      }))
+      set((state) => {
+        const nextCustomer = quote.customer || state.currentCustomer
+        const nextSchedule = quote.schedule || state.currentSchedule
+        saveReceptionContext({
+          customerId: nextCustomer?.id ?? null,
+          quoteId: quote.id,
+          scheduleId: nextSchedule?.id ?? null,
+        })
+        return {
+          currentQuote: quote,
+          currentCustomer: nextCustomer,
+          currentRequirement: quote.requirement || state.currentRequirement,
+          currentSchedule: nextSchedule,
+        }
+      })
       return quote
     } catch (e) {
       console.error('Failed to fetch quote details:', e)
@@ -3367,10 +3456,58 @@ export const useStore = create<AppState>((set, get) => ({
           nextSchedule = matched
         }
       }
+      saveReceptionContext({
+        customerId: state.currentCustomer?.id ?? null,
+        quoteId: quote?.id ?? null,
+        scheduleId: nextSchedule?.id ?? null,
+      })
       return { currentQuote: quote, currentSchedule: nextSchedule }
     }),
 
   getQuotesByCustomer: (customerId) => {
     return get().receptionQuotes.filter((q) => q.customerId === customerId)
+  },
+
+  restoreReceptionContext: async () => {
+    const ctx = loadReceptionContext()
+    if (!ctx.customerId && !ctx.quoteId && !ctx.scheduleId) return
+
+    const updates: Partial<AppState> = {}
+
+    try {
+      if (ctx.customerId) {
+        const customer = await api.getCustomer(ctx.customerId)
+        if (customer) updates.currentCustomer = customer
+      }
+    } catch (e) {
+      console.error('restoreReceptionContext: failed to restore customer', e)
+    }
+
+    try {
+      if (ctx.quoteId) {
+        const quote = await api.getQuoteWithDetails(ctx.quoteId)
+        if (quote) {
+          updates.currentQuote = quote
+          if (quote.customer) updates.currentCustomer = quote.customer
+          if (quote.requirement) updates.currentRequirement = quote.requirement
+          if (quote.schedule) updates.currentSchedule = quote.schedule
+        }
+      }
+    } catch (e) {
+      console.error('restoreReceptionContext: failed to restore quote', e)
+    }
+
+    try {
+      if (ctx.scheduleId && !updates.currentSchedule) {
+        const schedule = await api.getSchedule(ctx.scheduleId)
+        if (schedule) updates.currentSchedule = schedule
+      }
+    } catch (e) {
+      console.error('restoreReceptionContext: failed to restore schedule', e)
+    }
+
+    if (Object.keys(updates).length > 0) {
+      set(updates)
+    }
   },
 }))

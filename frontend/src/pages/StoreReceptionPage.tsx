@@ -77,15 +77,22 @@ export default function StoreReceptionPage() {
     fetchQuoteWithDetails,
     setCurrentSchedule,
     getScheduleById,
+    restoreReceptionContext,
   } = useStore()
 
   useEffect(() => {
-    fetchCustomers()
-    fetchRequirements()
-    fetchSchedules()
-    fetchParts()
-    fetchCategories()
-  }, [fetchCustomers, fetchRequirements, fetchSchedules, fetchParts, fetchCategories])
+    const init = async () => {
+      await Promise.all([
+        fetchCustomers(),
+        fetchRequirements(),
+        fetchSchedules(),
+        fetchParts(),
+        fetchCategories(),
+      ])
+      await restoreReceptionContext()
+    }
+    init()
+  }, [fetchCustomers, fetchRequirements, fetchSchedules, fetchParts, fetchCategories, restoreReceptionContext])
 
   useEffect(() => {
     if (currentQuote?.id) {
