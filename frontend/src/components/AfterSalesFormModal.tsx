@@ -483,11 +483,14 @@ export default function AfterSalesFormModal({ isOpen, onClose, orderId }: Props)
                   type="number"
                   value={formData.laborFee}
                   onChange={(e) => {
-                    const v = Number(e.target.value)
+                    const v = Number(e.target.value) || 0
+                    const { partsCost, warrantyCoverage, customerCharge } = calculateCosts(selectedParts, v)
                     setFormData({
                       ...formData,
                       laborFee: v,
-                      customerCharge: Math.max(0, v + formData.partsCost - formData.warrantyCoverage),
+                      partsCost,
+                      warrantyCoverage,
+                      customerCharge,
                     })
                   }}
                   className="w-full bg-carbon-700 text-moto-silver text-sm rounded-lg px-3 py-2 border border-carbon-500/30 focus:outline-none focus:border-moto-orange/50"
@@ -495,19 +498,16 @@ export default function AfterSalesFormModal({ isOpen, onClose, orderId }: Props)
                 />
               </div>
               <div>
-                <label className="text-sm text-moto-silver font-medium mb-2 block">配件费 (¥)</label>
+                <label className="text-sm text-moto-silver font-medium mb-2 block flex items-center gap-1">
+                  配件费 (¥)
+                  <span className="text-[10px] text-moto-steel font-normal">(自动计算)</span>
+                </label>
                 <input
                   type="number"
                   value={formData.partsCost}
-                  onChange={(e) => {
-                    const v = Number(e.target.value)
-                    setFormData({
-                      ...formData,
-                      partsCost: v,
-                      customerCharge: Math.max(0, formData.laborFee + v - formData.warrantyCoverage),
-                    })
-                  }}
-                  className="w-full bg-carbon-700 text-moto-silver text-sm rounded-lg px-3 py-2 border border-carbon-500/30 focus:outline-none focus:border-moto-orange/50"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-full bg-carbon-800 text-moto-silver text-sm rounded-lg px-3 py-2 border border-carbon-600/40 cursor-not-allowed opacity-90"
                   min={0}
                 />
                 {selectedParts.some((p) => p.needReplacement) && (
@@ -515,21 +515,23 @@ export default function AfterSalesFormModal({ isOpen, onClose, orderId }: Props)
                     需更换配件合计：¥{selectedParts.filter((p) => p.needReplacement).reduce((s, p) => s + p.unitPrice * p.quantity, 0).toLocaleString()}
                   </p>
                 )}
+                {!selectedParts.some((p) => p.needReplacement) && selectedParts.length > 0 && (
+                  <p className="text-xs text-moto-steel mt-1">
+                    请勾选配件的"需更换"来计算配件费
+                  </p>
+                )}
               </div>
               <div>
-                <label className="text-sm text-moto-silver font-medium mb-2 block">质保覆盖 (¥)</label>
+                <label className="text-sm text-moto-silver font-medium mb-2 block flex items-center gap-1">
+                  质保覆盖 (¥)
+                  <span className="text-[10px] text-moto-steel font-normal">(自动计算)</span>
+                </label>
                 <input
                   type="number"
                   value={formData.warrantyCoverage}
-                  onChange={(e) => {
-                    const v = Number(e.target.value)
-                    setFormData({
-                      ...formData,
-                      warrantyCoverage: v,
-                      customerCharge: Math.max(0, formData.laborFee + formData.partsCost - v),
-                    })
-                  }}
-                  className="w-full bg-carbon-700 text-green-400 text-sm rounded-lg px-3 py-2 border border-carbon-500/30 focus:outline-none focus:border-moto-orange/50"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-full bg-carbon-800 text-green-400 text-sm rounded-lg px-3 py-2 border border-carbon-600/40 cursor-not-allowed opacity-90"
                   min={0}
                 />
                 {selectedParts.some((p) => p.needReplacement && p.isUnderWarranty) && (
@@ -539,25 +541,45 @@ export default function AfterSalesFormModal({ isOpen, onClose, orderId }: Props)
                 )}
               </div>
               <div>
-                <label className="text-sm text-moto-silver font-medium mb-2 block">客户应付 (¥)</label>
+                <label className="text-sm text-moto-silver font-medium mb-2 block flex items-center gap-1">
+                  客户应付 (¥)
+                  <span className="text-[10px] text-moto-steel font-normal">(自动计算)</span>
+                </label>
                 <input
                   type="number"
                   value={formData.customerCharge}
-                  onChange={(e) => setFormData({ ...formData, customerCharge: Number(e.target.value) })}
-                  className="w-full bg-carbon-700 text-moto-orange text-sm font-medium rounded-lg px-3 py-2 border border-carbon-500/30 focus:outline-none focus:border-moto-orange/50"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-full bg-carbon-800 text-moto-orange text-sm font-medium rounded-lg px-3 py-2 border border-carbon-600/40 cursor-not-allowed opacity-90"
                   min={0}
                 />
               </div>
             </div>
 
-            <div className="mt-3 p-3 bg-carbon-700/30 rounded-lg border border-carbon-500/20">
-              <p className="text-xs text-moto-steel">
-                <span className="text-moto-silver font-medium">费用计算说明：</span>
-                客户应付 = 工时费 + 配件费（勾选"需更换"的配件） - 质保覆盖（在保且需更换的配件）
-              </p>
+            <div className="mt-4 p-4 bg-carbon-700/30 rounded-lg border border-carbon-500/20 space-y-2">
+              <p className="text-xs text-moto-silver font-medium">费用自动计算明细</p>
+              <div className="text-xs text-moto-steel space-y-1">
+                <div className="flex justify-between">
+                  <span>① 工时费（手动输入）</span>
+                  <span>¥{formData.laborFee.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>② 配件费（勾选"需更换"的配件合计）</span>
+                  <span>¥{formData.partsCost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-green-400">
+                  <span>− 质保覆盖（在保且需更换的配件合计）</span>
+                  <span>−¥{formData.warrantyCoverage.toLocaleString()}</span>
+                </div>
+                <div className="pt-1 mt-1 border-t border-carbon-500/30 flex justify-between text-moto-orange font-medium">
+                  <span>= 客户应付 = ① + ② − 质保覆盖</span>
+                  <span>¥{formData.customerCharge.toLocaleString()}</span>
+                </div>
+              </div>
               {selectedParts.some((p) => p.needReplacement && !p.isUnderWarranty) && (
-                <p className="text-xs text-moto-orange mt-1">
+                <p className="text-xs text-moto-orange mt-2 pt-2 border-t border-carbon-500/30">
                   ⚠️ 以下需更换配件已过质保期，费用由客户承担：
+                  <br />
                   {selectedParts.filter((p) => p.needReplacement && !p.isUnderWarranty).map((p) => p.partName).join('、')}
                 </p>
               )}
