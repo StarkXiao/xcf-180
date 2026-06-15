@@ -1,0 +1,71 @@
+{
+  "users": [
+    {
+      "id": "user_001",
+      "username": "admin",
+      "email": "admin@xcf180.com",
+      "password": "admin123",
+      "phone": "13800000000",
+      "nickname": "系统管理员",
+      "avatar": "",
+      "bio": "XCF-180平台管理员",
+      "role": "admin",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "lastLoginAt": ""
+    },
+    {
+      "id": "user_002",
+      "username": "rider001",
+      "email": "rider@xcf180.com",
+      "password": "rider123",
+      "phone": "13900000001",
+      "nickname": "机车骑士",
+      "avatar": "",
+      "bio": "热爱改装的摩托车爱好者",
+      "role": "user",
+      "createdAt": "2026-02-15T10:30:00.000Z",
+      "updatedAt": "2026-02-15T10:30:00.000Z",
+      "lastLoginAt": ""
+    }
+  ],
+  "userProfiles": [
+    {
+      "userId": "user_002",
+      "gender": "male",
+      "location": "北京市",
+      "bikeModel": "xcf-180",
+      "ridingStyle": "street",
+      "ridingExperience": "5年以上",
+      "favoriteBrands": ["Akrapovic", "Brembo"],
+      "socialLinks": {
+        "wechat": "",
+        "weibo": ""
+      },
+      "updatedAt": "2026-02-15T10:30:00.000Z"
+    }
+  ],
+  "favorites": [],
+  "browsingHistory": [],
+  "archives": [
+    {
+      "id": "archive_001",
+      "userId": "user_002",
+      "title": "街跑风格改装方案",
+      "description": "基于XCF-180的街跑风格改装，注重性能与外观的完美结合",
+      "coverImage": "",
+      "bikeModel": "xcf-180",
+      "items": [],
+      "totalCost": 25800,
+      "tags": ["街跑", "性能升级", "外观改装"],
+      "isPublic": true,
+      "status": "published",
+      "likes": 42,
+      "views": 356,
+      "createdAt": "2026-03-01T08:00:00.000Z",
+      "updatedAt": "2026-03-01T08:00:00.000Z",
+      "publishedAt": "2026-03-02T10:00:00.000Z"
+    }
+  ],
+  "sharedResources": []
+}

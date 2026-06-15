@@ -917,3 +917,187 @@ export const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
   expired: 'bg-zinc-500',
   converted: 'bg-purple-500',
 }
+
+export interface User {
+  id: string
+  username: string
+  email: string
+  phone?: string
+  nickname?: string
+  avatar?: string
+  bio?: string
+  role: 'user' | 'admin'
+  createdAt: string
+  updatedAt: string
+  lastLoginAt?: string
+}
+
+export interface UserProfile {
+  userId: string
+  gender?: string
+  location?: string
+  bikeModel?: string
+  ridingStyle?: string
+  ridingExperience?: string
+  favoriteBrands?: string[]
+  socialLinks?: {
+    wechat?: string
+    weibo?: string
+  }
+  updatedAt: string
+}
+
+export interface RegisterRequest {
+  username: string
+  email: string
+  password: string
+  nickname?: string
+  phone?: string
+}
+
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+export interface AuthResponse {
+  user: User
+  token: string
+}
+
+export interface UpdateUserProfileRequest {
+  nickname?: string
+  phone?: string
+  avatar?: string
+  bio?: string
+  gender?: string
+  location?: string
+  bikeModel?: string
+  ridingStyle?: string
+  ridingExperience?: string
+  favoriteBrands?: string[]
+  socialLinks?: {
+    wechat?: string
+    weibo?: string
+  }
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string
+  newPassword: string
+}
+
+export interface UserFavoritePart {
+  id: string
+  userId: string
+  targetType: 'part' | 'template' | 'selection'
+  targetId: string
+  targetName?: string
+  addedAt: string
+}
+
+export interface UserFavoriteTemplate {
+  templateId: string
+  addedAt: string
+}
+
+export interface UserFavoriteSelection {
+  selectionId: string
+  selectionName: string
+  addedAt: string
+}
+
+export interface UserBrowsingHistory {
+  id: string
+  userId: string
+  targetType: 'part' | 'template' | 'selection'
+  targetId: string
+  targetName?: string
+  targetImage?: string
+  viewedAt: string
+  duration?: number
+}
+
+export interface ModificationArchive {
+  id: string
+  userId: string
+  title: string
+  description?: string
+  coverImage?: string
+  bikeModel: string
+  items: SelectionItem[]
+  totalCost: number
+  tags: string[]
+  isPublic: boolean
+  status: 'draft' | 'published' | 'archived'
+  likes: number
+  views: number
+  createdAt: string
+  updatedAt: string
+  publishedAt?: string
+}
+
+export interface CreateModificationArchiveRequest {
+  title: string
+  description?: string
+  coverImage?: string
+  bikeModel: string
+  items: SelectionItem[]
+  totalCost: number
+  tags?: string[]
+  isPublic?: boolean
+}
+
+export interface UpdateModificationArchiveRequest {
+  title?: string
+  description?: string
+  coverImage?: string
+  bikeModel?: string
+  items?: SelectionItem[]
+  totalCost?: number
+  tags?: string[]
+  isPublic?: boolean
+  status?: 'draft' | 'published' | 'archived'
+}
+
+export interface Collaborator {
+  userId: string
+  username: string
+  nickname?: string
+  avatar?: string
+  permission: 'view' | 'edit' | 'admin'
+  addedAt: string
+  addedBy: string
+}
+
+export interface SharedResource {
+  id: string
+  resourceType: 'selection' | 'archive'
+  resourceId: string
+  resourceName: string
+  ownerId: string
+  collaborators: Collaborator[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InviteCollaboratorRequest {
+  email?: string
+  username?: string
+  permission: 'view' | 'edit' | 'admin'
+}
+
+export interface UpdateCollaboratorPermissionRequest {
+  permission: 'view' | 'edit' | 'admin'
+}
+
+export interface UserStats {
+  favoriteParts: number
+  favoriteTemplates: number
+  browsingHistoryCount: number
+  archivesCount: number
+  publishedArchivesCount: number
+  collaborationsCount: number
+  totalSpent: number
+}
+

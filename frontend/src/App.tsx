@@ -18,6 +18,8 @@ import AdminInventoryPage from "@/pages/AdminInventoryPage";
 import QuoteListPage from "@/pages/QuoteListPage";
 import QuoteDetailPage from "@/pages/QuoteDetailPage";
 import AdminDiscountRulesPage from "@/pages/AdminDiscountRulesPage";
+import AuthPage from "@/pages/AuthPage";
+import ProfilePage from "@/pages/ProfilePage";
 import Layout from "@/components/Layout";
 
 export default function App() {
@@ -25,6 +27,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/share/:shareId" element={<SharePage />} />
+        <Route path="/auth" element={<AuthPage />} />
         <Route
           path="*"
           element={
@@ -40,6 +43,7 @@ export default function App() {
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
                 <Route path="/quotes" element={<QuoteListPage />} />
                 <Route path="/quotes/:id" element={<QuoteDetailPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/admin/categories" element={<AdminCategoriesPage />} />
                 <Route path="/admin/discount-rules" element={<AdminDiscountRulesPage />} />
                 <Route path="/admin/parts" element={<AdminPartsPage />} />

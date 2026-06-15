@@ -56,6 +56,20 @@ import type {
   CreateDiscountRuleRequest,
   UpdateDiscountRuleRequest,
   ApprovalRole,
+  User,
+  UserProfile,
+  AuthResponse,
+  RegisterRequest,
+  LoginRequest,
+  UpdateUserProfileRequest,
+  ChangePasswordRequest,
+  UserFavoritePart,
+  UserBrowsingHistory,
+  ModificationArchive,
+  CreateModificationArchiveRequest,
+  UpdateModificationArchiveRequest,
+  SharedResource,
+  UserStats,
 } from '@/types'
 import { api } from '@/api/client'
 import { BIKE_MODELS, getPackagePartIds, getPackagesForModel } from '@/data/bikeModels'
@@ -326,6 +340,49 @@ interface AppState {
   }) => Promise<{ results: DiscountResult[]; totalDiscount: number; finalAmount: number } | undefined>
   applyDiscountToPlan: (quoteId: string, planId: string) => Promise<QuotePlan | undefined>
   downloadQuoteFile: (type: 'pdf' | 'excel', quoteId: string, planId?: string, exportedBy?: string) => Promise<void>
+
+  currentUser: User | null
+  userProfile: UserProfile | null
+  authToken: string | null
+  isAuthenticated: boolean
+  authLoading: boolean
+
+  userFavorites: (UserFavoritePart & { detail?: any; favorited?: boolean })[]
+  userBrowsingHistory: (UserBrowsingHistory & { detail?: any })[]
+  userArchives: ModificationArchive[]
+  userSharedResources: { owned: SharedResource[]; collaborated: SharedResource[] }
+  userStats: UserStats | null
+  userDataLoading: boolean
+
+  register: (data: RegisterRequest) => Promise<AuthResponse | undefined>
+  login: (data: LoginRequest) => Promise<AuthResponse | undefined>
+  logout: () => Promise<void>
+  fetchCurrentUser: () => Promise<void>
+  updateUserProfile: (data: UpdateUserProfileRequest) => Promise<{ user: User; profile: UserProfile } | undefined>
+  changePassword: (data: ChangePasswordRequest) => Promise<boolean>
+  setAuthToken: (token: string | null) => void
+
+  fetchUserFavorites: (type?: 'part' | 'template' | 'selection') => Promise<void>
+  toggleUserFavorite: (targetType: 'part' | 'template' | 'selection', targetId: string, targetName?: string) => Promise<boolean>
+  checkUserFavorite: (targetType: 'part' | 'template' | 'selection', targetId: string) => Promise<boolean>
+
+  fetchUserBrowsingHistory: (limit?: number) => Promise<void>
+  addUserBrowsingHistory: (data: { targetType: 'part' | 'template' | 'selection'; targetId: string; targetName?: string; targetImage?: string }) => Promise<void>
+  removeBrowsingHistoryItem: (id: string) => Promise<void>
+  clearBrowsingHistory: () => Promise<void>
+
+  fetchUserArchives: (status?: 'draft' | 'published' | 'archived') => Promise<void>
+  fetchArchiveDetail: (id: string) => Promise<ModificationArchive | undefined>
+  createArchive: (data: CreateModificationArchiveRequest) => Promise<ModificationArchive | undefined>
+  updateArchive: (id: string, data: UpdateModificationArchiveRequest) => Promise<ModificationArchive | undefined>
+  deleteArchive: (id: string) => Promise<void>
+
+  fetchSharedResources: () => Promise<void>
+  createSharedResource: (data: { resourceType: 'selection' | 'archive'; resourceId: string; resourceName: string }) => Promise<SharedResource | undefined>
+  inviteCollaborator: (sharedId: string, data: { email?: string; username?: string; permission: 'view' | 'edit' | 'admin' }) => Promise<any>
+  removeCollaborator: (sharedId: string, userId: string) => Promise<void>
+
+  fetchUserStats: () => Promise<void>
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -400,6 +457,19 @@ export const useStore = create<AppState>((set, get) => ({
   discountRules: [],
   discountRulesLoading: false,
   planComparison: null,
+
+  currentUser: null,
+  userProfile: null,
+  authToken: typeof localStorage !== 'undefined' ? localStorage.getItem('xcf-auth-token') : null,
+  isAuthenticated: false,
+  authLoading: false,
+
+  userFavorites: [],
+  userBrowsingHistory: [],
+  userArchives: [],
+  userSharedResources: { owned: [], collaborated: [] },
+  userStats: null,
+  userDataLoading: false,
 
   laborFeeRates: {
     exhaust: 0.15,
@@ -2311,6 +2381,356 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (e) {
       console.error('Failed to download quote file:', e)
       throw e
+    }
+  },
+
+  setAuthToken: (token) => {
+    if (token) {
+      localStorage.setItem('xcf-auth-token', token)
+    } else {
+      localStorage.removeItem('xcf-auth-token')
+    }
+    set({ authToken: token })
+  },
+
+  register: async (data) => {
+    try {
+      set({ authLoading: true })
+      const result = await api.register(data)
+      get().setAuthToken(result.token)
+      set({
+        currentUser: result.user,
+        isAuthenticated: true,
+        authLoading: false,
+      })
+      return result
+    } catch (e) {
+      console.error('Failed to register:', e)
+      set({ authLoading: false })
+    }
+  },
+
+  login: async (data) => {
+    try {
+      set({ authLoading: true })
+      const result = await api.login(data)
+      get().setAuthToken(result.token)
+      set({
+        currentUser: result.user,
+        isAuthenticated: true,
+        authLoading: false,
+      })
+      return result
+    } catch (e) {
+      console.error('Failed to login:', e)
+      set({ authLoading: false })
+    }
+  },
+
+  logout: async () => {
+    try {
+      await api.logout()
+    } catch (e) {
+      console.error('Failed to logout:', e)
+    } finally {
+      get().setAuthToken(null)
+      set({
+        currentUser: null,
+        userProfile: null,
+        isAuthenticated: false,
+        userFavorites: [],
+        userBrowsingHistory: [],
+        userArchives: [],
+        userSharedResources: { owned: [], collaborated: [] },
+        userStats: null,
+      })
+    }
+  },
+
+  fetchCurrentUser: async () => {
+    const token = get().authToken
+    if (!token) {
+      set({ isAuthenticated: false })
+      return
+    }
+    try {
+      set({ authLoading: true })
+      const result = await api.getCurrentUser()
+      set({
+        currentUser: result.user,
+        userProfile: result.profile,
+        isAuthenticated: true,
+        authLoading: false,
+      })
+    } catch (e) {
+      console.error('Failed to fetch current user:', e)
+      get().setAuthToken(null)
+      set({
+        currentUser: null,
+        userProfile: null,
+        isAuthenticated: false,
+        authLoading: false,
+      })
+    }
+  },
+
+  updateUserProfile: async (data) => {
+    try {
+      const result = await api.updateUserProfile(data)
+      set({
+        currentUser: result.user,
+        userProfile: result.profile,
+      })
+      return result
+    } catch (e) {
+      console.error('Failed to update user profile:', e)
+    }
+  },
+
+  changePassword: async (data) => {
+    try {
+      const result = await api.changePassword(data)
+      return result.success
+    } catch (e) {
+      console.error('Failed to change password:', e)
+      return false
+    }
+  },
+
+  fetchUserFavorites: async (type) => {
+    if (!get().isAuthenticated) return
+    try {
+      set({ userDataLoading: true })
+      const favorites = await api.getFavorites(type)
+      set({ userFavorites: favorites, userDataLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch favorites:', e)
+      set({ userDataLoading: false })
+    }
+  },
+
+  toggleUserFavorite: async (targetType, targetId, targetName) => {
+    if (!get().isAuthenticated) return false
+    try {
+      const existing = get().userFavorites.find(
+        (f) => f.targetType === targetType && f.targetId === targetId
+      )
+      if (existing) {
+        await api.removeFavorite(existing.id)
+        set((state) => ({
+          userFavorites: state.userFavorites.filter((f) => f.id !== existing.id),
+        }))
+        return false
+      } else {
+        const result = await api.addFavorite({ targetType, targetId, targetName })
+        set((state) => ({
+          userFavorites: [result, ...state.userFavorites],
+        }))
+        return true
+      }
+    } catch (e) {
+      console.error('Failed to toggle favorite:', e)
+      return false
+    }
+  },
+
+  checkUserFavorite: async (targetType, targetId) => {
+    if (!get().isAuthenticated) return false
+    try {
+      const result = await api.checkFavorite({ targetType, targetId })
+      return result.favorited
+    } catch (e) {
+      console.error('Failed to check favorite:', e)
+      return false
+    }
+  },
+
+  fetchUserBrowsingHistory: async (limit) => {
+    if (!get().isAuthenticated) return
+    try {
+      set({ userDataLoading: true })
+      const history = await api.getBrowsingHistory(limit)
+      set({ userBrowsingHistory: history, userDataLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch browsing history:', e)
+      set({ userDataLoading: false })
+    }
+  },
+
+  addUserBrowsingHistory: async (data) => {
+    if (!get().isAuthenticated) return
+    try {
+      const record = await api.addBrowsingHistory(data)
+      set((state) => {
+        const filtered = state.userBrowsingHistory.filter(
+          (h) => !(h.targetType === data.targetType && h.targetId === data.targetId)
+        )
+        return {
+          userBrowsingHistory: [record as any, ...filtered].slice(0, 200),
+        }
+      })
+    } catch (e) {
+      console.error('Failed to add browsing history:', e)
+    }
+  },
+
+  removeBrowsingHistoryItem: async (id) => {
+    if (!get().isAuthenticated) return
+    try {
+      await api.removeBrowsingHistory(id)
+      set((state) => ({
+        userBrowsingHistory: state.userBrowsingHistory.filter((h) => h.id !== id),
+      }))
+    } catch (e) {
+      console.error('Failed to remove browsing history:', e)
+    }
+  },
+
+  clearBrowsingHistory: async () => {
+    if (!get().isAuthenticated) return
+    try {
+      await api.clearBrowsingHistory()
+      set({ userBrowsingHistory: [] })
+    } catch (e) {
+      console.error('Failed to clear browsing history:', e)
+    }
+  },
+
+  fetchUserArchives: async (status) => {
+    if (!get().isAuthenticated) return
+    try {
+      set({ userDataLoading: true })
+      const archives = await api.getArchives(status)
+      set({ userArchives: archives, userDataLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch archives:', e)
+      set({ userDataLoading: false })
+    }
+  },
+
+  fetchArchiveDetail: async (id) => {
+    try {
+      return await api.getArchive(id)
+    } catch (e) {
+      console.error('Failed to fetch archive detail:', e)
+    }
+  },
+
+  createArchive: async (data) => {
+    if (!get().isAuthenticated) return
+    try {
+      const archive = await api.createArchive(data)
+      set((state) => ({
+        userArchives: [archive, ...state.userArchives],
+      }))
+      return archive
+    } catch (e) {
+      console.error('Failed to create archive:', e)
+    }
+  },
+
+  updateArchive: async (id, data) => {
+    if (!get().isAuthenticated) return
+    try {
+      const archive = await api.updateArchive(id, data)
+      set((state) => ({
+        userArchives: state.userArchives.map((a) => (a.id === id ? archive : a)),
+      }))
+      return archive
+    } catch (e) {
+      console.error('Failed to update archive:', e)
+    }
+  },
+
+  deleteArchive: async (id) => {
+    if (!get().isAuthenticated) return
+    try {
+      await api.deleteArchive(id)
+      set((state) => ({
+        userArchives: state.userArchives.filter((a) => a.id !== id),
+      }))
+    } catch (e) {
+      console.error('Failed to delete archive:', e)
+    }
+  },
+
+  fetchSharedResources: async () => {
+    if (!get().isAuthenticated) return
+    try {
+      set({ userDataLoading: true })
+      const resources = await api.getSharedResources()
+      set({ userSharedResources: resources, userDataLoading: false })
+    } catch (e) {
+      console.error('Failed to fetch shared resources:', e)
+      set({ userDataLoading: false })
+    }
+  },
+
+  createSharedResource: async (data) => {
+    if (!get().isAuthenticated) return
+    try {
+      const resource = await api.createSharedResource(data)
+      set((state) => ({
+        userSharedResources: {
+          ...state.userSharedResources,
+          owned: [resource, ...state.userSharedResources.owned],
+        },
+      }))
+      return resource
+    } catch (e) {
+      console.error('Failed to create shared resource:', e)
+    }
+  },
+
+  inviteCollaborator: async (sharedId, data) => {
+    if (!get().isAuthenticated) return
+    try {
+      const collaborator = await api.inviteCollaborator(sharedId, data)
+      set((state) => ({
+        userSharedResources: {
+          ...state.userSharedResources,
+          owned: state.userSharedResources.owned.map((r) =>
+            r.id === sharedId
+              ? { ...r, collaborators: [...r.collaborators, collaborator] }
+              : r
+          ),
+        },
+      }))
+      return collaborator
+    } catch (e) {
+      console.error('Failed to invite collaborator:', e)
+    }
+  },
+
+  removeCollaborator: async (sharedId, userId) => {
+    if (!get().isAuthenticated) return
+    try {
+      await api.removeCollaborator(sharedId, userId)
+      set((state) => ({
+        userSharedResources: {
+          ...state.userSharedResources,
+          owned: state.userSharedResources.owned.map((r) =>
+            r.id === sharedId
+              ? {
+                  ...r,
+                  collaborators: r.collaborators.filter((c) => c.userId !== userId),
+                }
+              : r
+          ),
+        },
+      }))
+    } catch (e) {
+      console.error('Failed to remove collaborator:', e)
+    }
+  },
+
+  fetchUserStats: async () => {
+    if (!get().isAuthenticated) return
+    try {
+      const stats = await api.getUserStats()
+      set({ userStats: stats })
+    } catch (e) {
+      console.error('Failed to fetch user stats:', e)
     }
   },
 }))

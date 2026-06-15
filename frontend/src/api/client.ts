@@ -1,10 +1,19 @@
-import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest } from '@/types'
+import type { Category, Part, Selection, SelectionItem, SelectionVersion, CompatibilityCheckResult, CompatibilityConflict, Share, CreateShareRequest, UpdateShareRequest, Order, CreateOrderRequest, UpdateOrderStatusRequest, AddAfterSaleNoteRequest, AfterSaleNote, PartAdmin, CreatePartRequest, UpdatePartRequest, ReviewPartRequest, BatchPriceAdjustRequest, BatchStatusRequest, CreateCategoryRequest, UpdateCategoryRequest, PriceHistoryRecord, StatusHistoryRecord, CompatibilityRelation, PartStatus, Template, TemplateCategory, TemplateCompatibilityResult, CreateTemplateRequest, UpdateTemplateRequest, BatchPublishRequest, BatchUpdateStatusRequest, ApplyTemplateResult, TemplateFavorite, InventoryInfo, StockReservationResult, StockAlert, SubstitutePart, PurchaseOrder, CreatePurchaseOrderRequest, PurchaseOrderStatus, Quote, QuotePlan, QuoteStatus, DiscountRule, DiscountResult, PlanComparisonResult, CreateQuoteRequest, UpdateQuoteRequest, CreateQuotePlanRequest, UpdateQuotePlanRequest, SubmitApprovalRequest, ProcessApprovalRequest, CustomerConfirmRequest, ExportQuoteRequest, CreateDiscountRuleRequest, UpdateDiscountRuleRequest, CalculateDiscountRequest, User, UserProfile, RegisterRequest, LoginRequest, AuthResponse, UpdateUserProfileRequest, ChangePasswordRequest, UserFavoritePart, UserBrowsingHistory, ModificationArchive, CreateModificationArchiveRequest, UpdateModificationArchiveRequest, SharedResource, Collaborator, InviteCollaboratorRequest, UpdateCollaboratorPermissionRequest, UserStats } from '@/types'
 
 const BASE = ''
 
+function getAuthToken(): string | null {
+  return localStorage.getItem('xcf-auth-token')
+}
+
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = getAuthToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
   const res = await fetch(BASE + url, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...options,
   })
   if (!res.ok) throw new Error(`API Error: ${res.status}`)
@@ -584,4 +593,141 @@ export const api = {
     document.body.removeChild(link)
     setTimeout(() => URL.revokeObjectURL(objectURL), 1000)
   },
+
+  register: (data: RegisterRequest) =>
+    fetchJSON<AuthResponse>('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  login: (data: LoginRequest) =>
+    fetchJSON<AuthResponse>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  logout: () =>
+    fetchJSON<{ success: boolean }>('/api/auth/logout', {
+      method: 'POST',
+    }),
+
+  getCurrentUser: () =>
+    fetchJSON<{ user: User; profile: UserProfile | null }>('/api/user/me'),
+
+  updateUserProfile: (data: UpdateUserProfileRequest) =>
+    fetchJSON<{ user: User; profile: UserProfile }>('/api/user/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  changePassword: (data: ChangePasswordRequest) =>
+    fetchJSON<{ success: boolean }>('/api/user/password', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  getFavorites: (type?: 'part' | 'template' | 'selection') => {
+    const qs = type ? `?type=${type}` : ''
+    return fetchJSON<(UserFavoritePart & { detail: any })[]>(`/api/user/favorites${qs}`)
+  },
+
+  addFavorite: (data: { targetType: 'part' | 'template' | 'selection'; targetId: string; targetName?: string }) =>
+    fetchJSON<UserFavoritePart & { favorited: boolean }>('/api/user/favorites', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  removeFavorite: (id: string) =>
+    fetchJSON<UserFavoritePart & { favorited: boolean }>(`/api/user/favorites/${id}`, {
+      method: 'DELETE',
+    }),
+
+  checkFavorite: (data: { targetType: 'part' | 'template' | 'selection'; targetId: string }) =>
+    fetchJSON<{ favorited: boolean; id: string | null }>('/api/user/favorites/check', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getBrowsingHistory: (limit?: number) => {
+    const qs = limit ? `?limit=${limit}` : ''
+    return fetchJSON<(UserBrowsingHistory & { detail: any })[]>(`/api/user/history${qs}`)
+  },
+
+  addBrowsingHistory: (data: { targetType: 'part' | 'template' | 'selection'; targetId: string; targetName?: string; targetImage?: string; duration?: number }) =>
+    fetchJSON<UserBrowsingHistory>('/api/user/history', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  removeBrowsingHistory: (id: string) =>
+    fetchJSON<{ success: boolean }>(`/api/user/history/${id}`, {
+      method: 'DELETE',
+    }),
+
+  clearBrowsingHistory: () =>
+    fetchJSON<{ success: boolean }>('/api/user/history', {
+      method: 'DELETE',
+    }),
+
+  getArchives: (status?: 'draft' | 'published' | 'archived') => {
+    const qs = status ? `?status=${status}` : ''
+    return fetchJSON<ModificationArchive[]>(`/api/user/archives${qs}`)
+  },
+
+  getArchive: (id: string) =>
+    fetchJSON<ModificationArchive>(`/api/user/archives/${id}`),
+
+  createArchive: (data: CreateModificationArchiveRequest) =>
+    fetchJSON<ModificationArchive>('/api/user/archives', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateArchive: (id: string, data: UpdateModificationArchiveRequest) =>
+    fetchJSON<ModificationArchive>(`/api/user/archives/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteArchive: (id: string) =>
+    fetchJSON<ModificationArchive>(`/api/user/archives/${id}`, {
+      method: 'DELETE',
+    }),
+
+  likeArchive: (id: string) =>
+    fetchJSON<{ likes: number }>(`/api/user/archives/${id}/like`, {
+      method: 'POST',
+    }),
+
+  getSharedResources: () =>
+    fetchJSON<{ owned: SharedResource[]; collaborated: SharedResource[] }>('/api/user/shared'),
+
+  getSharedResource: (id: string) =>
+    fetchJSON<SharedResource>(`/api/user/shared/${id}`),
+
+  createSharedResource: (data: { resourceType: 'selection' | 'archive'; resourceId: string; resourceName: string }) =>
+    fetchJSON<SharedResource>('/api/user/shared', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  inviteCollaborator: (sharedId: string, data: InviteCollaboratorRequest) =>
+    fetchJSON<Collaborator>(`/api/user/shared/${sharedId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateCollaboratorPermission: (sharedId: string, userId: string, data: UpdateCollaboratorPermissionRequest) =>
+    fetchJSON<Collaborator>(`/api/user/shared/${sharedId}/collaborators/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  removeCollaborator: (sharedId: string, userId: string) =>
+    fetchJSON<Collaborator>(`/api/user/shared/${sharedId}/collaborators/${userId}`, {
+      method: 'DELETE',
+    }),
+
+  getUserStats: () =>
+    fetchJSON<UserStats>('/api/user/stats'),
 }
